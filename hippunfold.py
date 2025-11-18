@@ -1,0 +1,145 @@
+#!/usr/bin/env python
+# coding: utf-8
+"""
+This script is part of MICA-PET pipeline for hippocampal surface generation with HippUnfold.
+
+The script requires the following arguments:
+    -sub        : Subject identification. (eg. PX001)
+    -ses        : Session. (eg. 01)
+    -bids       : Path to BIDS directory ( . or FULL PATH)
+    -hippunfold_img: Path to HippUnfold .sif image.
+    -output_dir : Specify path to HippUnfold output directory. (Default: hippunfold subdirectory in BIDS derivatives directory.)
+    -tmp_dir    : (Optional) Path to temporary directory. (Default /tmp)
+    -cache_dir  : (Optional) Set HIPPUNFOLD_CACHE_DIR manually. (Default ~/.cache)
+    -B          : (Optional) Bind pathway for Singularity (eg. /host or /host,/opt etc)
+    -T1         : (Optional) Path to T1w image. (Default T1w image in BIDS directory).
+    -force      : (Optional) Force HippUnfold even if output exists.
+
+The script is intended for use by researchers and developers working with PET imaging data, particularly in the context of the MICA lab at McGill University.
+It is part of a larger pipeline for processing and analyzing neuroimaging data.
+This script is licensed under the MIT License. See the LICENSE file for details.
+Copyright (c) 2025 MICA-MNI
+"""
+# -threads    : Number of threads to use (default 15)
+
+
+import argparse
+import os
+import sys
+from datetime import datetime
+from spython.main import Client
+import shutil
+
+# Load utilities functions from utils.py
+# from utils import *
+
+# Set the working directory to the script's location
+script_dir = os.path.dirname(os.path.abspath(__file__))
+repo_dir = os.path.dirname(script_dir)
+
+# Argument Parsing
+parser = argparse.ArgumentParser(add_help=True)
+parser.add_argument("-sub", type=str, required=True, help="(Str) Subject identifier (eg. '0001')")
+parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '01')")
+parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
+# parser.add_argument("-threads", dest="threads", type=int, help="(Int) Number of threads to use", default=15)
+parser.add_argument("-hippunfold_img", dest="hippunfold_img", type=str, required=True, help="(Str) Specify path to HippUnfold singularity image.")
+parser.add_argument("-tmp_dir", dest="tmp_dir", type=str, help="(Str) Specify path to temporary directory.")
+parser.add_argument("-cache_dir", dest="cache_dir", type=str, help="(Str) Set HIPPUNFOLD_CACHE_DIR manually. (Default ~/.cache).")
+parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify path to HippUnfold output directory.")
+parser.add_argument("-B", dest="B",type=str, help="(Str) Specify paths to bind for Singularity. (eg. /host or /host,/opt etc)")
+parser.add_argument("-T1", dest="T1_path", type=str, help="(Str) Specify path to T1w image. (Default T1w image in BIDS directory).")
+parser.add_argument("-force", action='store_true', help="Force HippUnfold even if output exists.")
+
+args = parser.parse_args()
+
+# Validate mandatory arguments
+if not all([args.sub, args.ses, args.bids_dir, args.hippunfold_img]):
+    print("Error: One or more mandatory arguments are missing.")
+    parser.print_help()
+    sys.exit(1)
+    
+# Normalize paths and variables
+session = f"{args.ses.replace('ses-', '')}"
+subject = f"{args.sub.replace('sub-', '')}"
+bids_dir = os.path.realpath(args.bids_dir)
+# threads = args.threads
+hippunfold_img = os.path.realpath(args.hippunfold_img)
+if args.tmp_dir is None:
+    tmp_dir = []
+else:
+    tmp_dir = ["--env",f"TMPDIR={os.path.realpath(args.tmp_dir)}"]
+    os.environ['TMPDIR'] = args.tmp_dir
+
+if args.cache_dir is None:
+    cache_dir = []
+else:
+    cache_dir = ["--env",f"HIPPUNFOLD_CACHE_DIR={os.path.realpath(args.cache_dir)}"]
+    os.environ['HIPPUNFOLD_CACHE_DIR'] = args.cache_dir
+
+if args.B is None:
+    bind = []
+else:
+    bind = ["-B",f"{os.path.realpath(args.B)}"]
+
+if args.output_dir is None: #check if user inputted output_dir
+    output_dir = f"{bids_dir}/derivatives/hippunfold_v1.4.1"
+    os.makedirs(output_dir,exist_ok=True) #makes output_dir if it doesn't already exist
+else:
+    output_dir = os.path.realpath(args.output_dir)
+
+if args.T1_path is None: #check if user inputted T1_path 
+    if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"): # if not T1_path inputted, does T1w image exist already in BIDS?
+        print(f"Error: T1w image for subject {subject}, session {session} does not exist. Please specify with -T1 flag and replace subject name with "+"{subject}.")
+        sys.exit(1)
+    else: 
+        T1_path = []
+else: 
+    T1_path = ["--path-T1w", f"{os.path.realpath(args.T1_path)}"]
+
+force = args.force
+force_command=[]
+
+if os.path.exists(f"{output_dir}/hippunfold/sub-{subject}/ses-{session}") and force==False: #check if HippUnfold run already & if no force flag
+    print("HippUnfold already run. Please rerun with -force flag to overwrite.")
+    sys.exit(1)
+elif os.path.exists(f"{output_dir}/hippunfold/sub-{subject}/ses-{session}") and force==True: #if
+    force_command=["--force-output"]
+
+print(f"Starting HippUnfold for subject {subject}, session {session}.")
+# print(os.environ['HIPPUNFOLD_CACHE_DIR'])
+
+# Define HippUnfold args to run inside container
+args = [
+    "/bids_dir",
+    "/output_dir",
+    "participant",
+    "--participant-label",f"{subject}",
+    "--modality", "T1w",
+    "--output-density","2mm",
+    "--cores", "4"
+    ]
+args.extend(T1_path)
+args.extend(force_command)
+
+# set Singularity options
+options=["--cleanenv",
+        "--writable-tmpfs",
+        "--containall",
+        "-B", f"{bids_dir}:/bids_dir",
+        "-B", f"{output_dir}:/output_dir"
+    ]
+options.extend(tmp_dir)
+options.extend(cache_dir)
+options.extend(bind)
+
+# print(options)
+
+# Run using spython
+Client.run(
+    image=hippunfold_img,
+    args=args,
+    options=options
+)
+
+print("HippUnfold completed.")

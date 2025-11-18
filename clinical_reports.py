@@ -1,0 +1,296 @@
+#!/usr/bin/env python
+# coding: utf-8
+"""
+This script is part of MICA-PET pipeline for mapping FreeSurfer/FastSurfer cortical surfaces to HCP.
+FreeSurfer/FastSurfer must have been run first.
+
+The script requires the following arguments:
+    -sub        : Subject identification. (eg. PX001)
+    -ses        : Session. (eg. 01)
+    -bids       : Path to BIDS directory ( . or FULL PATH)
+    -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory.
+    -ref_region : Reference regions to use. eg. ['pons','cerebellarGM','composite']. Default: ['pons'].
+
+The script is intended for use by researchers and developers working with PET imaging data, particularly in the context of the MICA lab at McGill University.
+It is part of a larger pipeline for processing and analyzing neuroimaging data.
+This script is licensed under the MIT License. See the LICENSE file for details.
+Copyright (c) 2025 MICA-MNI
+"""
+import argparse
+import os
+import sys
+from datetime import datetime
+from nipype.interfaces.freesurfer import FSCommand, MRIConvert
+from nipype.interfaces.fsl.maths import MathsCommand, BinaryMaths
+import sys
+import numpy as np
+import nilearn
+from nilearn import plotting
+from brainstat.datasets import fetch_mask, fetch_template_surface
+from brainspace.plotting import plot_hemispheres
+import hippomaps as hm
+
+
+# Load utilities functions from utils.py
+# from utils import *
+
+# Set the working directory to the script's location
+script_dir = os.path.dirname(os.path.abspath(__file__))
+repo_dir = os.path.dirname(script_dir)
+
+# Argument Parsing
+parser = argparse.ArgumentParser(add_help=True)
+parser.add_argument("-sub", type=str, required=True, help="(Str) Subject identifier (eg. '0001')")
+parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '01')")
+parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
+parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
+parser.add_argument("-ref_region",dest="ref_region", type=str, choices=['pons','cerebellarGM','composite'], default='pons',help="Specify reference region. Default: pons.")
+
+args = parser.parse_args()
+
+# Validate mandatory arguments
+if not all([args.sub, args.ses, args.bids_dir, args.subj_dir]):
+    print("Error: One or more mandatory arguments are missing.")
+    parser.print_help()
+    sys.exit(1)
+    
+# Normalize paths and variables
+session = f"{args.ses.replace('ses-', '')}"
+subject = f"{args.sub.replace('sub-', '')}"
+bids_dir = os.path.realpath(args.bids_dir)
+f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
+ref_region = args.ref_region
+
+FSCommand.set_default_subjects_dir(args.subj_dir)
+
+# Check BIDS directory structure if it doesn't exist
+if not os.path.exists(f"{bids_dir}/derivatives/MICA-PET/rawdata/sub-{subject}/ses-{session}"):
+    print(f"Error: BIDS rawdata directory for subject {subject}, session {session} does not exist.")
+    sys.exit(1)
+if not os.path.exists(f"{bids_dir}/derivatives/MICA-PET/derivatives/MICA-PET/sub-{subject}/ses-{session}"):
+    print(f"Error: BIDS derivatives directory for subject {subject}, session {session} does not exist.")
+    sys.exit(1)
+    
+# Check if QC directory made    
+qc_dir = f"{bids_dir}/derivatives/MICA-PET/qc"
+if not os.path.exists(qc_dir):
+    print(f"Error: QC directory does not exist at {qc_dir}. Please create it first.")
+    sys.exit(1)
+    
+print(f"Starting clinical report generation for subject: {subject}, session: {session}")
+ 
+filename= f"/host/fladgate/local_raid/jack/FDG/sub-{subj}_ses-{session}_FDG_clinical_report.pdf"
+
+pial_left, pial_right = fetch_template_surface("fslr32k",join=False)
+mask = fetch_mask("fslr32k")
+
+def plot_SUVR(subject,session,bids_dir,qc_dir,pial_left,pial_right,mask):
+    tmp_pt_FDG_surf_L = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
+    tmp_pt_FDG_surf_R = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
+
+    to_plot = np.hstack((tmp_pt_FDG_surf_L,tmp_pt_FDG_surf_R))
+    to_plot[~mask] = np.nan
+
+    global max_value
+    max_value = np.max(to_plot[mask]) * 1.5
+    img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_SUVR_clin_report.png"
+    plot_hemispheres(pial_left,pial_right,to_plot,color_bar=True, 
+                    cmap="jet",color_range=(0,max_value), embed_nb=False,transparent_bg=True,size=(900,200),nan_color=(1,1,1, 1),screenshot=True,filename=img_stream)
+    return img_stream
+
+def plot_subcort(subject,session,bids_dir,qc_dir):
+    subcort_SUVR = pd.read_csv(f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_pvc-rbv_ref-pons_space-aparc_aseg_trc-FDG_pet_desc-subcort_SUVR.csv',header=None).to_numpy()
+    subcort_SUVR = subcort_SUVR[1,:]
+    
+    img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_SUVR_subcortical_clin_report.png"
+
+    plot_subcortical(array_name=subcort_SUVR, size=(900,200),
+                 cmap='jet',color_range=(0,max_value),color_bar=False, ventricles=False,embed_nb=False,transparent_bg=True,interactive=False,screenshot=True,filename=img_stream)
+    
+    return img_stream
+
+def plot_hippunfold(subject,session,bids_dir,qc_dir):
+    tmp_hcsurf_L = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/{session}/surf/sub-{subject}_{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
+
+    tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/{session}/surf/sub-{subject}_{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")             
+
+    to_plot = np.hstack((np.expand_dims(tmp_hcsurf_L,axis=1),np.expand_dims(tmp_hcsurf_R,axis=1)))
+
+    img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_SUVR_hippunfold_clin_report.png"
+
+    hm.plotting.surfplot_canonical_foldunfold(to_plot,hemis=['L','R'],den='2mm',labels=['hipp'],embed_nb=True,transparent_bg=True,tighten_cwindow=True,screenshot=True,cmap='jet',color_range=(0,max_value), size=[350,300],filename=img_stream)
+
+    return img_stream
+
+def plot_hippunfold_AI(subject,session,bids_dir,qc_dir):
+    tmp_hcsurf_L = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/{session}/surf/sub-{subject}_{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
+
+    tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/{session}/surf/sub-{subject}_{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
+
+    AI_L = (tmp_hcsurf_L - tmp_hcsurf_R)/(0.5 * (tmp_hcsurf_L+tmp_hcsurf_R))             
+
+    to_plot = AI_L
+
+    img_stream = f"{qc_dir}/sub-{subj}_ses-{session}_FDG_AI_hippunfold_clin_report.png"
+
+    hm.plotting.surfplot_canonical_foldunfold(to_plot,hemis=['L'],den='2mm',labels=['hipp'],embed_nb=True,transparent_bg=True,tighten_cwindow=True,screenshot=True,cmap='bwr',color_range=(-1,1), size=[350,350],filename=img_stream)
+
+    return img_stream
+    
+def plot_AI(subject,session,bids_dir,qc_dir,pial_left,pial_right):
+    tmp_pt_FDG_surf_L = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
+    tmp_pt_FDG_surf_R = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
+
+    AI_R = (tmp_pt_FDG_surf_R - tmp_pt_FDG_surf_L)/ (0.5 * (tmp_pt_FDG_surf_R + tmp_pt_FDG_surf_L))
+    AI_L = (tmp_pt_FDG_surf_L - tmp_pt_FDG_surf_R)/ (0.5 * (tmp_pt_FDG_surf_R + tmp_pt_FDG_surf_L))
+
+    to_plot = np.hstack((AI_L,np.zeros(32492)))
+    to_plot[~mask] = np.nan
+
+    img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_AI_surface_clin_report.png"
+    
+    plot_hemispheres(pial_left, pial_right,to_plot,color_bar=True,cmap="bwr",color_range=(-1,1),embed_nb=False,transparent_bg=True,size=(900,200),nan_color=(1,1,1,1),screenshot=True,filename=img_stream)
+
+    return img_stream
+
+def plot_subcortical_AI(subject,session,bids_dir,qc_dir):
+    subcort_SUVR = pd.read_csv(f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_pvc-rbv_ref-pons_space-aparc_aseg_trc-FDG_pet_desc-subcort_SUVR.csv',header=None).to_numpy()
+    subcort_SUVR = subcort_SUVR[1,:]
+    subcort_SUVR = subcort_SUVR.astype(float)
+
+    subcort_SUVR_L = subcort_SUVR[0:7]
+    subcort_SUVR_R = subcort_SUVR[7:14]
+    subcort_AI_L = (subcort_SUVR_L - subcort_SUVR_R) / (0.5 *(subcort_SUVR_R+subcort_SUVR_L))
+    subcort_SUVR_AI = np.hstack((subcort_AI_L,np.zeros(7)))
+
+    img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_AI_subcortical_clin_report.png"
+
+    plot_subcortical(array_name=subcort_SUVR_AI, size=(900,200),
+                 cmap='bwr',color_bar=False,color_range=(-1,1), 
+                ventricles=False,embed_nb=False,transparent_bg=True,interactive=False,screenshot=True,filename=img_stream)
+
+    return img_stream
+
+def plot_roi(subject,session,bids_dir,qc_dir):
+    pet_derivatives=f'{bids_dir}/derivatives/MICA-PET'
+    mri_derivatives=f'{bids_dir}/derivatives/fastsurfer'
+
+    img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_SUVR_plot_roi_clin_report.png"
+
+    # plotting.plot_roi(pet_derivatives+'/sub-{subject}/{session}/pet/sub-{subject}_{session}_pvc-none_ref-pons_space-T1w_trc-FDG_pet_desc-brainmask.nii.gz',bg_img=mri_derivatives+'/freesurfer/sub-{subject}_{session}/mri/T1.mgz',display_mode='mosaic',cut_coords=15,alpha=0.6,radiological=True, title=subj+' FDG SUVR',resampling_interpolation='continuous',output_file=img_stream)
+
+    plotting.plot_roi(f'{pet_derivatives}/sub-{subject}/{session}/pet/sub-{subject}_{session}_pvc-none_ref-pons_space-T1w_trc-FDG_pet_desc-brainmask.nii.gz',bg_img=f'{mri_derivatives}/sub-{subject}_ses-{session}/mri/orig.mgz',display_mode='z',cut_coords=tuple(np.linspace(-75,75,15)),alpha=0.3,radiological=True, title=f'sub-{subject} ses-{session} FDG SUVR',dim=0,resampling_interpolation='continuous',output_file=img_stream)
+
+    return img_stream
+
+def max_hist(data, bins=50):
+    data = data[~np.isnan(data)]  # Remove NaN values
+    hist_values, bin_edges = np.histogram(data, bins=bins)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    max_index = np.argmax(hist_values)
+    max_value = bin_centers[max_index]
+    return max_value
+
+def plot_Zscore(subject,session,bids_dir,qc_dir):
+    pet_derivatives=f'{bids_dir}/derivatives/MICA-PET'
+    mri_derivatives=f'{bids_dir}/derivatives/fastsurfer'
+    pvc = 'none'
+    Z_score_threhold = 1.96
+
+    FDG_surf_ctrl_hist_norm_mean = np.genfromtxt(f'/host/fladgate/local_raid/jack/FDG/FDG_surf_ctrl_hist_norm_mean.csv', delimiter=',', missing_values='""', filling_values=np.nan)
+    FDG_surf_ctrl_hist_norm_std = np.genfromtxt(f'/host/fladgate/local_raid/jack/FDG/FDG_surf_ctrl_hist_norm_std.csv', delimiter=',', missing_values='""', filling_values=np.nan)
+
+    tmp_L = nilearn.surface.load_surf_data(f'{pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-{pvc}_ref-pons_smooth-10mm_trc-FDG_pet.func.gii');
+    tmp_R = nilearn.surface.load_surf_data(f'{pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-{pvc}_ref-pons_smooth-10mm_trc-FDG_pet.func.gii');
+
+    tmp = np.hstack((tmp_L,tmp_R))
+    tmp[~mask] = np.nan
+    norm_factor = max_hist(tmp)
+    test_FDG_surf_pt = tmp / norm_factor
+
+    Zscore = (test_FDG_surf_pt - FDG_surf_ctrl_hist_norm_mean)/ FDG_surf_ctrl_hist_norm_std
+
+    to_plot = Zscore
+    # to_plot = test_FDG_surf_pt
+    to_plot[~mask] = np.nan   
+    to_plot[(to_plot >= -Z_score_threhold) & (to_plot <= Z_score_threhold)] = 0 # Filter out values outside the range
+
+    img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_SUVR_plot_Zscore_clin_report.png"
+
+    plot_hemispheres(pial_left, pial_right,to_plot,color_bar=True,embed_nb=False,transparent_bg=True,cmap=["bwr"],color_range=(-5,5),size=(900,200),nan_color=(0.7, 0.7, 0.7, 1),screenshot=True,filename=img_stream)
+
+    return img_stream
+
+c = canvas.Canvas(filename, pagesize=letter)
+width, height = letter  # 8.5 x 11 inches
+left_margin = 50
+
+# Add a title
+c.setFont("Helvetica-Bold", 16)
+c.drawString(left_margin, height - 60, f"FDG PET Clinical Report: {subject}")
+
+c.setFont("Helvetica", 12)
+
+# Plot SUVR
+img_stream = plot_SUVR(subject,session,bids_dir,qc_dir, pial_left, pial_right, mask)
+c.drawImage(img_stream, left_margin, height - 215, width=500, height=125)
+c.drawString(left_margin, height - 100, "Surface FDG PET Standard Uptake Value Ratio (SUVR)")
+
+# Plot subcortical SUVR
+img_stream = plot_subcort(subject,session,bids_dir,qc_dir)
+c.drawImage(img_stream, left_margin, height - 325, width=465, height=115)
+c.drawString(left_margin, height - 225, "Subcortical FDG PET Standard Uptake Value Ratio (SUVR)")
+
+# Plot hippunfold
+img_stream = plot_hippunfold(subject,session,bids_dir,qc_dir)
+c.drawImage(img_stream, left_margin+50, height - 445, width=375, height=115)
+c.drawString(left_margin, height - 325, "Hippocampal FDG PET Standard Uptake Value Ratio (SUVR)")
+c.drawString(left_margin+45, height - 400, "L")
+c.drawString(left_margin+425, height - 400, "R")
+
+
+
+# Plot AI
+img_stream = plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right)
+c.drawImage(img_stream, left_margin, height - 600, width=500, height=125)
+c.drawString(left_margin, height - 475, "Surface FDG PET Asymmetry Index (L minus R) (BLUE = left < right, RED = right < left)")
+
+# # Plot subcortical SUVR
+# img_stream = plot_subcortical_AI(subject,session,bids_dir,qc_dir)
+# c.drawImage(img_stream, left_margin, height - 725, width=465, height=115)
+# c.drawString(left_margin, height - 625, "Subcortical FDG PET Asymmetry Index (L-R)")
+
+# Plot Z score
+img_stream = plot_Zscore(subject,session,bids_dir,qc_dir)
+c.drawImage(img_stream, left_margin, height - 725, width=465, height=115)
+c.drawString(left_margin, height - 625, "FDG PET Z score (threshold at |Z| > 1.96)")
+
+c.setFillColor((1, 1, 1)) 
+c.setStrokeColor((1, 1, 1))
+c.rect(275, height - 575, 220, 75, fill=1)
+
+# c.rect(275, height - 700, 220, 60, fill=1)
+
+# Plot hippunfold AI
+img_stream = plot_hippunfold_AI(subject,session,bids_dir,qc_dir)
+c.drawImage(img_stream, left_margin+245, height - 600, width=175, height=115)
+
+c.setFont("Helvetica", 8)
+c.drawString(left_margin, height - 600,"BLUE = left < right. RED = right < left.")
+
+
+c.showPage()
+
+# Plot PET/MRI overlay
+c.setFillColor((0,0,0)) 
+c.setStrokeColor((0,0,0))
+# c.rect(0,0,height, width, fill=1)
+img_stream = plot_roi(subject,session,bids_dir,qc_dir)
+# c.drawImage(img_stream,0,350,width,height-350)
+c.drawImage(img_stream,0,height-250,width,75)
+# c.rect(0,0,height, width, fill=1)
+
+# Save the PDF
+c.save()
+
+print("QC screenshots completed.")
