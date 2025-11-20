@@ -1,0 +1,9 @@
+antspyx==0.6.1
+brainspace==0.1.10
+brainstat==0.4.2
+dcm2niixpy==1.1.0
+hippomaps
+nilearn==0.10.2
+nipype==1.9.2
+numpy==1.26.4
+spython==0.2.14

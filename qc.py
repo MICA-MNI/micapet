@@ -18,7 +18,6 @@ Copyright (c) 2025 MICA-MNI
 """
 import argparse
 import os
-import sys
 from datetime import datetime
 from nipype.interfaces.freesurfer import FSCommand, MRIConvert
 from nipype.interfaces.fsl.maths import MathsCommand, BinaryMaths
