@@ -9,8 +9,8 @@ The script requires the following arguments:
     -bids       : Path to BIDS directory ( . or FULL PATH)
     -hippunfold_img: Path to HippUnfold .sif image.
     -output_dir : Specify path to HippUnfold output directory. (Default: hippunfold subdirectory in BIDS derivatives directory.)
-    -tmp_dir    : (Optional) Path to temporary directory. (Default /tmp)
-    -cache_dir  : (Optional) Set HIPPUNFOLD_CACHE_DIR manually. (Default ~/.cache)
+    -tmpdir    : (Optional) Path to temporary directory. (Default /tmp)
+    -cachedir  : (Optional) Set HIPPUNFOLD_CACHE_DIR manually. (Default ~/.cache)
     -B          : (Optional) Bind pathway for Singularity (eg. /host or /host,/opt etc)
     -T1         : (Optional) Path to T1w image. (Default T1w image in BIDS directory).
     -force      : (Optional) Force HippUnfold even if output exists.
@@ -44,8 +44,8 @@ parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '0
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
 # parser.add_argument("-threads", dest="threads", type=int, help="(Int) Number of threads to use", default=15)
 parser.add_argument("-hippunfold_img", dest="hippunfold_img", type=str, required=True, help="(Str) Specify path to HippUnfold singularity image.")
-parser.add_argument("-tmp_dir", dest="tmp_dir", type=str, help="(Str) Specify path to temporary directory.")
-parser.add_argument("-cache_dir", dest="cache_dir", type=str, help="(Str) Set HIPPUNFOLD_CACHE_DIR manually. (Default ~/.cache).")
+parser.add_argument("-tmpdir", dest="tmpdir", type=str, help="(Str) Specify path to temporary directory.")
+parser.add_argument("-cachedir", dest="cachedir", type=str, help="(Str) Set HIPPUNFOLD_CACHE_DIR manually. (Default ~/.cache).")
 parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify path to HippUnfold output directory.")
 parser.add_argument("-B", dest="B",type=str, help="(Str) Specify paths to bind for Singularity. (eg. /host or /host,/opt etc)")
 parser.add_argument("-T1", dest="T1_path", type=str, help="(Str) Specify path to T1w image. (Default T1w image in BIDS directory).")
@@ -65,17 +65,17 @@ subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
 # threads = args.threads
 hippunfold_img = os.path.realpath(args.hippunfold_img)
-if args.tmp_dir is None:
-    tmp_dir = []
+if args.tmpdir is None:
+    tmpdir = []
 else:
-    tmp_dir = ["--env",f"TMPDIR={os.path.realpath(args.tmp_dir)}"]
-    os.environ['TMPDIR'] = args.tmp_dir
+    tmpdir = ["--env",f"TMPDIR={os.path.realpath(args.tmpdir)}"]
+    os.environ['TMPDIR'] = args.tmpdir
 
-if args.cache_dir is None:
-    cache_dir = []
+if args.cachedir is None:
+    cachedir = []
 else:
-    cache_dir = ["--env",f"HIPPUNFOLD_CACHE_DIR={os.path.realpath(args.cache_dir)}"]
-    os.environ['HIPPUNFOLD_CACHE_DIR'] = args.cache_dir
+    cachedir = ["--env",f"HIPPUNFOLD_CACHE_DIR={os.path.realpath(args.cachedir)}"]
+    os.environ['HIPPUNFOLD_CACHE_DIR'] = args.cachedir
 
 if args.B is None:
     bind = []
@@ -117,7 +117,7 @@ args = [
     "--participant-label",f"{subject}",
     "--modality", "T1w",
     "--output-density","2mm",
-    "--cores", "4"
+    "--cores", "24"
     ]
 args.extend(T1_path)
 args.extend(force_command)
@@ -129,8 +129,8 @@ options=["--cleanenv",
         "-B", f"{bids_dir}:/bids_dir",
         "-B", f"{output_dir}:/output_dir"
     ]
-options.extend(tmp_dir)
-options.extend(cache_dir)
+options.extend(tmpdir)
+options.extend(cachedir)
 options.extend(bind)
 
 # print(options)

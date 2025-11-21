@@ -29,6 +29,14 @@ from nilearn import plotting
 from brainstat.datasets import fetch_mask, fetch_template_surface
 from brainspace.plotting import plot_hemispheres
 import hippomaps as hm
+import matplotlib.pyplot as plt
+import enigmatoolbox
+from enigmatoolbox.plotting import plot_subcortical
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import inch
+import hippomaps as hm
+import pandas as pd
 
 
 # Load utilities functions from utils.py
@@ -64,22 +72,22 @@ ref_region = args.ref_region
 FSCommand.set_default_subjects_dir(args.subj_dir)
 
 # Check BIDS directory structure if it doesn't exist
-if not os.path.exists(f"{bids_dir}/derivatives/MICA-PET/rawdata/sub-{subject}/ses-{session}"):
+if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
     print(f"Error: BIDS rawdata directory for subject {subject}, session {session} does not exist.")
     sys.exit(1)
-if not os.path.exists(f"{bids_dir}/derivatives/MICA-PET/derivatives/MICA-PET/sub-{subject}/ses-{session}"):
+if not os.path.exists(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}"):
     print(f"Error: BIDS derivatives directory for subject {subject}, session {session} does not exist.")
     sys.exit(1)
     
 # Check if QC directory made    
-qc_dir = f"{bids_dir}/derivatives/MICA-PET/qc"
+qc_dir = f"{bids_dir}//qc/sub-{subject}/ses-{session}"
 if not os.path.exists(qc_dir):
     print(f"Error: QC directory does not exist at {qc_dir}. Please create it first.")
     sys.exit(1)
     
 print(f"Starting clinical report generation for subject: {subject}, session: {session}")
  
-filename= f"/host/fladgate/local_raid/jack/FDG/sub-{subj}_ses-{session}_FDG_clinical_report.pdf"
+filename= f"/host/fladgate/local_raid/jack/FDG/sub-{subject}_ses-{session}_FDG_clinical_report.pdf"
 
 pial_left, pial_right = fetch_template_surface("fslr32k",join=False)
 mask = fetch_mask("fslr32k")
@@ -99,7 +107,7 @@ def plot_SUVR(subject,session,bids_dir,qc_dir,pial_left,pial_right,mask):
     return img_stream
 
 def plot_subcort(subject,session,bids_dir,qc_dir):
-    subcort_SUVR = pd.read_csv(f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_pvc-rbv_ref-pons_space-aparc_aseg_trc-FDG_pet_desc-subcort_SUVR.csv',header=None).to_numpy()
+    subcort_SUVR = pd.read_csv(f'{bids_dir}/qc/sub-{subject}/ses-{session}/sub-{subject}_ses-{session}_subcortical_means_pvc-rbv_ref-{ref_region}_trc-FDG_pet.csv',header=None).to_numpy()
     subcort_SUVR = subcort_SUVR[1,:]
     
     img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_SUVR_subcortical_clin_report.png"
@@ -110,9 +118,9 @@ def plot_subcort(subject,session,bids_dir,qc_dir):
     return img_stream
 
 def plot_hippunfold(subject,session,bids_dir,qc_dir):
-    tmp_hcsurf_L = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/{session}/surf/sub-{subject}_{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
+    tmp_hcsurf_L = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
 
-    tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/{session}/surf/sub-{subject}_{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")             
+    tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")             
 
     to_plot = np.hstack((np.expand_dims(tmp_hcsurf_L,axis=1),np.expand_dims(tmp_hcsurf_R,axis=1)))
 
@@ -123,15 +131,15 @@ def plot_hippunfold(subject,session,bids_dir,qc_dir):
     return img_stream
 
 def plot_hippunfold_AI(subject,session,bids_dir,qc_dir):
-    tmp_hcsurf_L = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/{session}/surf/sub-{subject}_{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
+    tmp_hcsurf_L = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
 
-    tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/{session}/surf/sub-{subject}_{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
+    tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
 
     AI_L = (tmp_hcsurf_L - tmp_hcsurf_R)/(0.5 * (tmp_hcsurf_L+tmp_hcsurf_R))             
 
     to_plot = AI_L
 
-    img_stream = f"{qc_dir}/sub-{subj}_ses-{session}_FDG_AI_hippunfold_clin_report.png"
+    img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_AI_hippunfold_clin_report.png"
 
     hm.plotting.surfplot_canonical_foldunfold(to_plot,hemis=['L'],den='2mm',labels=['hipp'],embed_nb=True,transparent_bg=True,tighten_cwindow=True,screenshot=True,cmap='bwr',color_range=(-1,1), size=[350,350],filename=img_stream)
 
@@ -154,7 +162,7 @@ def plot_AI(subject,session,bids_dir,qc_dir,pial_left,pial_right):
     return img_stream
 
 def plot_subcortical_AI(subject,session,bids_dir,qc_dir):
-    subcort_SUVR = pd.read_csv(f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_pvc-rbv_ref-pons_space-aparc_aseg_trc-FDG_pet_desc-subcort_SUVR.csv',header=None).to_numpy()
+    subcort_SUVR = pd.read_csv(f'{bids_dir}/qc/sub-{subject}/ses-{session}/sub-{subject}_ses-{session}_subcortical_means_pvc-rbv_ref-{ref_region}_trc-FDG_pet.csv',header=None).to_numpy()
     subcort_SUVR = subcort_SUVR[1,:]
     subcort_SUVR = subcort_SUVR.astype(float)
 
@@ -179,7 +187,7 @@ def plot_roi(subject,session,bids_dir,qc_dir):
 
     # plotting.plot_roi(pet_derivatives+'/sub-{subject}/{session}/pet/sub-{subject}_{session}_pvc-none_ref-pons_space-T1w_trc-FDG_pet_desc-brainmask.nii.gz',bg_img=mri_derivatives+'/freesurfer/sub-{subject}_{session}/mri/T1.mgz',display_mode='mosaic',cut_coords=15,alpha=0.6,radiological=True, title=subj+' FDG SUVR',resampling_interpolation='continuous',output_file=img_stream)
 
-    plotting.plot_roi(f'{pet_derivatives}/sub-{subject}/{session}/pet/sub-{subject}_{session}_pvc-none_ref-pons_space-T1w_trc-FDG_pet_desc-brainmask.nii.gz',bg_img=f'{mri_derivatives}/sub-{subject}_ses-{session}/mri/orig.mgz',display_mode='z',cut_coords=tuple(np.linspace(-75,75,15)),alpha=0.3,radiological=True, title=f'sub-{subject} ses-{session} FDG SUVR',dim=0,resampling_interpolation='continuous',output_file=img_stream)
+    plotting.plot_roi(f'{pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-none_ref-pons_trc-FDG_pet_desc-brainmask.nii.gz',bg_img=f'{mri_derivatives}/sub-{subject}_ses-{session}/mri/orig.mgz',display_mode='z',cut_coords=tuple(np.linspace(-75,75,15)),alpha=0.3,radiological=True, title=f'sub-{subject} ses-{session} FDG SUVR',dim=0,resampling_interpolation='continuous',output_file=img_stream)
 
     return img_stream
 
