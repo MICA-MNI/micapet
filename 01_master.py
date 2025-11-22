@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
+# ./01_master.py -sub PXtt169 -ses 01 -bids /host/fladgate/local_raid/jack/FDG/MICA-PET/BIDS/ -fastsurfer_img /data/mica1/01_programs/fastsurfer/fastsurfer-cpu-v2.4.2.sif -fs_license /data/mica1/01_programs/freesurfer-7.4.1/license.txt -hippunfold_img /data/mica1/01_programs/singularity/hippunfold_v1.4.1.sif -cachedir /host/verges/tank/data/jack/hippunfold_tmp/ -psf 4.5 -ref_region pons
 """
 Master script for MICA-PET pipeline.
 
@@ -38,6 +39,7 @@ import os
 import sys
 from datetime import datetime
 import shutil
+import subprocess
 
 # Load utilities functions from utils.py
 # from utils import *
@@ -98,7 +100,6 @@ def main():
             sys.exit(1)
 
     seg_type = args.seg_type.lower()
-    
     ref_region = args.ref_region
 
     fastsurfer_img = os.path.realpath(args.fastsurfer_img) if args.fastsurfer_img else None
@@ -124,24 +125,25 @@ def main():
         sys.exit(1)
         
     if args.tmpdir is None:
-        tmpdir_flag = ""
+        os.makedirs(f"{bids_dir}/derivatives/tmp", exist_ok=True)
+        tmpdir_flag = [ "-tmpdir", f"{bids_dir}/derivatives/tmp"]
     else:
-        tmpdir_flag = f"-tmpdir {os.path.realpath(args.tmpdir)}"
+        tmpdir_flag = [ "-tmpdir", f"{os.path.realpath(args.tmpdir)}"]  
 
     if args.cachedir is None:
-        cachedir_flag = ""
+        cachedir_flag = []
     else:
-        cachedir_flag = f"-cachedir {os.path.realpath(args.cachedir)}"
+        cachedir_flag = [ "-cachedir", f"{os.path.realpath(args.cachedir)}"]
     
     if args.force: 
-        force_flag = "-force"
+        force_flag = ["-force"]
     else:
-        force_flag = ""
+        force_flag = []
         
     if args.B is not None:
-        bind_flag = f"-B {args.B}"
+        bind_flag = ["-B", f"{args.B}"]
     else:
-        bind_flag = ""
+        bind_flag = []
 
 
     # create rawdata and derivatives directories if they don't exist
@@ -179,41 +181,56 @@ def main():
         
     # Run FastSurfer if specified
     if fastsurfer_run:
-        import fastsurfer
         print("Running FastSurfer...")
-        f'{script_dir}/fastsurfer.py -sub {subject} -ses {session} -bids {bids_dir} -subj_dir {subj_dir} -fastsurfer_img {fastsurfer_img} -fs_license {fs_license} {tmpdir_flag}'
+        cmd = [f'{script_dir}/fastsurfer.py',"-sub",f'{subject}',"-ses",f'{session}',"-bids",f'{bids_dir}',"-subj_dir",f'{subj_dir}',"-fastsurfer_img",f'{fastsurfer_img}',"-fs_license",f'{fs_license}'] + tmpdir_flag + force_flag
+        subprocess.call(cmd)
     
     # Run HippUnfold if specified
     if hippunfold:
         print("Running HippUnfold...")
-        f'{script_dir}/hippunfold.py -sub {subject} -ses {session} -bids {bids_dir} -hippunfold_img {hippunfold_img} -B /data:/data,/host:/host,/home:/home {bind_flag} {cachedir_flag} {tmpdir_flag} {force_flag}'
+        cmd = [f'{script_dir}/hippunfold.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-hippunfold_img", f'{hippunfold_img}'] + bind_flag + cachedir_flag + tmpdir_flag + force_flag
+        subprocess.call(cmd)
      
      # Linear coreg
-    f'{script_dir}/linear_coreg.py -sub {subject} -ses {session} -bids {bids_dir} -subj_dir {subj_dir}'
+    cmd = [f'{script_dir}/linear_coreg.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}']
+    subprocess.call(cmd)
     
     # GTM seg
-    f'{script_dir}/gtm_seg.py -sub {subject} -ses {session} -bids {bids_dir} -subj_dir {subj_dir} -seg_type {seg_type}'
+    cmd = [f'{script_dir}/gtm_seg.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-seg_type", f'{seg_type}']
+    subprocess.call(cmd)
     
     # PVC
-    f'{script_dir}/pvc.py -sub {subject} -ses {session} -bids {bids_dir} -subj_dir {subj_dir} -psf {args.psf} {force_flag}'
+    cmd = [f'{script_dir}/pvc.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-psf", f'{args.psf}'] + force_flag
+    subprocess.call(cmd)
     
     # SUVR calculation
-    f'{script_dir}/suvr.py -sub {subject} -ses {session} -bids {bids_dir} -ref_region {ref_region} {force_flag}'
+    cmd = [f'{script_dir}/suvr.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-ref_region", f'{ref_region}'] + force_flag
+    subprocess.call(cmd)
         
     # Cortical surface generation
-    f'{script_dir}/cortical_surface.py -sub {subject} -ses {session} -bids {bids_dir} -subj_dir {subj_dir}'
+    cmd = [f'{script_dir}/cortical_surface.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}']
+    subprocess.call(cmd)
     
     # Project PET data to surfaces
-    f'{script_dir}/project_pet_data.py -sub {subject} -ses {session} -bids {bids_dir} -subj_dir {subj_dir} -hippunfold_dir {hippunfold_dir} -pvc -ref_region {ref_region} -cortical -hippocampal'
+    cmd = [f'{script_dir}/project_pet_data.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-hippunfold_dir", f'{hippunfold_dir}', "-pvc", "-ref_region", f'{ref_region}', "-cortical", "-hippocampal"]
+    subprocess.call(cmd)
     
     # Subcortical maps
-    f'{script_dir}/subcortical_maps.py -sub {subject} -ses {session} -bids {bids_dir} -subj_dir {subj_dir} -ref_region {ref_region}'
+    cmd = [f'{script_dir}/subcortical_maps.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-ref_region", f'{ref_region}']
+    subprocess.call(cmd)
     
     # QC
-    f'{script_dir}/qc.py -sub {subject} -ses {session} -bids {bids_dir} -subj_dir {subj_dir} -ref_region {ref_region}'
+    cmd = [f'{script_dir}/qc.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-ref_region", f'{ref_region}']
+    subprocess.call(cmd)
     
     # Clinical report
-    f'{script_dir}/clinical_report.py -sub {subject} -ses {session} -bids {bids_dir} -subj_dir {subj_dir} -ref_region {ref_region}'
+    cmd = [f'{script_dir}/clinical_report.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-ref_region", f'{ref_region}']
+    subprocess.call(cmd)
+    
+    # Clean up temporary directory
+    if args.tmpdir is None:
+        shutil.rmtree(f"{bids_dir}/derivatives/tmp")
+
 
 if __name__ == "__main__":
     main()

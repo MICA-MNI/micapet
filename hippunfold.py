@@ -127,7 +127,8 @@ options=["--cleanenv",
         "--writable-tmpfs",
         "--containall",
         "-B", f"{bids_dir}:/bids_dir",
-        "-B", f"{output_dir}:/output_dir"
+        "-B", f"{output_dir}:/output_dir",
+        "-B", "/data:/data,/host:/host,/home:/home"
     ]
 options.extend(tmpdir)
 options.extend(cachedir)

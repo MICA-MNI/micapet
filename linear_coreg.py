@@ -126,7 +126,7 @@ coreg.inputs.subject_id=f"sub-{subject}_ses-{session}"
 # coreg.inputs.subjects_dir=subj_dir
 coreg.inputs.out_lta_file=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet_to_T1w_xfm.reg.lta'
 print(coreg.cmdline)
-# coreg.run()
+coreg.run()
 
 applyreg = ApplyVolTransform()
 applyreg.inputs.source_file=pet
