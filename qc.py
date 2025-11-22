@@ -73,7 +73,7 @@ if not os.path.exists(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{sessi
 # Check if QC directory made    
 qc_dir = f"{bids_dir}/qc/sub-{subject}/ses-{session}"
 if not os.path.exists(qc_dir):
-    os.mkdir(qc_dir)
+    os.makedirs(qc_dir, exist_ok=True)
     
 print(f"Starting QC for subject: {subject}, session: {session}")
                              

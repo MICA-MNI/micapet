@@ -10,6 +10,7 @@ The script requires the following arguments:
     -bids       : Path to BIDS directory ( . or FULL PATH)
     -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory.
     -ref_region : Reference regions to use. eg. ['pons','cerebellarGM','composite']. Default: ['pons'].
+    -max_value  : (Optional) Maximum SUVR value for color scale. Default: 1.5 times the maximum SUVR value in the data.
 
 The script is intended for use by researchers and developers working with PET imaging data, particularly in the context of the MICA lab at McGill University.
 It is part of a larger pipeline for processing and analyzing neuroimaging data.
@@ -53,6 +54,8 @@ parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '0
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
 parser.add_argument("-ref_region",dest="ref_region", type=str, choices=['pons','cerebellarGM','composite'], default='pons',help="Specify reference region. Default: pons.")
+parser.add_argument("-max_value", dest="max_value", type=float, help="(Float) Maximum SUVR value for color scale. Default: 1.5 times the maximum SUVR value in the data.")
+
 
 args = parser.parse_args()
 
@@ -68,6 +71,10 @@ subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
+
+global max_value
+if args.max_value is not None:
+    max_value = args.max_value
 
 FSCommand.set_default_subjects_dir(args.subj_dir)
 
@@ -86,7 +93,7 @@ if not os.path.exists(qc_dir):
     sys.exit(1)
     
 print(f"Starting clinical report generation for subject: {subject}, session: {session}")
- 
+
 filename= f"/host/fladgate/local_raid/jack/FDG/sub-{subject}_ses-{session}_FDG_clinical_report.pdf"
 
 pial_left, pial_right = fetch_template_surface("fslr32k",join=False)
@@ -100,7 +107,10 @@ def plot_SUVR(subject,session,bids_dir,qc_dir,pial_left,pial_right,mask):
     to_plot[~mask] = np.nan
 
     global max_value
-    max_value = np.max(to_plot[mask]) * 1.5
+    if max_value is None:
+        max_value = np.max(to_plot[mask]) * 1.5
+        
+        
     img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_SUVR_clin_report.png"
     plot_hemispheres(pial_left,pial_right,to_plot,color_bar=True, 
                     cmap="jet",color_range=(0,max_value), embed_nb=False,transparent_bg=True,size=(900,200),nan_color=(1,1,1, 1),screenshot=True,filename=img_stream)

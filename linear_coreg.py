@@ -61,7 +61,7 @@ if args.subj_dir is None: #check if user inputted subj_dir
 else:
     subj_dir = os.path.realpath(args.subj_dir)
     if not os.path.exists(subj_dir):
-        print("ERROR: FastSurfer directory does not exist. Please enter a valid -subj_dir.")
+        print("ERROR: FreeSurfer/FastSurfer directory does not exist. Please enter a valid -subj_dir.")
         sys.exit(1)
 
 pet = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet.nii.gz"
@@ -126,12 +126,12 @@ coreg.inputs.subject_id=f"sub-{subject}_ses-{session}"
 # coreg.inputs.subjects_dir=subj_dir
 coreg.inputs.out_lta_file=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet_to_T1w_xfm.reg.lta'
 print(coreg.cmdline)
-coreg.run()
+# coreg.run()
 
 applyreg = ApplyVolTransform()
 applyreg.inputs.source_file=pet
 applyreg.inputs.reg_file=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet_to_T1w_xfm.reg.lta'
-applyreg.inputs.target_file=mri
+applyreg.inputs.fs_target=True
 applyreg.inputs.transformed_file=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-none_ref-none_trc-FDG_pet.nii.gz'
 applyreg.run()
 

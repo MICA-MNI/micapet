@@ -7,8 +7,8 @@ The script requires the following arguments:
     -sub        : Subject identification. (eg. PX001)
     -ses        : Session. (eg. 01)
     -bids       : Path to BIDS directory ( . or FULL PATH)
-    -seg_type   : 'freesurfer' or 'fastsurfer'. Default: 'fastsurfer'
-    -subj_dir : Specify path to FreeSurfer/FastSurfer subjects directory.
+    -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory.
+    -seg_type   : 'freesurfer' or 'fastsurfer'. Default: 'fastsurfer'   
     -force      : (Optional) Force gtmseg even if output exists.
 
 The script is intended for use by researchers and developers working with PET imaging data, particularly in the context of the MICA lab at McGill University.

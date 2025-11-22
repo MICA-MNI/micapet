@@ -7,7 +7,7 @@ The script requires the following arguments:
     -sub        : Subject identification. (eg. PX001)
     -ses        : Session. (eg. 01)
     -image_type : Type of image to convert (e.g.,   'pet', 'mri'). Default 'pet'.
-    -dicom_dir  : Input directory with PET DICOMs.
+    -dicom_dir  : Input directory with DICOMs.
     -bids       : Path to BIDS directory ( . or FULL PATH)
     -series     : Specify DICOM series number to convert. For PET, select the attenuation corrected image. Default 12.
 

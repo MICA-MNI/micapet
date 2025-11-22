@@ -142,7 +142,7 @@ if hippocampal:
                 print(f"Processing PVC method: {pvc}, reference region: {ref}, hemisphere: {hemi}...")
                 SUVR_map=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
                 
-                hipp_surf=f'{hippunfold_dir}/hippunfold/sub-{subject}/ses-{session}/surf/sub-{subject}_hemi-{hemi}_space-T1w_den-2mm_label-hipp_midthickness.surf.gii' #_ses-{session}
+                hipp_surf=f'{hippunfold_dir}/hippunfold/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-T1w_den-2mm_label-hipp_midthickness.surf.gii' #_ses-{session}
                 
                 SUVR_on_surf=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-hipp_den-2mm_label-midthickness_pvc-{pvc}_ref-{ref}_trc-FDG_pet.func.gii'
                 
