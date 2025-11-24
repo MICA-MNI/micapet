@@ -378,6 +378,7 @@ def parcel_stats(subject,session,bids_dir,subj_dir,qc_dir):
         
         regions = list(dict['L'].keys())
         
+    df = df.sort_values(by='Asymmetry_Index', ascending=True).reset_index(drop=True)    
     return df
 
 
