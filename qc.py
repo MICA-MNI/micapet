@@ -28,6 +28,8 @@ from nilearn import plotting
 from brainstat.datasets import fetch_mask, fetch_template_surface
 from brainspace.plotting import plot_hemispheres
 import hippomaps as hm
+from PIL import Image
+
 
 
 # Load utilities functions from utils.py
@@ -102,8 +104,8 @@ if not os.path.exists(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{sessi
     multiply.run()
     
     # remove temp files
-    # os.remove(f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/tmp.brainmask.nii.gz')
-    # os.remove(f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/tmp.brainmask_bin.nii.gz')
+    os.remove(f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/tmp.brainmask.nii.gz')
+    os.remove(f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/tmp.brainmask_bin.nii.gz')
     
 # make maps
 pial_left, pial_right = fetch_template_surface("fslr32k",join=False)

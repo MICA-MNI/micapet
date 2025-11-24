@@ -60,7 +60,7 @@ if not (args.cortical or args.hippocampal):
     parser.print_help()
     sys.exit(1)
 if not any(region in ['pons', 'cerebellarGM', 'composite'] for region in args.ref_region):
-    print("Error: None of the reference regions are valid ('pons', 'cerebellarGM', or 'composite').")
+    print(f"Error: Inputted: {args.ref_region}. None of the reference regions are valid ('pons', 'cerebellarGM', or 'composite').")
     sys.exit(1)
     
 # Normalize paths and variables

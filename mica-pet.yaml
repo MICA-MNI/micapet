@@ -1,0 +1,18 @@
+name: mica-pet
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.12
+  - antspyx==0.6.1
+  - brainspace==0.1.10
+  - brainstat==0.4.2
+  - dcm2niixpy==1.1.0
+  - enigmatoolbox==2.0.3
+  - hippomaps==0.1.17
+  - nibabel==5.2.1
+  - nilearn==0.10.2
+  - nipype==1.9.2
+  - numpy==1.26.4
+  - spython==0.2.14
+  - report_creator==1.1.1
