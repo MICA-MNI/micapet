@@ -1,0 +1,23 @@
+name: base
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.12
+  - vtk>=9.1.0,<9.3.2  # needed for brainspace
+  - nibabel
+  - nilearn
+  - nipype
+  - traits             # nipype runtime dependency
+  - snakemake
+  - pip
+  - pip:
+      - antspyx==0.6.1
+      - brainspace==0.1.10
+      - brainstat==0.4.2
+      - dcm2niixpy==1.1.0
+      - enigmatoolbox==2.0.3
+      - hippomaps==0.1.17
+      - numpy==1.26.4
+      - spython==0.2.14
+      - report_creator==1.1.1
