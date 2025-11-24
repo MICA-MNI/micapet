@@ -35,4 +35,4 @@ RUN git clone https://github.com/MICA-MNI/ENIGMA.git /tmp/enigmatoolbox && \
 COPY . .
 
 # Default command
-CMD ["python", "main.py"]
+CMD ["python", "functions/01_master.py"]
