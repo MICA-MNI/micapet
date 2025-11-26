@@ -102,10 +102,11 @@ print(f"Starting FastSurfer for subject {subject}, session {session}.")
 # ]
 
 # Define command to run inside container
+# We bind T1 to /mnt/T1.nii.gz to avoid overlapping binds with /tmpdir
 command = [
     "/fastsurfer/run_fastsurfer.sh",
     "--fs_license", "/output/license.txt",
-    "--t1", f"/tmpdir/sub-{subject}_ses-{session}_T1w.nii.gz",
+    "--t1", "/mnt/T1.nii.gz",
     "--sid", f"sub-{subject}_ses-{session}",
     "--sd", "/output",
     "--no_fs_T1",
@@ -136,7 +137,7 @@ try:
             "--containall",
             "-B", f"{subj_dir}:/output",
             "-B", f"{tmpdir}:/tmpdir",
-            "-B", f"{T1_path}:/tmpdir/sub-{subject}_ses-{session}_T1w.nii.gz",
+            "-B", f"{T1_path}:/mnt/T1.nii.gz",
             "-B", f"{fs_license}:/output/license.txt"
         ],
         stream=True
