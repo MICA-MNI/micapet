@@ -1,1 +1,9 @@
 micapet_v*.sif
+stderr.nipype
+stdout.nipype
+talairach.label*
+archive_Dockerfile
+pipfreeze.txt
+report.html
+Singularity.def
+mica-pet.yml

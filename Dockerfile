@@ -1,38 +1,28 @@
-FROM mambaorg/micromamba:2.4
+FROM continuumio/miniconda3:latest
 
-# Set work directory
+# Set the working directory in the container
 WORKDIR /app
 
-# Set writable temp directory for micromamba
-ENV TMPDIR=/tmp
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PIP_ROOT_USER_ACTION=ignore
+# Copy the entire project into the container
+COPY . /app
 
-# Switch to root
-USER root
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install git system-wide
-RUN apt-get update && apt-get install -y --no-install-recommends git && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Create a conda environment and install dependencies
+COPY environment.yml /app/environment.yml
+RUN conda env create -f /app/environment.yml && conda clean -a -y
 
-# Copy environment
-COPY environment.yml /tmp/environment.yml
+# Activate the conda environment
+SHELL ["/bin/bash", "-c"]
+RUN echo "conda activate micapet" >> ~/.bashrc
+ENV PATH /opt/conda/envs/micapet/bin:$PATH
 
-# Create environment (micapet) safely in /opt/conda/envs
-RUN micromamba create -y -n micapet -f /tmp/environment.yml && \
-    micromamba clean --all --yes
-
-# Make micapet the default environment for subsequent commands
-SHELL ["micromamba", "run", "-n", "micapet", "/bin/bash", "-c"]
-
-# install enigmatoolbox from source
-RUN git clone https://github.com/MICA-MNI/ENIGMA.git /tmp/enigmatoolbox && \
-    cd /tmp/enigmatoolbox && \
-    python setup.py install && \
-    rm -rf /tmp/enigmatoolbox
-
-# Copy rest of pipeline
-COPY . .
-
-# Default command
-CMD ["python", "functions/01_master.py"]
+# Set the entrypoint to run the 01_master.py script
+ENTRYPOINT ["python", "/app/functions/01_master.py"]

@@ -120,7 +120,7 @@ if cortical:
                     
                     sphere_surf=f'{f_surf_dir}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-fsnative_label-sphere.surf.gii'
                     
-                    reg_surf_gii=f'{script_dir}/surfaces/{surf}.{hemi}.sphere.reg.surf.gii'
+                    reg_surf_gii=f'{repo_dir}/surfaces/{surf}.{hemi}.sphere.reg.surf.gii'
                     
                     SUVR_resampled_out=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-{surf}_label-midthickness_pvc-{pvc}_ref-{ref}_smooth-none_trc-FDG_pet.func.gii'
                     

@@ -110,7 +110,7 @@ def plot_SUVR(subject,session,bids_dir,qc_dir,pial_left,pial_right,mask,max_valu
     
 
     if max_value is None:
-        max_value = np.max(to_plot[mask]) * 1.5
+        max_value = np.percentile(to_plot[mask],85) *1.5
         
     img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_SUVR_clin_report.png"
     plot_hemispheres(pial_left,pial_right,to_plot,color_bar=True, 
@@ -501,7 +501,7 @@ with rc.ReportCreator(
     #   ),
    )
 
-   report.save(view, "report.html")
+   report.save(view, f"{qc_dir}/sub-{subject}_ses-{session}_report.html")
 
 
 

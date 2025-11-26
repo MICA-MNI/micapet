@@ -12,6 +12,7 @@ dependencies:
   - traits             # nipype runtime dependency
   - snakemake
   - pip
+  - singularity
   - pip:
       - antspyx==0.6.1
       - brainspace==0.1.10

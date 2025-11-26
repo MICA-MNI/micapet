@@ -157,7 +157,7 @@ for hemi in ['lh','rh']:
             fs_white=f"{f_surf_dir}/surf/{hemi}.white",
             fs_pial=f"{f_surf_dir}/surf/{hemi}.pial",
             current_fs_sphere=f"{f_surf_dir}/surf/{hemi}.sphere.reg",
-            new_sphere=f"{script_dir}/surfaces/fsLR-{res}.{hemi_cap}.sphere.reg.surf.gii",
+            new_sphere=f"{repo_dir}/surfaces/fsLR-{res}.{hemi_cap}.sphere.reg.surf.gii",
             # fs_LR-deformed_to-fsaverage.{hemi_cap}.sphere.{res}_fs_LR.surf.gii",
             midthickness_current_out=f"{f_surf_dir}/surf/sub-{subject}_ses-{session}_hemi-{hemi_cap}_surf-fsnative_label-midthickness.surf.gii",
             midthickness_new_out=f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi_cap}_space-T1w_surf-fsLR-{res}_label-midthickness.surf.gii",
