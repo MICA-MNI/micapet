@@ -101,44 +101,49 @@ print(f"Starting FastSurfer for subject {subject}, session {session}.")
 #     "--threads", str(threads)
 # ]
 
-# Print the FASTSURFER_HOME environment variable
-fastsurfer_home = os.environ.get('FASTSURFER_HOME')
-if fastsurfer_home:
-    print(f"FASTSURFER_HOME: {fastsurfer_home}")
+# Define command to run inside container
+command = [
+    "/fastsurfer/run_fastsurfer.sh",
+    "--fs_license", "/output/license.txt",
+    "--t1", f"/tmpdir/sub-{subject}_ses-{session}_T1w.nii.gz",
+    "--sid", f"sub-{subject}_ses-{session}",
+    "--sd", "/output",
+    "--no_fs_T1",
+    "--parallel",
+    "--threads", str(threads)
+]
+
+if os.path.exists(fastsurfer_img):
+    print(f"Using FastSurfer image at {fastsurfer_img}")
 else:
-    print("FASTSURFER_HOME environment variable is not set.")
+    print(f"Error: FastSurfer image not found at {fastsurfer_img}")
+    sys.exit(1)
 
-# List the contents of the FASTSURFER_HOME directory
-if fastsurfer_home:
-    try:
-        print("Contents of FASTSURFER_HOME:")
-        print(os.listdir(fastsurfer_home))
-    except FileNotFoundError:
-        print(f"FASTSURFER_HOME directory '{fastsurfer_home}' does not exist.")
-    except PermissionError:
-        print(f"Permission denied when accessing FASTSURFER_HOME directory '{fastsurfer_home}'.")
+# Run using spython
+print(f"Executing command in Singularity: {' '.join(command)}")
 
-command=f'/opt/FastSurfer/run_fastsurfer.sh --fs_license {fs_license} --t1 {T1_path} --sid sub-{subject}_ses-{session} --sd {subj_dir} --no_fs_T1 --parallel --threads {threads}'
+if shutil.which('singularity') is None:
+    print("Error: 'singularity' executable not found in PATH. Please ensure Singularity is installed.")
+    sys.exit(1)
 
-subprocess.call(command)
-
-
-# if os.path.exists(fastsurfer_img):
-#     print(f"Using FastSurfer image at {fastsurfer_img}")
-
-# # Run using spython
-# Client.execute(
-#     image=fastsurfer_img,
-#     command=command,
-#     options=[
-#         "--cleanenv",
-#         "--writable-tmpfs",
-#         "--containall",
-#         "-B", f"{subj_dir}:/output",
-#         "-B", f"{tmpdir}:/tmpdir",
-#         "-B", f"{T1_path}:/tmpdir/sub-{subject}_ses-{session}_T1w.nii.gz",
-#         "-B", f"{fs_license}:/output/license.txt"
-#     ]
-# )
+try:
+    for line in Client.execute(
+        image=fastsurfer_img,
+        command=command,
+        options=[
+            "--cleanenv",
+            "--writable-tmpfs",
+            "--containall",
+            "-B", f"{subj_dir}:/output",
+            "-B", f"{tmpdir}:/tmpdir",
+            "-B", f"{T1_path}:/tmpdir/sub-{subject}_ses-{session}_T1w.nii.gz",
+            "-B", f"{fs_license}:/output/license.txt"
+        ],
+        stream=True
+    ):
+        print(line, end='')
+except Exception as e:
+    print(f"An error occurred during Singularity execution: {e}")
+    sys.exit(1)
 
 print("FastSurfer completed.")

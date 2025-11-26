@@ -184,7 +184,7 @@ def main():
     # Run FastSurfer if specified
     if fastsurfer_run:
         print("Running FastSurfer...")
-        cmd = [f'{script_dir}/fastsurfer.py',"-sub",f'{subject}',"-ses",f'{session}',"-bids",f'{bids_dir}',"-subj_dir",f'{subj_dir}',"-fastsurfer_img",f'{fastsurfer_img}',"-fs_license",f'{fs_license}'] + tmpdir_flag + force_flag
+        cmd = [sys.executable, f'{script_dir}/fastsurfer.py',"-sub",f'{subject}',"-ses",f'{session}',"-bids",f'{bids_dir}',"-subj_dir",f'{subj_dir}',"-fastsurfer_img",f'{fastsurfer_img}',"-fs_license",f'{fs_license}'] + tmpdir_flag + force_flag
         subprocess.call(cmd)
     
     # # Run HippUnfold if specified
