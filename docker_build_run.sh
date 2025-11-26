@@ -6,8 +6,16 @@ echo "user:x:$(id -u):$(id -g):User,,,:/tmp:/bin/bash" >> passwd.fake
 echo "root:x:0:" > group.fake
 echo "user:x:$(id -g):" >> group.fake
 
+# Prepare group arguments to pass all user groups to Docker
+# This ensures access to files permitted via secondary groups
+GROUP_ARGS=""
+for gid in $(id -G); do
+    GROUP_ARGS="$GROUP_ARGS --group-add $gid"
+done
+
 docker run -it --privileged \
     --user "$(id -u):$(id -g)" \
+    $GROUP_ARGS \
     --security-opt seccomp=unconfined \
     --security-opt apparmor=unconfined \
     --env HOME=/tmp \
