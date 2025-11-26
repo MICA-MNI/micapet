@@ -61,7 +61,7 @@ session = f"{args.ses.replace('ses-', '')}"
 subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
 threads = args.threads
-fastsurfer_img = os.path.realpath(args.fastsurfer_img)
+fastsurfer_img = os.path.abspath(args.fastsurfer_img)
 tmpdir = os.path.realpath(args.tmpdir)
 fs_license = os.path.realpath(args.fs_license)
 if args.subj_dir is None: #check if user inputted subj_dir
