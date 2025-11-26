@@ -1,7 +1,4 @@
 # !/bin/bash
-
-docker build -t micalab/micapet:v.alpha.0.1 .
-
 # Generate local user files for Singularity mapping
 # This fixes the "unknown userid" error by providing a passwd file that includes the current user
 echo "root:x:0:0:root:/root:/bin/bash" > passwd.fake
