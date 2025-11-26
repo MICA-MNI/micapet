@@ -62,3 +62,7 @@ clinical_report.py
         - f'{bids_dir}/qc/sub-{subject}/ses-{session}/sub-{subject}_ses-{session}_subcortical_means_pvc-rbv_ref-{ref_region}_trc-FDG_pet.csv'
         - f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii"
     -out: f"{qc_dir}/sub-{subject}_ses-{session}_report.html"
+
+
+
+example : /host/fladgate/local_raid/jack/FDG/MICA-PET/BIDS_PET_test

@@ -1,28 +1,31 @@
 FROM continuumio/miniconda3:latest
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Copy the entire project into the container
-COPY . /app
-
-# Install system dependencies
+# Install system dependencies (rarely changes)
 RUN apt-get update && apt-get install -y \
     build-essential \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
     libxrender-dev \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a conda environment and install dependencies
-COPY environment.yml /app/environment.yml
-RUN conda env create -f /app/environment.yml && conda clean -a -y
+# Copy only the environment file so that conda layer is reusable
+COPY environment.yml .
 
-# Activate the conda environment
-SHELL ["/bin/bash", "-c"]
-RUN echo "conda activate micapet" >> ~/.bashrc
-ENV PATH /opt/conda/envs/micapet/bin:$PATH
+# Create the conda environment (expensive; keep it early for caching)
+RUN conda env create -f environment.yml && conda clean -ay
+ENV PATH="/opt/conda/envs/micapet/bin:${PATH}"
 
-# Set the entrypoint to run the 01_master.py script
+# Install FastSurfer (put before copying entire repo)
+ENV FASTSURFER_HOME="/opt/FastSurfer"
+RUN git clone --depth 1 --branch v2.4.2 \
+    https://github.com/Deep-MI/FastSurfer.git $FASTSURFER_HOME
+
+# Now copy the project (frequent changes → placed at end)
+COPY . /app
+
+# ENTRYPOINT
 ENTRYPOINT ["python", "/app/functions/01_master.py"]
