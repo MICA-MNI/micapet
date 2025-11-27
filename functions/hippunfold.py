@@ -137,10 +137,11 @@ options.extend(bind)
 # print(options)
 
 # Run using spython
-Client.run(
+for line in Client.run(
     image=hippunfold_img,
     args=args,
     options=options
-)
+):
+    print(line, end='')
 
 print("HippUnfold completed.")
