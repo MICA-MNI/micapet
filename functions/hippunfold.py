@@ -137,10 +137,16 @@ options.extend(bind)
 # print(options)
 
 # Run using spython
-Client.run(
-    image=hippunfold_img,
-    args=args,
-    options=options
-)
-
+try:
+    for line in Client.run(
+        image=hippunfold_img,
+        args=args,
+        options=options,
+        stream=True
+    ):
+        print(line, end='')
+except Exception as e:
+    print(f"Error during HippUnfold execution: {e}")
+    sys.exit(1)
+    
 print("HippUnfold completed.")

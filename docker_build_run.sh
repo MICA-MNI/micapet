@@ -28,10 +28,10 @@ docker run -it --privileged \
     -v "$(pwd)/passwd.fake":/etc/passwd:ro \
     -v "$(pwd)/group.fake":/etc/group:ro \
     micalab/micapet:v.alpha.0.1 \
-    -sub PX2002001 \
-    -ses pre \
-    -bids /host/fladgate/local_raid/jack/FDG/MICA-PET/BIDS_20251111TLE_TZ_test \
+    -sub PX001 \
+    -ses 01 \
+    -bids /host/fladgate/local_raid/jack/FDG/MICA-PET/BIDS_PET_test \
     -fastsurfer_img /data/mica1/01_programs/fastsurfer/fastsurfer-cpu-v2.4.2.sif \
     -fs_license /data/mica1/01_programs/freesurfer-7.4.1/license.txt \
     -hippunfold_img /data/mica1/01_programs/singularity/hippunfold_v1.4.1.sif \
-    -psf 4.5
+    -psf 4.5 -force
