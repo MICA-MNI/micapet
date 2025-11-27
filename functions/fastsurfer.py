@@ -101,7 +101,7 @@ command = [
 ]
 
 # Run using spython
-Client.execute(
+for line in Client.execute(
     image=fastsurfer_img,
     command=command,
     options=[
@@ -112,7 +112,9 @@ Client.execute(
         "-B", f"{tmpdir}:/tmpdir",
         "-B", f"{T1_path}:/tmpdir/sub-{subject}_ses-{session}_T1w.nii.gz",
         "-B", f"{fs_license}:/output/license.txt"
-    ]
-)
+    ], 
+    stream=True
+):
+    print(line) 
 
 print("FastSurfer completed.")
