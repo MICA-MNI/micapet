@@ -181,17 +181,17 @@ def main():
     elif not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet.nii.gz"): #copy PET to BIDS rawdata if not already there
             shutil.copyfile(os.path.realpath(args.pet_path), f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet.nii.gz")
         
-    # # Run FastSurfer if specified
-    # if fastsurfer_run:
-    #     print("Running FastSurfer...")
-    #     cmd = [sys.executable, f'{script_dir}/fastsurfer.py',"-sub",f'{subject}',"-ses",f'{session}',"-bids",f'{bids_dir}',"-subj_dir",f'{subj_dir}',"-fastsurfer_img",f'{fastsurfer_img}',"-fs_license",f'{fs_license}'] + tmpdir_flag + force_flag #sys.executable, 
-    #     subprocess.call(cmd)
-    
-    # Run HippUnfold if specified
-    if hippunfold:
-        print("Running HippUnfold...")
-        cmd = [f'{script_dir}/hippunfold.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-hippunfold_img", f'{hippunfold_img}'] + bind_flag + cachedir_flag + tmpdir_flag + force_flag
+    # Run FastSurfer if specified
+    if fastsurfer_run:
+        print("Running FastSurfer...")
+        cmd = [sys.executable, f'{script_dir}/fastsurfer.py',"-sub",f'{subject}',"-ses",f'{session}',"-bids",f'{bids_dir}',"-subj_dir",f'{subj_dir}',"-fastsurfer_img",f'{fastsurfer_img}',"-fs_license",f'{fs_license}'] + tmpdir_flag + force_flag #sys.executable, 
         subprocess.call(cmd)
+    
+    # # Run HippUnfold if specified
+    # if hippunfold:
+    #     print("Running HippUnfold...")
+    #     cmd = [f'{script_dir}/hippunfold.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-hippunfold_img", f'{hippunfold_img}'] + bind_flag + cachedir_flag + tmpdir_flag + force_flag
+    #     subprocess.call(cmd)
     
     # # Linear coreg
     # cmd = [f'{script_dir}/linear_coreg.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}']

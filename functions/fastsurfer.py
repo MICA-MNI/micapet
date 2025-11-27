@@ -85,7 +85,7 @@ if os.path.exists(f"{subj_dir}/sub-{subject}_ses-{session}") and force==False:
     print("FastSurfer already run. Please rerun with -force flag to overwrite.")
     sys.exit(1)
 elif os.path.exists(f"{subj_dir}/sub-{subject}_ses-{session}") and force==True:
-    shutil.rmtree(f"{subj_dir}/sub-{subject}_ses-{session}")
+    shutil.rmtree(f"{subj_dir}/sub-{subject}_ses-{session}", ignore_errors=True)
 
 print(f"Starting FastSurfer for subject {subject}, session {session}.")
 

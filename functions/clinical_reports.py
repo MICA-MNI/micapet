@@ -152,7 +152,7 @@ def plot_hippunfold_AI(subject,session,bids_dir,qc_dir):
 
     img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_AI_hippunfold_clin_report.png"
 
-    hm.plotting.surfplot_canonical_foldunfold(to_plot,hemis=['L'],den='2mm',labels=['hipp'],embed_nb=False,color_bar='bottom',transparent_bg=True,tighten_cwindow=True,screenshot=True,cmap='bwr',color_range=(-1,1), size=[350,350],filename=img_stream)
+    hm.plotting.surfplot_canonical_foldunfold(to_plot,hemis=['L'],den='2mm',labels=['hipp'],embed_nb=False,color_bar='bottom',transparent_bg=True,tighten_cwindow=True,screenshot=True,cmap='bwr',color_range=(-0.5,0.5), size=[350,350],filename=img_stream)
 
     return img_stream
     
@@ -168,7 +168,7 @@ def plot_AI(subject,session,bids_dir,qc_dir,pial_left,pial_right):
 
     img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_AI_surface_clin_report.png"
     
-    plot_hemispheres(pial_left, pial_right,to_plot,color_bar='left',cmap="bwr",color_range=(-1,1),embed_nb=False,transparent_bg=True,size=(900,200),nan_color=(1,1,1,1),screenshot=True,filename=img_stream)
+    plot_hemispheres(pial_left, pial_right,to_plot,color_bar='left',cmap="bwr",color_range=(-0.5,0.5),embed_nb=False,transparent_bg=True,size=(900,200),nan_color=(1,1,1,1),screenshot=True,filename=img_stream)
     
     # Crop the image in half lengthwise and keep the left side
     original_image_path = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_AI_surface_clin_report.png"
@@ -195,7 +195,7 @@ def plot_subcortical_AI(subject,session,bids_dir,qc_dir):
     img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_AI_subcortical_clin_report.png"
 
     plot_subcortical(array_name=subcort_SUVR_AI, size=(900,200),
-                 cmap='bwr',color_bar='left',color_range=(-1,1), 
+                 cmap='bwr',color_bar='left',color_range=(-0.5,0.5), 
                 ventricles=False,embed_nb=False,transparent_bg=True,interactive=False,screenshot=True, filename=img_stream)
     
     cropped_image_path = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_AI_subcortical_clin_report_cropped.png"
