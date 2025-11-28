@@ -84,7 +84,7 @@ if os.path.exists(f"{subj_dir}/sub-{subject}_ses-{session}") and force==False:
     print("FastSurfer already run. Please rerun with -force flag to overwrite.")
     sys.exit(1)
 elif os.path.exists(f"{subj_dir}/sub-{subject}_ses-{session}") and force==True:
-    shutil.rmtree(f"{subj_dir}/sub-{subject}_ses-{session}")
+    shutil.rmtree(f"{subj_dir}/sub-{subject}_ses-{session}", ignore_errors=True)
 
 print(f"Starting FastSurfer for subject {subject}, session {session}.")
 
@@ -99,9 +99,7 @@ command = [
     "--parallel",
     "--threads", str(threads)
 ]
-
-# Run using spython
-for line in Client.execute(
+Client.execute(
     image=fastsurfer_img,
     command=command,
     options=[
@@ -112,9 +110,7 @@ for line in Client.execute(
         "-B", f"{tmpdir}:/tmpdir",
         "-B", f"{T1_path}:/tmpdir/sub-{subject}_ses-{session}_T1w.nii.gz",
         "-B", f"{fs_license}:/output/license.txt"
-    ], 
-    stream=True
-):
-    print(line) 
+    ]
+)
 
 print("FastSurfer completed.")
