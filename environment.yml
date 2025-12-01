@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - python=3.12
+  - python=3.10
   - vtk>=9.1.0,<9.3.2  # needed for brainspace
   - etelemetry>=0.3.1
   - nibabel
@@ -12,7 +12,7 @@ dependencies:
   - traits             # nipype runtime dependency
   - snakemake
   - pip
-  - singularity
+  - matplotlib==3.6.0
   - pip:
       - antspyx==0.6.1
       - brainspace==0.1.10

@@ -7,3 +7,7 @@ pipfreeze.txt
 report.html
 Singularity.def
 mica-pet.yml
+neurodocker-mica-pet2.Dockerfile
+neurodocker-mica-pet_cgpt.Dockerfile
+neurodocker-mica-pet_singularity.def
+freesurfer*

@@ -22,7 +22,7 @@ import os
 import sys
 from datetime import datetime
 from nipype.interfaces.freesurfer import FSCommand, MRIConvert
-from nipype.interfaces.fsl.maths import MathsCommand, BinaryMaths
+# from nipype.interfaces.fsl.maths import MathsCommand, BinaryMaths
 import sys
 import numpy as np
 import nilearn

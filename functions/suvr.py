@@ -21,9 +21,12 @@ import os
 import sys
 from datetime import datetime
 import glob
-from nipype.interfaces.fsl.maths import MathsCommand, BinaryMaths
-from nipype.interfaces.fsl import ImageStats
+# from nipype.interfaces.fsl.maths import MathsCommand, BinaryMaths
+# from nipype.interfaces.fsl import ImageStats
 from nipype.interfaces.freesurfer import FSCommand, ApplyVolTransform
+import nibabel as nib
+import numpy as np
+from scipy.ndimage import morphology
 import shutil
 
 # Load utilities functions from utils.py
@@ -79,14 +82,24 @@ print(f"Starting reference region creation and SUVR calculation for subject: {su
 def ROImaker(roi,f_surf_dir,bids_dir,subject,session, erode=False):
     print(f"Creating ROI mask for ROI {roi}...")
     # make mask for specified index
-    fslmaths = MathsCommand()
-    fslmaths.inputs.in_file = f"{f_surf_dir}/mri/gtmseg.nii.gz"
-    fslmaths.inputs.args = f'-uthr {roi} -thr {roi} -bin'
+    # fslmaths = MathsCommand()
+    # fslmaths.inputs.in_file = f"{f_surf_dir}/mri/gtmseg.nii.gz"
+    # fslmaths.inputs.args = f'-uthr {roi} -thr {roi} -bin'
+    # if erode:
+    #     print(f"Eroding ROI {roi} mask...")
+    #     fslmaths.inputs.args += ' -ero -ero'
+    # fslmaths.inputs.out_file = f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/anat/tmp_sub-{subject}_ses-{session}_space-T1w_desc-roi{roi}_mask.nii.gz"
+    # fslmaths.run()
+    
+    in_file = nib.load(f"{f_surf_dir}/mri/gtmseg.nii.gz")
+    in_data = in_file.get_fdata()
+    roi_data = in_data.copy()
+    # Set values in roi_data to 1 where in_data equals roi
+    roi_data[in_data == roi] = 1
     if erode:
-        print(f"Eroding ROI {roi} mask...")
-        fslmaths.inputs.args += ' -ero -ero'
-    fslmaths.inputs.out_file = f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/anat/tmp_sub-{subject}_ses-{session}_space-T1w_desc-roi{roi}_mask.nii.gz"
-    fslmaths.run()
+        roi_data = morphology.binary_erosion(roi_data, iterations=2)
+    out_file = nib.Nifti1Image(roi_data, in_file.affine, in_file.header)
+    nib.save(out_file, f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/anat/tmp_sub-{subject}_ses-{session}_space-T1w_desc-roi{roi}_mask.nii.gz")
     
 def combineROIs(ref,bids_dir,subject,session):
     print(f"Combining ROI masks for reference region: {ref}...")
@@ -96,20 +109,32 @@ def combineROIs(ref,bids_dir,subject,session):
         sys.exit(1)
         
     # add masks together
-    for mask in mask_files[1:]:
-        addmask = BinaryMaths()
-        addmask.inputs.in_file = mask_files[0]
-        addmask.inputs.operand_file = mask
-        addmask.inputs.operation = 'add'  # logical OR will be done after binarization
-        addmask.inputs.out_file = mask_files[0]
-        addmask.run()
+    # for mask in mask_files[1:]:
+    #     addmask = BinaryMaths()
+    #     addmask.inputs.in_file = mask_files[0]
+    #     addmask.inputs.operand_file = mask
+    #     addmask.inputs.operation = 'add'  # logical OR will be done after binarization
+    #     addmask.inputs.out_file = mask_files[0]
+    #     addmask.run()
     
-    # binarize combined mask
-    binarize = MathsCommand()
-    binarize.inputs.in_file = mask_files[0]
-    binarize.inputs.out_file = f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-T1w_desc-{ref}_mask.nii.gz"
-    binarize.inputs.args = '-bin'
-    binarize.run()
+    # # binarize combined mask
+    # binarize = MathsCommand()
+    # binarize.inputs.in_file = mask_files[0]
+    # binarize.inputs.out_file = f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-T1w_desc-{ref}_mask.nii.gz"
+    # binarize.inputs.args = '-bin'
+    # binarize.run()
+    
+    # Combine masks using nibabel
+    add_mask = nib.load(mask_files[0])
+    add_mask_data = add_mask.get_fdata()
+    for mask in mask_files[1:]:
+        tmp = nib.load(mask)
+        tmp_data = tmp.get_fdata()
+        add_mask_data += tmp_data
+    # Binarize
+    add_mask_data[add_mask_data > 0] = 1
+    out_file = nib.Nifti1Image(add_mask_data, add_mask.affine, add_mask.header)
+    nib.save(out_file, f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-T1w_desc-{ref}_mask.nii.gz")
     
     # move mask into same space as PET
     applyreg = ApplyVolTransform()
@@ -140,21 +165,33 @@ for ref in ref_region:
 
     # Calculate avg in reference region
     print(f"Calculating average uptake in reference region: {ref}...")
-    fslstats = ImageStats()
-    fslstats.inputs.in_file = f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-rbv_ref-none_trc-FDG_pet.nii.gz"
-    fslstats.inputs.op_string=f"-k {bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-T1w_desc-{ref}_mask.nii.gz -m"
-    fslstats.terminal_output = 'file_split'
-    ref_region_avg = fslstats.run().runtime.stdout
+    # fslstats = ImageStats()
+    # fslstats.inputs.in_file = f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-rbv_ref-none_trc-FDG_pet.nii.gz"
+    # fslstats.inputs.op_string=f"-k {bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-T1w_desc-{ref}_mask.nii.gz -m"
+    # fslstats.terminal_output = 'file_split'
+    # ref_region_avg = fslstats.run().runtime.stdout
+    
+    in_file = nib.load(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-rbv_ref-none_trc-FDG_pet.nii.gz")
+    in_data = in_file.get_fdata()
+    mask_file = nib.load(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-T1w_desc-{ref}_mask.nii.gz")
+    mask_data = mask_file.get_fdata()
+    masked_data = in_data[mask_data > 0]
+    ref_region_avg = np.mean(masked_data)
 
     print(f"Reference region ({ref}) average uptake: {ref_region_avg}")
 
     # Calculate SUVR
     print("Calculating SUVR image...")
     for pvc in ['none','rbv']:
-        fslmaths = MathsCommand()
-        fslmaths.inputs.in_file = f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-{pvc}_ref-none_trc-FDG_pet.nii.gz"
-        fslmaths.inputs.args = f'-div {ref_region_avg}'
-        fslmaths.inputs.out_file = f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz"
-        fslmaths.run()
+        # fslmaths = MathsCommand()
+        # fslmaths.inputs.in_file = f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-{pvc}_ref-none_trc-FDG_pet.nii.gz"
+        # fslmaths.inputs.args = f'-div {ref_region_avg}'
+        # fslmaths.inputs.out_file = f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz"
+        # fslmaths.run()
+        in_file = nib.load(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-{pvc}_ref-none_trc-FDG_pet.nii.gz")
+        in_data = in_file.get_fdata()
+        suvr_data = in_data / float(ref_region_avg)
+        out_file = nib.Nifti1Image(suvr_data, in_file.affine, in_file.header)
+        nib.save(out_file, f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz")
 
 print("SUVR calculation completed.")

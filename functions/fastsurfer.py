@@ -127,8 +127,8 @@ if shutil.which('singularity') is None:
     print("Error: 'singularity' executable not found in PATH. Please ensure Singularity is installed.")
     sys.exit(1)
 
-try:
-    for line in Client.execute(
+try: 
+    Client.execute(
         image=fastsurfer_img,
         command=command,
         options=[
@@ -139,10 +139,8 @@ try:
             "-B", f"{tmpdir}:/tmpdir",
             "-B", f"{T1_path}:/mnt/T1.nii.gz",
             "-B", f"{fs_license}:/output/license.txt"
-        ],
-        stream=True
-    ):
-        print(line, end='')
+        ]
+    )
 except Exception as e:
     print(f"An error occurred during Singularity execution: {e}")
     sys.exit(1)
