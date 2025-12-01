@@ -51,7 +51,7 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     uuid-dev \
     golang-go \
     curl wget git && \
-    apt-get install -y connectome-workbench && \
+    apt-get install -y connectome-workbench fuse3 fuse-overlayfs squashfuse && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
