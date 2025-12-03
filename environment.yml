@@ -4,9 +4,8 @@ channels:
   - bioconda
 dependencies:
   - python=3.10
-  - vtk==9.1.0=osmesa_py39h8ab48e2_107 #>9.4.0
+  - vtk>=9.4.0 #vtk>=9.1.0,<9.3.2
   - mesalib
-#  - vtk-osmesa  # needed for brainspace #vtk>=9.1.0,<9.3.2
   - etelemetry>=0.3.1
   - nibabel
   - nilearn
@@ -25,4 +24,3 @@ dependencies:
       - spython==0.2.14
       - report_creator==1.1.1
       - netneurotools==0.2.5
-
