@@ -181,11 +181,11 @@ def main():
     elif not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet.nii.gz"): #copy PET to BIDS rawdata if not already there
             shutil.copyfile(os.path.realpath(args.pet_path), f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet.nii.gz")
         
-    # # Run FastSurfer if specified
-    # if fastsurfer_run:
-    #     print("Running FastSurfer...")
-    #     cmd = [sys.executable, f'{script_dir}/fastsurfer.py',"-sub",f'{subject}',"-ses",f'{session}',"-bids",f'{bids_dir}',"-subj_dir",f'{subj_dir}',"-fastsurfer_img",f'{fastsurfer_img}',"-fs_license",f'{fs_license}'] + tmpdir_flag + force_flag #sys.executable, 
-    #     subprocess.call(cmd)
+    # Run FastSurfer if specified
+    if fastsurfer_run:
+        print("Running FastSurfer...")
+        cmd = [f'{script_dir}/fastsurfer.py',"-sub",f'{subject}',"-ses",f'{session}',"-bids",f'{bids_dir}',"-subj_dir",f'{subj_dir}',"-fastsurfer_img",f'{fastsurfer_img}',"-fs_license",f'{fs_license}'] + tmpdir_flag + force_flag #sys.executable, 
+        subprocess.call(cmd)
     
     # Run HippUnfold if specified
     if hippunfold:
@@ -193,41 +193,41 @@ def main():
         cmd = [f'{script_dir}/hippunfold.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-hippunfold_img", f'{hippunfold_img}'] + bind_flag + cachedir_flag + tmpdir_flag + force_flag
         subprocess.call(cmd)
     
-    # # Linear coreg
-    # cmd = [f'{script_dir}/linear_coreg.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}']
-    # subprocess.call(cmd)
+    # Linear coreg
+    cmd = [f'{script_dir}/linear_coreg.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}']
+    subprocess.call(cmd)
     
-    # # GTM seg
-    # cmd = [f'{script_dir}/gtm_seg.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-seg_type", f'{seg_type}']
-    # subprocess.call(cmd)
+    # GTM seg
+    cmd = [f'{script_dir}/gtm_seg.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-seg_type", f'{seg_type}']
+    subprocess.call(cmd)
     
-    # # PVC
-    # cmd = [f'{script_dir}/pvc.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-psf", f'{args.psf}'] + force_flag
-    # subprocess.call(cmd)
+    # PVC
+    cmd = [f'{script_dir}/pvc.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-psf", f'{args.psf}'] + force_flag
+    subprocess.call(cmd)
     
-    # # SUVR calculation
-    # cmd = [f'{script_dir}/suvr.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}',"-ref_region", f'{ref_region}']
-    # subprocess.call(cmd)
+    # SUVR calculation
+    cmd = [f'{script_dir}/suvr.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}',"-ref_region", f'{ref_region}']
+    subprocess.call(cmd)
         
-    # # Cortical surface generation
-    # cmd = [f'{script_dir}/cortical_surface.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}']
-    # subprocess.call(cmd)
+    # Cortical surface generation
+    cmd = [f'{script_dir}/cortical_surface.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}']
+    subprocess.call(cmd)
     
-    # # Project PET data to surfaces
-    # cmd = [f'{script_dir}/project_pet_data.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-hippunfold_dir", f'{hippunfold_dir}', "-pvc", "-ref_region", f'{ref_region}', "-cortical", "-hippocampal"]
-    # subprocess.call(cmd)
+    # Project PET data to surfaces
+    cmd = [f'{script_dir}/project_pet_data.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-hippunfold_dir", f'{hippunfold_dir}', "-pvc", "-ref_region", f'{ref_region}', "-cortical", "-hippocampal"]
+    subprocess.call(cmd)
     
-    # # Subcortical maps
-    # cmd = [f'{script_dir}/subcortical_map.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-ref_region", f'{ref_region}']
-    # subprocess.call(cmd)
+    # Subcortical maps
+    cmd = [f'{script_dir}/subcortical_map.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-ref_region", f'{ref_region}']
+    subprocess.call(cmd)
     
-    # # QC
-    # cmd = [f'{script_dir}/qc.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-ref_region", f'{ref_region}']
-    # subprocess.call(cmd)
+    # QC
+    cmd = [f'{script_dir}/qc.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-ref_region", f'{ref_region}']
+    subprocess.call(cmd)
     
-    # # Clinical report
-    # cmd = [f'{script_dir}/clinical_reports.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-ref_region", f'{ref_region}']
-    # subprocess.call(cmd)
+    # Clinical report
+    cmd = [f'{script_dir}/clinical_reports.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-ref_region", f'{ref_region}']
+    subprocess.call(cmd)
     
     # Clean up temporary directory
     if args.tmpdir is None:

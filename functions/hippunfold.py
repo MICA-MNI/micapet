@@ -68,13 +68,13 @@ hippunfold_img = os.path.realpath(args.hippunfold_img)
 if args.tmpdir is None:
     tmpdir = []
 else:
-    tmpdir = ["--env",f"TMPDIR={os.path.realpath(args.tmpdir)}"]
+    tmpdir = ["--env",f"TMPDIR={os.path.realpath(args.tmpdir)}","-B",os.path.realpath(args.tmpdir)]
     os.environ['TMPDIR'] = args.tmpdir
 
 if args.cachedir is None:
     cachedir = []
 else:
-    cachedir = ["--env",f"HIPPUNFOLD_CACHE_DIR={os.path.realpath(args.cachedir)}"]
+    cachedir = ["--env",f"HIPPUNFOLD_CACHE_DIR={os.path.realpath(args.cachedir)}","-B",os.path.realpath(args.cachedir)]
     os.environ['HIPPUNFOLD_CACHE_DIR'] = args.cachedir
 
 if args.B is None:
@@ -128,7 +128,7 @@ options=["--cleanenv",
         "--containall",
         "-B", f"{bids_dir}:/bids_dir",
         "-B", f"{output_dir}:/output_dir",
-        "-B", "/data:/data,/host:/host,/home:/home"
+        "-B", "/host:/host,/home:/home"
     ]
 options.extend(tmpdir)
 options.extend(cachedir)
