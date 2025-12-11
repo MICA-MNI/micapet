@@ -21,8 +21,6 @@ import os
 import sys
 from datetime import datetime
 import glob
-# from nipype.interfaces.fsl.maths import MathsCommand, BinaryMaths
-# from nipype.interfaces.fsl import ImageStats
 from nipype.interfaces.freesurfer import FSCommand, ApplyVolTransform
 import nibabel as nib
 import numpy as np

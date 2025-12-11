@@ -20,7 +20,6 @@ import argparse
 import os
 from datetime import datetime
 from nipype.interfaces.freesurfer import FSCommand, MRIConvert
-# from nipype.interfaces.fsl.maths import MathsCommand, BinaryMaths
 import nibabel as nib
 import sys
 import numpy as np
@@ -30,8 +29,21 @@ from brainstat.datasets import fetch_mask, fetch_template_surface
 from brainspace.plotting import plot_hemispheres
 import hippomaps as hm
 from PIL import Image
-
-
+import platform
+display_flag = False
+if (
+        "DISPLAY" not in os.environ or not os.environ["DISPLAY"]
+    ) and platform.system() != "Windows":
+        try:
+            from pyvirtualdisplay import Display
+            os.environ["PYVIRTUALDISPLAY_DISPLAYFD"] = "0"
+            dsize = (900, 750)
+            display = Display(visible=False, size=dsize)
+            display.start()
+            display_flag = True
+        except ImportError:
+            if verbose:
+                print("Warning: pyvirtualdisplay not available, plotting may fail in headless environment")
 
 # Load utilities functions from utils.py
 # from utils import *
@@ -89,13 +101,6 @@ if not os.path.exists(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{sessi
     mc.inputs.out_type = 'niigz'
     mc.run()
 
-    # binarize
-    # binarize = MathsCommand()
-    # binarize.inputs.in_file = f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/tmp.brainmask.nii.gz'
-    # binarize.inputs.out_file = f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/tmp.brainmask_bin.nii.gz'
-    # binarize.inputs.args = '-bin'
-    # binarize.run()
-    
     in_file = nib.load(f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/tmp.brainmask.nii.gz')
     in_data = in_file.get_fdata()
     tmp_data = np.zeros(in_data.shape)
@@ -108,14 +113,6 @@ if not os.path.exists(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{sessi
     brainmasked_data = pet_in_data * tmp_data
     out_pet_file = nib.Nifti1Image(brainmasked_data, pet_in_file.affine, pet_in_file.header)
     nib.save(out_pet_file, f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-none_ref-{ref_region}_trc-FDG_pet_desc-brainmask.nii.gz")
-
-    # multiply
-    # multiply = BinaryMaths()
-    # multiply.inputs.in_file = f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-none_ref-{ref_region}_trc-FDG_pet.nii.gz"
-    # multiply.inputs.operation = 'mul'
-    # multiply.inputs.operand_file = f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/tmp.brainmask_bin.nii.gz'
-    # multiply.inputs.out_file = f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-none_ref-{ref_region}_trc-FDG_pet_desc-brainmask.nii.gz"
-    # multiply.run()
 
     # remove temp files
     os.remove(f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/tmp.brainmask.nii.gz')
@@ -138,7 +135,7 @@ tmp_hcsurf_L = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/
 tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
 
 to_plot = np.hstack((np.expand_dims(tmp_hcsurf_L,axis=1),np.expand_dims(tmp_hcsurf_R,axis=1)))
-hm.plotting.surfplot_canonical_foldunfold(to_plot,hemis=['L','R'],den='2mm',labels=['hipp'],embed_nb=False,transparent_bg=True,tighten_cwindow=True,screenshot=True,filename=f"{qc_dir}/sub-{subject}_ses-{session}_hippounfold_screenshot.png")
+hm.plotting.surfplot_canonical_foldunfold(to_plot,hemis=['L','R'],den='2mm',labels=['hipp'],embed_nb=False,transparent_bg=True,tighten_cwindow=True,screenshot=True,filename=f"{qc_dir}/sub-{subject}_ses-{session}_hippunfold_screenshot.png")
 
 plotting.plot_roi(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-none_ref-{ref_region}_trc-FDG_pet_desc-brainmask.nii.gz",
     bg_img=f"{f_surf_dir}/mri/orig.mgz",
@@ -150,4 +147,9 @@ plotting.plot_roi(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/
     resampling_interpolation='continuous',
     output_file=f"{qc_dir}/sub-{subject}_ses-{session}_SUVR_screenshot.png")
 
+# Clean up display
+if display_flag:
+    display.stop()
+    del display
+    
 print("QC screenshots completed.")

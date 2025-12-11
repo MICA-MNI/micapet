@@ -117,22 +117,24 @@ args = [
     "--participant-label",f"{subject}",
     "--modality", "T1w",
     "--output-density","2mm",
-    "--cores", "24"
+    "--cores", "all"
     ]
 args.extend(T1_path)
 args.extend(force_command)
 
 # set Singularity options
 options=["--cleanenv",
-        "--writable-tmpfs",
-        "--containall",
         "-B", f"{bids_dir}:/bids_dir",
-        "-B", f"{output_dir}:/output_dir",
-        "-B", "/host:/host,/home:/home"
+        "-B", f"{output_dir}:/output_dir"
     ]
 options.extend(tmpdir)
 options.extend(cachedir)
 options.extend(bind)
+
+        # "--writable-tmpfs",
+        # "--containall",
+        # "--no-privs",
+        # ^causing hang?
 
 # print(options)
 

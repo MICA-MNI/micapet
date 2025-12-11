@@ -18,7 +18,8 @@ USER root
 # Set environment variables
 # ENV LANG="en_US.UTF-8" \
 #     LC_ALL="en_US.UTF-8" \
-ENV FREESURFER_HOME="/opt/freesurfer-7.4.1" \
+ENV LC_ALL=C \
+    FREESURFER_HOME="/opt/freesurfer-7.4.1" \
     SUBJECTS_DIR="$FREESURFER_HOME/subjects" \
     PATH="/opt/freesurfer-7.4.1/bin:$FREESURFER_HOME/mni/bin:$PATH" \
     ANTSPATH="/opt/ants-2.4.3/" \
@@ -27,6 +28,7 @@ ENV FREESURFER_HOME="/opt/freesurfer-7.4.1" \
     PATH="/opt/convert3d-1.0.0/bin:$PATH" \
     CONDA_DIR="/opt/miniconda-latest" \
     PATH="/opt/miniconda-latest/bin:$PATH"
+    
 #####################################################################
 # Install Dependencies
 #####################################################################
@@ -50,14 +52,13 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     libssl-dev \
     uuid-dev \
     golang-go \
+    xvfb \
+    x11-utils \
     curl wget git && \
     apt-get install -y connectome-workbench fuse3 fuse-overlayfs squashfuse fuse2fs gocryptfs && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-    # fuse3 \
-    # fuse-overlayfs \
-    # squashfuse \
 #####################################################################
 # Install Apptainer 1.2.4
 #####################################################################
@@ -134,18 +135,9 @@ ENV PATH=$CONDA_DIR/bin:$PATH
 
 COPY --from=conda_stage /opt/conda/envs/mica-pet /opt/conda/envs/mica-pet
 
-#####################################################################
-# Install pip packages INSIDE the environment
-#####################################################################
-# RUN conda run -n mica-pet pip install \
-#     antspyx==0.6.1 \
-#     brainspace==0.1.10 \
-#     brainstat==0.4.2 \
-#     dcm2niixpy==1.1.0 \
-#     hippomaps==0.1.17 \
-#     spython==0.2.14 \
-#     report_creator==1.1.1 \
-#     netneurotools==0.2.5
+# RUN pip install --upgrade --force-reinstall git+https://github.com/MICA-MNI/BrainSpace.git
+
+RUN conda run -n mica-pet pip install --extra-index-url https://wheels.vtk.org vtk-osmesa
 
 #####################################################################
 # Copy Application
@@ -160,8 +152,6 @@ COPY license.txt /app/license.txt
 ENV FS_LICENSE=/app/license.txt \
     PATH=$FREESURFER_HOME/bin:$PATH \
     VTK_DEFAULT_OPENGL_WINDOW='vtkOSOpenGLRenderWindow' \
-    PYVISTA_OFF_SCREEN=True \
-    MESA_GL_VERSION_OVERRIDE=3.3 \
-    DISPLAY=
+    MESA_GL_VERSION_OVERRIDE=3.3
 
-# ENTRYPOINT ["conda", "run", "-n", "mica-pet", "python", "/app/functions/01_master.py"]
+ENTRYPOINT ["conda", "run", "-n", "mica-pet", "python", "/app/functions/01_master.py"]

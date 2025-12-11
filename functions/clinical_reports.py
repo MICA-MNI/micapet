@@ -10,7 +10,7 @@ The script requires the following arguments:
     -bids       : Path to BIDS directory ( . or FULL PATH)
     -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory.
     -ref_region : Reference regions to use. eg. ['pons','cerebellarGM','composite']. Default: ['pons'].
-    -max_value  : (Optional) Maximum SUVR value for color scale. Default: 1.5 times the maximum SUVR value in the data.
+    -max_value  : (Optional) Maximum SUVR value for color scale. Default: 1.5 times the 85th percentile SUVR in the data.
 
 The script is intended for use by researchers and developers working with PET imaging data, particularly in the context of the MICA lab at McGill University.
 It is part of a larger pipeline for processing and analyzing neuroimaging data.
@@ -22,7 +22,6 @@ import os
 import sys
 from datetime import datetime
 from nipype.interfaces.freesurfer import FSCommand, MRIConvert
-# from nipype.interfaces.fsl.maths import MathsCommand, BinaryMaths
 import sys
 import numpy as np
 import nilearn
@@ -30,9 +29,7 @@ from nilearn import plotting
 from brainstat.datasets import fetch_mask, fetch_template_surface
 from brainspace.plotting import plot_hemispheres
 import hippomaps as hm
-import matplotlib.pyplot as plt
-import enigmatoolbox
-from enigmatoolbox.plotting import plot_subcortical
+import matplotlib.pyplot as pltl
 import hippomaps as hm
 import pandas as pd
 from PIL import Image
@@ -40,6 +37,28 @@ import report_creator as rc
 import nibabel as nib
 from nibabel.processing import resample_from_to
 import csv
+from brainspace.mesh.mesh_io import read_surface
+from brainspace.plotting.surface_plotting import plot_surf
+from pathlib import Path
+from typing import List, Union, Tuple, Literal
+PathType = Union[str, os.PathLike]
+Analysis = Literal["regional", "asymmetry"]
+
+display_flag = False
+import platform
+if (
+        "DISPLAY" not in os.environ or not os.environ["DISPLAY"]
+    ) and platform.system() != "Windows":
+        try:
+            from pyvirtualdisplay import Display
+            os.environ["PYVIRTUALDISPLAY_DISPLAYFD"] = "0"
+            dsize = (900, 750)
+            display = Display(visible=False, size=dsize)
+            display.start()
+            display_flag = True
+        except ImportError:
+            if verbose:
+                print("Warning: pyvirtualdisplay not available, plotting may fail in headless environment")
 
 # Load utilities functions from utils.py
 # from utils import *
@@ -101,6 +120,88 @@ filename= f"/host/fladgate/local_raid/jack/FDG/sub-{subject}_ses-{session}_FDG_c
 pial_left, pial_right = fetch_template_surface("fslr32k",join=False)
 mask = fetch_mask("fslr32k")
 
+sctx_left = read_surface(f"/app/surfaces/sctx.L.surf.gii", itype="gii")
+sctx_right = read_surface(f"/app/surfaces/sctx.R.surf.gii", itype="gii")
+
+# Utility functions ------------------------------------------------------------
+def map_subcortical_vertices(x) -> np.ndarray:
+    """
+    Taken from the ENIGMA toolbox
+    https://github.com/MICA-MNI/ENIGMA/blob/master/enigmatoolbox
+    Map one value per subcortical area to surface vertices (author:
+    @saratheriver)
+    Parameters
+    ----------
+    x:
+        Subcortical values with shape = (16,) in the following order:
+        L_accumbens, L_amygdala, L_caudate, L_hippocampus, L_pallidun,
+        L_putamen, L_thalamus, L_ventricles,
+        R_accumbens, R_amygdala, R_caudate, R_hippocampus, R_pallidun,
+        R_putamen, R_thalamus, R_ventricles
+    zbrains output (the fisrt colum is SubjID):
+        'Laccumb', 'Lamyg', 'Lcaud', 'Lhippo', 'Lpal', 'Lput','Lthal',
+        'Raccumb', 'Ramyg', 'Rcaud', 'Rhippo', 'Rpal', 'Rput', 'Rthal'
+    Returns
+    -------
+    data :
+        Mapped data, shape = (51278,)
+    """
+    n_vert = [
+        867,
+        1419,
+        3012,
+        3784,
+        1446,
+        4003,
+        3726,
+        7653,
+        838,
+        1457,
+        3208,
+        3742,
+        1373,
+        3871,
+        3699,
+        7180,
+    ]
+    x = np.asarray(x)
+    if x.shape == (16,):
+        return np.repeat(x, n_vert)
+    else:
+        raise ValueError("Input data must have 16 values.")
+    
+def _load_data_sctx(
+    sctx_file: PathType,
+    analysis: Analysis,
+    threshold: Union[float, None] = None,
+    threshold_alpha: float = 0.5,
+):
+    # Load CSV data
+    x = pd.read_csv(sctx_file, header=[0], index_col=None).to_numpy().ravel()
+    if threshold is not None:
+        x[np.abs(x) < threshold] *= threshold_alpha
+    # if analysis == "asymmetry":
+    #     print("e")
+    # Array of data
+    array_16 = np.full(16, np.nan)
+    
+    if analysis != "asymmetry":
+        array_16[0:7] = x[0:7]
+        array_16[8:15] = x[7:]
+    else:
+        array_16[0:7] = (x[0:7]-x[7:])/((x[0:7]+x[7:])/2)
+        array_16[8:15] = x[0:7]
+        array_16[8:15] = np.nan
+    # Fill ventricle slots with 0 (or another default) instead of leaving as NaN
+    array_16[7] = np.nan #0.0   # Left ventricle
+    array_16[15] = np.nan #0.0  # Right ventricle
+    # Map array to vertices of surfaces
+    feat_map = map_subcortical_vertices(array_16)
+    # Map array to left and right surfaces
+    data_lh = feat_map[0:25910]
+    data_rh = feat_map[25910:]
+    return data_lh, data_rh
+
 def plot_SUVR(subject,session,bids_dir,qc_dir,pial_left,pial_right,mask,max_value):
     tmp_pt_FDG_surf_L = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
     tmp_pt_FDG_surf_R = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
@@ -117,15 +218,24 @@ def plot_SUVR(subject,session,bids_dir,qc_dir,pial_left,pial_right,mask,max_valu
                     cmap="jet",color_range=(0,max_value), embed_nb=False,transparent_bg=True,size=(900,200),nan_color=(1,1,1, 1),screenshot=True,filename=img_stream)
     return img_stream, max_value
 
-def plot_subcort(subject,session,bids_dir,qc_dir,max_value):
-    subcort_SUVR = pd.read_csv(f'{bids_dir}/qc/sub-{subject}/ses-{session}/sub-{subject}_ses-{session}_subcortical_means_pvc-rbv_ref-{ref_region}_trc-FDG_pet.csv',header=None).to_numpy()
-    subcort_SUVR = subcort_SUVR[1,:]
+
+# Plotting functions ------------------------------------------------------------
+
+def plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value):
+    # subcort_SUVR = pd.read_csv(f'{bids_dir}/qc/sub-{subject}/ses-{session}/sub-{subject}_ses-{session}_subcortical_means_pvc-rbv_ref-{ref_region}_trc-FDG_pet.csv',header=None).to_numpy()
+    # to_plot = subcort_SUVR[1,:]
     
+    data_lh, data_rh = _load_data_sctx(
+    sctx_file=Path(f'{bids_dir}/qc/sub-{subject}/ses-{session}/sub-{subject}_ses-{session}_subcortical_means_pvc-rbv_ref-{ref_region}_trc-FDG_pet.csv'),
+    analysis="regional"
+)
+    to_plot = np.hstack((data_lh, data_rh))
+
     img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_SUVR_subcortical_clin_report.png"
 
-    plot_subcortical(array_name=subcort_SUVR, size=(900,200),
-                 cmap='jet',color_range=(0,max_value),color_bar=('right'), ventricles=False,embed_nb=False,transparent_bg=True,interactive=False,screenshot=True,filename=img_stream)
-    
+    plot_hemispheres(sctx_left,sctx_right,to_plot,color_bar='right', 
+        cmap="jet",color_range=(0,max_value), embed_nb=False,transparent_bg=True,size=(900,200),nan_color=(1,1,1, 0),screenshot=True,filename=img_stream)
+
     return img_stream
 
 def plot_hippunfold(subject,session,bids_dir,qc_dir,max_value):
@@ -155,6 +265,8 @@ def plot_hippunfold_AI(subject,session,bids_dir,qc_dir):
     hm.plotting.surfplot_canonical_foldunfold(to_plot,hemis=['L'],den='2mm',labels=['hipp'],embed_nb=False,color_bar='bottom',transparent_bg=True,tighten_cwindow=True,screenshot=True,cmap='bwr',color_range=(-0.5,0.5), size=[350,350],filename=img_stream)
 
     return img_stream
+
+# Plotting asymmetry -------------------------------------------------------------
     
 def plot_AI(subject,session,bids_dir,qc_dir,pial_left,pial_right):
     tmp_pt_FDG_surf_L = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
@@ -182,22 +294,19 @@ def plot_AI(subject,session,bids_dir,qc_dir,pial_left,pial_right):
 
     return cropped_image_path
 
-def plot_subcortical_AI(subject,session,bids_dir,qc_dir):
-    subcort_SUVR = pd.read_csv(f'{bids_dir}/qc/sub-{subject}/ses-{session}/sub-{subject}_ses-{session}_subcortical_means_pvc-rbv_ref-{ref_region}_trc-FDG_pet.csv',header=None).to_numpy()
-    subcort_SUVR = subcort_SUVR[1,:]
-    subcort_SUVR = subcort_SUVR.astype(float)
-
-    subcort_SUVR_L = subcort_SUVR[0:7]
-    subcort_SUVR_R = subcort_SUVR[7:14]
-    subcort_AI_L = (subcort_SUVR_L - subcort_SUVR_R) / (0.5 *(subcort_SUVR_R+subcort_SUVR_L))
-    subcort_SUVR_AI = np.hstack((subcort_AI_L,np.zeros(7)))
+def plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir):
+    
+    data_lh, data_rh = _load_data_sctx(
+    sctx_file=Path(f'{bids_dir}/qc/sub-{subject}/ses-{session}/sub-{subject}_ses-{session}_subcortical_means_pvc-rbv_ref-{ref_region}_trc-FDG_pet.csv'),
+    analysis="asymmetry")   
+    
+    to_plot = np.hstack((data_lh, data_rh))
 
     img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_AI_subcortical_clin_report.png"
 
-    plot_subcortical(array_name=subcort_SUVR_AI, size=(900,200),
-                 cmap='bwr',color_bar='left',color_range=(-0.5,0.5), 
-                ventricles=False,embed_nb=False,transparent_bg=True,interactive=False,screenshot=True, filename=img_stream)
-    
+    plot_hemispheres(sctx_left,sctx_right,to_plot,color_bar='left', 
+        cmap="bwr",color_range=(-0.5,0.5), embed_nb=False,transparent_bg=True,size=(900,200),nan_color=(1,1,1, 0),screenshot=True,filename=img_stream)
+        
     cropped_image_path = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_AI_subcortical_clin_report_cropped.png"
 
     with Image.open(img_stream) as img:
@@ -213,8 +322,6 @@ def plot_roi(subject,session,bids_dir,qc_dir):
     mri_derivatives=f'{bids_dir}/derivatives/fastsurfer'
 
     img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_SUVR_plot_roi_clin_report.png"
-
-    # plotting.plot_roi(pet_derivatives+'/sub-{subject}/{session}/pet/sub-{subject}_{session}_pvc-none_ref-pons_space-T1w_trc-FDG_pet_desc-brainmask.nii.gz',bg_img=mri_derivatives+'/freesurfer/sub-{subject}_{session}/mri/T1.mgz',display_mode='mosaic',cut_coords=15,alpha=0.6,radiological=True, title=subj+' FDG SUVR',resampling_interpolation='continuous',output_file=img_stream)
 
     plotting.plot_roi(f'{pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-none_ref-pons_trc-FDG_pet_desc-brainmask.nii.gz',bg_img=f'{mri_derivatives}/sub-{subject}_ses-{session}/mri/orig.mgz',display_mode='z',cut_coords=tuple(np.linspace(-75,75,15)),alpha=0.3,radiological=True, title=f'sub-{subject} ses-{session} FDG SUVR',dim=0,resampling_interpolation='continuous',output_file=img_stream)
 
@@ -406,7 +513,7 @@ with rc.ReportCreator(
     rc.Select(
         blocks=[
             rc.Image(
-                plot_subcort(subject,session,bids_dir,qc_dir,max_value),
+                plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value),
                 label="Subcortical FDG SUVR",
                 extra_css="width: 900px; height: auto;",
             ),
@@ -435,7 +542,7 @@ with rc.ReportCreator(
                 label="Cortical FDG SUVR AI"
             ),
             rc.Image(
-                plot_subcortical_AI(subject,session,bids_dir,qc_dir),
+                plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir),
                 label="Subcortical FDG SUVR AI"
             ),
             rc.Image(
@@ -448,9 +555,9 @@ with rc.ReportCreator(
     ),
     rc.Group(
         rc.Metric(
-            heading="AI calculation",
-            value="AI = (L - R) / (0.5 * (L + R))",
-            label="BLUE = Left < Right; RED = Right < Left"
+            heading="BLUE = Left < Right; RED = Right < Left",
+            label="Asymmetry Index interpretation",
+            value="AI = (L - R) / (0.5 * (L + R))"
         ),
     ),
     
@@ -503,83 +610,9 @@ with rc.ReportCreator(
 
    report.save(view, f"{qc_dir}/sub-{subject}_ses-{session}_report.html")
 
-
-
-
-
-
-
-
-# c = canvas.Canvas(filename, pagesize=letter)
-# width, height = letter  # 8.5 x 11 inches
-# left_margin = 50
-
-# # Add a title
-# c.setFont("Helvetica-Bold", 16)
-# c.drawString(left_margin, height - 60, f"FDG PET Clinical Report: {subject}")
-
-# c.setFont("Helvetica", 12)
-
-# # Plot SUVR
-# img_stream, max_value = plot_SUVR(subject,session,bids_dir,qc_dir, pial_left, pial_right, mask,max_value)
-# c.drawImage(img_stream, left_margin, height - 215, width=500, height=125)
-# c.drawString(left_margin, height - 100, "Surface FDG PET Standard Uptake Value Ratio (SUVR)")
-
-# # Plot subcortical SUVR
-# img_stream = plot_subcort(subject,session,bids_dir,qc_dir,max_value)
-# c.drawImage(img_stream, left_margin, height - 325, width=465, height=115)
-# c.drawString(left_margin, height - 225, "Subcortical FDG PET Standard Uptake Value Ratio (SUVR)")
-
-# # Plot hippunfold
-# img_stream = plot_hippunfold(subject,session,bids_dir,qc_dir,max_value)
-# c.drawImage(img_stream, left_margin+50, height - 445, width=375, height=115)
-# c.drawString(left_margin, height - 325, "Hippocampal FDG PET Standard Uptake Value Ratio (SUVR)")
-# c.drawString(left_margin+45, height - 400, "L")
-# c.drawString(left_margin+425, height - 400, "R")
-
-
-
-# # Plot AI
-# img_stream = plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right)
-# c.drawImage(img_stream, left_margin, height - 600, width=500, height=125)
-# c.drawString(left_margin, height - 475, "Surface FDG PET Asymmetry Index (L minus R) (BLUE = left < right, RED = right < left)")
-
-# # # Plot subcortical SUVR
-# # img_stream = plot_subcortical_AI(subject,session,bids_dir,qc_dir)
-# # c.drawImage(img_stream, left_margin, height - 725, width=465, height=115)
-# # c.drawString(left_margin, height - 625, "Subcortical FDG PET Asymmetry Index (L-R)")
-
-# # Plot Z score
-# img_stream = plot_Zscore(subject,session,bids_dir,qc_dir)
-# c.drawImage(img_stream, left_margin, height - 725, width=465, height=115)
-# c.drawString(left_margin, height - 625, "FDG PET Z score (threshold at |Z| > 1.96)")
-
-# c.setFillColor((1, 1, 1)) 
-# c.setStrokeColor((1, 1, 1))
-# c.rect(275, height - 575, 220, 75, fill=1)
-
-# # c.rect(275, height - 700, 220, 60, fill=1)
-
-# # Plot hippunfold AI
-# img_stream = plot_hippunfold_AI(subject,session,bids_dir,qc_dir)
-# c.drawImage(img_stream, left_margin+245, height - 600, width=175, height=115)
-
-# c.setFont("Helvetica", 8)
-# c.drawString(left_margin, height - 600,"BLUE = left < right. RED = right < left.")
-
-
-# c.showPage()
-
-# # Plot PET/MRI overlay
-# c.setFillColor((0,0,0)) 
-# c.setStrokeColor((0,0,0))
-# # c.rect(0,0,height, width, fill=1)
-# img_stream = plot_roi(subject,session,bids_dir,qc_dir)
-# # c.drawImage(img_stream,0,350,width,height-350)
-# c.drawImage(img_stream,0,height-250,width,75)
-# # c.rect(0,0,height, width, fill=1)
-
-# # Save the PDF
-# c.save()
+# Clean up display
+if display_flag:
+    display.stop()
+    del display
 
 print("QC screenshots completed.")

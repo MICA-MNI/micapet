@@ -1,11 +1,29 @@
 # !/bin/bash
-## test
+echo "root:x:0:0:root:/root:/bin/bash" > passwd.fake
+echo "user:x:$(id -u):$(id -g):User,,,:/tmp:/bin/bash" >> passwd.fake
+echo "root:x:0:" > group.fake
+echo "user:x:$(id -g):" >> group.fake
+# --- Fastest + most stable way to run Singularity inside Docker ---
+GROUP_ARGS=""
+for gid in $(id -G); do
+    GROUP_ARGS="$GROUP_ARGS --group-add $gid"
+done
+
 docker run -it --privileged \
+    --user "$(id -u):$(id -g)" \
+    $GROUP_ARGS \
     --security-opt seccomp=unconfined \
     --security-opt apparmor=unconfined \
+    --env HOME=/tmp \
+    --env APPTAINER_TMPDIR=/tmp \
+    --env APPTAINER_CACHEDIR=/tmp \
+    --env APPTAINER_NO_MOUNT_HOME=1 \
+    --env APPTAINER_NO_MOUNT_TMP=1 \
     -v /host:/host \
+    -v "$(pwd)/passwd.fake":/etc/passwd:ro \
+    -v "$(pwd)/group.fake":/etc/group:ro \
     micalab/micapet:v.alpha.0.2 \
-        -sub PX2002001 \
+        -sub PX2001001 \
         -ses pre \
         -bids /host/fladgate/local_raid/jack/FDG/MICA-PET/BIDS_20251111TLE_TZ_test/ \
         -fastsurfer_img /host/verges/tank/data/jack/fastsurfer-cpu-v2.4.2.sif \
@@ -14,42 +32,19 @@ docker run -it --privileged \
         -cachedir /host/verges/tank/data/jack/hippunfold_tmp \
         -psf 4.5 -force
 
-
-
-
-
-
-
-
-
-
-
-## old
-# echo "root:x:0:0:root:/root:/bin/bash" > passwd.fake
-# echo "user:x:$(id -u):$(id -g):User,,,:/tmp:/bin/bash" >> passwd.fake
-# echo "root:x:0:" > group.fake
-# echo "user:x:$(id -g):" >> group.fake
-# # --- Fastest + most stable way to run Singularity inside Docker ---
-# GROUP_ARGS=""
-# for gid in $(id -G); do
-#     GROUP_ARGS="$GROUP_ARGS --group-add $gid"
-# done
-
+## test
 # docker run -it --privileged \
-#     --user "$(id -u):$(id -g)" \
-#     $GROUP_ARGS \
 #     --security-opt seccomp=unconfined \
 #     --security-opt apparmor=unconfined \
-#     --env HOME=/tmp \
 #     --env APPTAINER_TMPDIR=/tmp \
 #     --env APPTAINER_CACHEDIR=/tmp \
 #     --env APPTAINER_NO_MOUNT_HOME=1 \
 #     --env APPTAINER_NO_MOUNT_TMP=1 \
+#     --env APPTAINER_NO_SETUID=1 \
+#     --env APPTAINER_UNSHARE_NS=1 \
 #     -v /host:/host \
-#     -v "$(pwd)/passwd.fake":/etc/passwd:ro \
-#     -v "$(pwd)/group.fake":/etc/group:ro \
 #     micalab/micapet:v.alpha.0.2 \
-#         -sub PX2002001 \
+#         -sub PX2101001 \
 #         -ses pre \
 #         -bids /host/fladgate/local_raid/jack/FDG/MICA-PET/BIDS_20251111TLE_TZ_test/ \
 #         -fastsurfer_img /host/verges/tank/data/jack/fastsurfer-cpu-v2.4.2.sif \
@@ -57,9 +52,6 @@ docker run -it --privileged \
 #         -hippunfold_img /host/verges/tank/data/jack/hippunfold_v1.4.1.sif \
 #         -cachedir /host/verges/tank/data/jack/hippunfold_tmp \
 #         -psf 4.5 -force
-
-
-
 
 
 

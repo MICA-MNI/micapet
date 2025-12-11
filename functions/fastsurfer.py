@@ -111,6 +111,8 @@ command = [
     "--sd", "/output",
     "--no_fs_T1",
     "--parallel",
+    "--no_hypothal",
+    "--no_cereb",
     "--threads", str(threads)
 ]
 
@@ -135,6 +137,7 @@ try:
             "--cleanenv",
             "--writable-tmpfs",
             "--containall",
+            "--no-privs",
             "-B", f"{subj_dir}:/output",
             "-B", f"{tmpdir}:/tmpdir",
             "-B", f"{T1_path}:/mnt/T1.nii.gz",
