@@ -1,0 +1,5 @@
+/functions/stat_result.json
+/functions/stderr*
+/functions/stdout*
+/functions/talairach.label_*
+/functions/test.py

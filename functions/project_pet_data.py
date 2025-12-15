@@ -30,7 +30,7 @@ from nipype.interfaces.workbench.base import WBCommand
 import shutil
 
 # Load utilities functions from utils.py
-# from utils import *
+import utils
 
 # Set the working directory to the script's location
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -75,13 +75,16 @@ pvc_options = ['none', 'rbv'] if args.pvc else ['none']
 cortical = args.cortical
 hippocampal = args.hippocampal
 
+mica_pet_version = os.environ['MICA_PET_VERSION']
+mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
+
 FSCommand.set_default_subjects_dir(args.subj_dir)
 
 # Check BIDS directory structure if it doesn't exist
 if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
     print(f"Error: BIDS rawdata directory for subject {subject}, session {session} does not exist.")
     sys.exit(1)
-if not os.path.exists(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}"):
+if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):
     print(f"Error: BIDS derivatives directory for subject {subject}, session {session} does not exist.")
     sys.exit(1)
     
@@ -100,7 +103,7 @@ if hippocampal:
             print(f"Error: HippUnfold directory {hippunfold_dir} does not exist.")
             sys.exit(1)
 
-print(f"Starting PET data projection to surface for subject: {subject}, session: {session}")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting PET data projection to surface for subject: {subject}, session: {session}.")
 
 if cortical:
     print("Doing cortical surface projection.")
@@ -108,11 +111,11 @@ if cortical:
         for pvc in pvc_options:
             for ref in ref_region:
                 print(f"Processing PVC method: {pvc}, reference region: {ref}, hemisphere: {hemi}...")
-                SUVR_map=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
+                SUVR_map=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
                 
                 surf_fsnative=f'{f_surf_dir}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-fsnative_label-midthickness.surf.gii'
                 
-                SUVR_on_surf=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-fsnative_label-midthickness_pvc-{pvc}_ref-{ref}_trc-FDG_pet.func.gii'
+                SUVR_on_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-fsnative_label-midthickness_pvc-{pvc}_ref-{ref}_trc-FDG_pet.func.gii'
                 WBCommand(f'wb_command -volume-to-surface-mapping {SUVR_map} {surf_fsnative} {SUVR_on_surf} -trilinear').run()
                 
                 for surf in ['fsLR-32k','fsLR-5k']:
@@ -122,15 +125,15 @@ if cortical:
                     
                     reg_surf_gii=f'{repo_dir}/surfaces/{surf}.{hemi}.sphere.reg.surf.gii'
                     
-                    SUVR_resampled_out=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-{surf}_label-midthickness_pvc-{pvc}_ref-{ref}_smooth-none_trc-FDG_pet.func.gii'
+                    SUVR_resampled_out=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-{surf}_label-midthickness_pvc-{pvc}_ref-{ref}_smooth-none_trc-FDG_pet.func.gii'
                     
                     WBCommand(f'wb_command -metric-resample {SUVR_on_surf} {sphere_surf} {reg_surf_gii} BARYCENTRIC {SUVR_resampled_out}').run()
                     
                     for smooth in [5,10]:
                         print(f"Smoothing with {smooth}mm kernel...")
-                        midthick_surf=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-T1w_surf-{surf}_label-midthickness.surf.gii'
+                        midthick_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-T1w_surf-{surf}_label-midthickness.surf.gii'
                         
-                        SUVR_resampled_smooth_out=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-{surf}_label-midthickness_pvc-{pvc}_ref-{ref}_smooth-{smooth}mm_trc-FDG_pet.func.gii'
+                        SUVR_resampled_smooth_out=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-{surf}_label-midthickness_pvc-{pvc}_ref-{ref}_smooth-{smooth}mm_trc-FDG_pet.func.gii'
                         
                         WBCommand(f'wb_command -metric-smoothing {midthick_surf} {SUVR_resampled_out} {smooth} {SUVR_resampled_smooth_out}').run()
 
@@ -140,14 +143,14 @@ if hippocampal:
         for pvc in pvc_options:
             for ref in ref_region:
                 print(f"Processing PVC method: {pvc}, reference region: {ref}, hemisphere: {hemi}...")
-                SUVR_map=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
+                SUVR_map=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
                 
                 hipp_surf=f'{hippunfold_dir}/hippunfold/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-T1w_den-2mm_label-hipp_midthickness.surf.gii' #_ses-{session}
                 
-                SUVR_on_surf=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-hipp_den-2mm_label-midthickness_pvc-{pvc}_ref-{ref}_trc-FDG_pet.func.gii'
+                SUVR_on_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-hipp_den-2mm_label-midthickness_pvc-{pvc}_ref-{ref}_trc-FDG_pet.func.gii'
                 
                 WBCommand(f'wb_command -volume-to-surface-mapping {SUVR_map} {hipp_surf} {SUVR_on_surf} -trilinear').run()
                     
         
-print("PET data projection completed.")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] PET data projection completed.")
 

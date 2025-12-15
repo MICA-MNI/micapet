@@ -22,9 +22,10 @@ import sys
 from datetime import datetime
 # from nipype.interfaces.freesurfer.petsurfer import GTMSeg
 from nipype.interfaces import freesurfer
+from nipype.interfaces.freesurfer import ApplyVolTransform
 
 # Load utilities functions from utils.py
-# from utils import *
+import utils
 
 # Set the working directory to the script's location
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -56,16 +57,19 @@ f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 force = args.force
 
 os.environ['SUBJECTS_DIR'] = os.path.realpath(args.subj_dir)
+mica_pet_version = os.environ['MICA_PET_VERSION']
+mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
+
 
 # Check BIDS directory structure if it doesn't exist
 if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
     print(f"Error: BIDS directory for subject {subject}, session {session} does not exist.")
     sys.exit(1)
-if not os.path.exists(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}"):
+if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):
     print(f"Error: BIDS derivatives directory for subject {subject}, session {session} does not exist.")
     sys.exit(1)
 
-print(f"Starting gtmseg for subject: {subject}, session: {session}")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting gtmseg for subject: {subject}, session: {session}.")
 
 # check seg type
 if seg_type == 'freesurfer':
@@ -107,10 +111,21 @@ elif seg_type == 'fastsurfer':
             gtmseg.inputs.ctx_annot = ("aparc.DKTatlas.annot",1000,2000)
             gtmseg.run()
 
-mc = freesurfer.MRIConvert()
-mc.inputs.in_file = f'{f_surf_dir}/mri/gtmseg.mgz'
-mc.inputs.out_file = f'{f_surf_dir}/mri/gtmseg.nii.gz'
-mc.inputs.out_type = 'niigz'
-mc.run()
+# mc = freesurfer.MRIConvert()
+# mc.inputs.in_file = f'{f_surf_dir}/mri/gtmseg.mgz'
+# mc.inputs.out_file = f'{f_surf_dir}/mri/gtmseg.nii.gz'
+# mc.inputs.out_type = 'niigz'
+# mc.run()
 
-print("GTM segmentation completed.")
+# Resample GTMseg to T1w space
+mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+gtm = f'{f_surf_dir}/mri/gtmseg.mgz'
+
+applyreg = ApplyVolTransform()
+applyreg.inputs.source_file= gtm
+applyreg.inputs.reg_header=True
+applyreg.inputs.target_file= mri
+applyreg.inputs.transformed_file=f'{f_surf_dir}/mri/gtmseg.nii.gz'
+applyreg.run()
+
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] GTM segmentation completed.")

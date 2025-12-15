@@ -26,9 +26,10 @@ import sys
 from datetime import datetime
 from spython.main import Client
 import shutil
+import subprocess
 
 # Load utilities functions from utils.py
-# from utils import *
+import utils
 
 # Set the working directory to the script's location
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -60,7 +61,7 @@ session = f"{args.ses.replace('ses-', '')}"
 subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
 threads = args.threads
-fastsurfer_img = os.path.realpath(args.fastsurfer_img)
+fastsurfer_img = os.path.abspath(args.fastsurfer_img)
 tmpdir = os.path.realpath(args.tmpdir)
 fs_license = os.path.realpath(args.fs_license)
 if args.subj_dir is None: #check if user inputted subj_dir
@@ -84,35 +85,68 @@ if os.path.exists(f"{subj_dir}/sub-{subject}_ses-{session}") and force==False:
     print("FastSurfer already run. Please rerun with -force flag to overwrite.")
     sys.exit(1)
 elif os.path.exists(f"{subj_dir}/sub-{subject}_ses-{session}") and force==True:
-    shutil.rmtree(f"{subj_dir}/sub-{subject}_ses-{session}")
+    shutil.rmtree(f"{subj_dir}/sub-{subject}_ses-{session}", ignore_errors=True)
 
-print(f"Starting FastSurfer for subject {subject}, session {session}.")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting FastSurfer for subject {subject}, session {session}.")
 
 # Define command to run inside container
+# command = [
+#     "/fastsurfer/run_fastsurfer.sh",
+#     "--fs_license", "/output/license.txt",
+#     "--t1", f"/tmpdir/sub-{subject}_ses-{session}_T1w.nii.gz",
+#     "--sid", f"sub-{subject}_ses-{session}",
+#     "--sd", "/output",
+#     "--no_fs_T1",
+#     "--parallel",
+#     "--threads", str(threads)
+# ]
+
+# Define command to run inside container
+# We bind T1 to /mnt/T1.nii.gz to avoid overlapping binds with /tmpdir
 command = [
     "/fastsurfer/run_fastsurfer.sh",
     "--fs_license", "/output/license.txt",
-    "--t1", f"/tmpdir/sub-{subject}_ses-{session}_T1w.nii.gz",
+    "--t1", "/mnt/T1.nii.gz",
     "--sid", f"sub-{subject}_ses-{session}",
     "--sd", "/output",
     "--no_fs_T1",
     "--parallel",
+    "--no_hypothal",
+    "--no_cereb",
     "--threads", str(threads)
 ]
+options=[
+    "--cleanenv",
+    "--writable-tmpfs",
+    "--containall",
+    "--no-home",
+    "-B", f"{subj_dir}:/output",
+    "-B", f"{tmpdir}:/tmpdir",
+    "-B", f"{T1_path}:/mnt/T1.nii.gz",
+    "-B", f"{fs_license}:/output/license.txt"
+]
+
+if os.path.exists(fastsurfer_img):
+    print(f"Using FastSurfer image at {fastsurfer_img}")
+else:
+    print(f"Error: FastSurfer image not found at {fastsurfer_img}")
+    sys.exit(1)
 
 # Run using spython
-Client.execute(
-    image=fastsurfer_img,
-    command=command,
-    options=[
-        "--cleanenv",
-        "--writable-tmpfs",
-        "--containall",
-        "-B", f"{subj_dir}:/output",
-        "-B", f"{tmpdir}:/tmpdir",
-        "-B", f"{T1_path}:/tmpdir/sub-{subject}_ses-{session}_T1w.nii.gz",
-        "-B", f"{fs_license}:/output/license.txt"
-    ]
-)
+print(f"Executing command in Singularity: \n{bcolors.BLUE}singularity exec {' '.join(options)} {fastsurfer_img} {' '.join(command)}{bcolors.RESET}")
 
-print("FastSurfer completed.")
+if shutil.which('singularity') is None:
+    print("Error: 'singularity' executable not found in PATH. Please ensure Singularity is installed.")
+    sys.exit(1)
+
+try: 
+    Client.execute(
+        image=fastsurfer_img,
+        command=command,
+        options=options
+    )
+except Exception as e:
+    print(f"An error occurred during Singularity execution: {e}")
+    sys.exit(1)
+
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] FastSurfer completed.")
