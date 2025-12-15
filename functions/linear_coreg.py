@@ -21,11 +21,13 @@ import os
 import shutil
 import sys
 from datetime import datetime
-# import ants
+import ants
+import subprocess
+# from nipype.interfaces.freesurfer import FSCommand
 from nipype.interfaces.freesurfer import MRICoreg, ApplyVolTransform, FSCommand
 
 # Load utilities functions from utils.py
-# from utils import *
+import utils
 
 # Set the working directory to the script's location
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -77,6 +79,7 @@ if not os.path.exists(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{sessi
     os.makedirs(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/anat")
     os.makedirs(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet")
     os.makedirs(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf")
+    os.makedirs(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/xfm")
 
 # Check and copy PET and MRI files if provided
 if args.pet == None:
@@ -95,7 +98,7 @@ else:
     if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"):
         shutil.copyfile(os.path.realpath(args.mri), mri)
 
-print(f"Starting PET to MRI co-registration for subject: {subject}, session: {session}")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting PET to MRI co-registration for subject: {subject}, session: {session}.")
 
 ## ANTS
 # fixed = ants.image_read(mri)
@@ -105,7 +108,7 @@ print(f"Starting PET to MRI co-registration for subject: {subject}, session: {se
 #     fixed=fixed,
 #     moving=moving,
 #     type_of_transform='Rigid',
-#     outprefix=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet_to_T1w_'
+#     outprefix=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to_T1w_'
 # )
 
 # pet_in_mri = ants.apply_transforms(
@@ -114,7 +117,27 @@ print(f"Starting PET to MRI co-registration for subject: {subject}, session: {se
 #     transformlist=mytx['fwdtransforms'],
 #     interpolator='linear')
 
-# ants.image_write(pet_in_mri, f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_trc-FDG_pet.nii.gz')
+# ants.image_write(pet_in_mri, f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-none_ref-none_trc-FDG_pet.nii.gz')
+
+# os.environ["PATH"] += os.pathsep + '/opt/ants/bin'
+# FSCommand.set_default_subjects_dir(args.subj_dir)
+
+# # # convert ANTS mat to ITK txt
+# ants_mat = f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to_T1w_0GenericAffine.mat'
+# itk_txt = f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from_pet_to_T1w_xfm.txt'
+# out_lta = f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-FDG_pet_to_T1w_xfm.reg.lta'
+# subprocess.call(['ConvertTransformFile', '3', 
+#     ants_mat,
+#     itk_txt])
+
+# convert ITK txt to FreeSurfer LTA
+# subprocess.call(['lta_convert',
+#     '--initk',itk_txt,
+#     '--outlta',out_lta,
+#     '--src',pet,
+#     '--trg',mri,
+#     '--subject',f"sub-{subject}_ses-{session}",
+#     '--ltavox2vox']) 
 
 ## MRICoreg
 
@@ -124,18 +147,19 @@ coreg.inputs.source_file=pet
 # coreg.inputs.reference_file=mri
 coreg.inputs.subject_id=f"sub-{subject}_ses-{session}"
 # coreg.inputs.subjects_dir=subj_dir
-coreg.inputs.out_lta_file=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet_to_T1w_xfm.reg.lta'
+coreg.inputs.out_lta_file=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to_T1w_xfm.reg.lta'
 print(coreg.cmdline)
 coreg.run()
 
 applyreg = ApplyVolTransform()
 applyreg.inputs.source_file=pet
-applyreg.inputs.reg_file=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet_to_T1w_xfm.reg.lta'
-applyreg.inputs.fs_target=True
-applyreg.inputs.transformed_file=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-none_ref-none_trc-FDG_pet.nii.gz'
+applyreg.inputs.reg_file=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-FDG_pet_to_T1w_xfm.reg.lta'
+# applyreg.inputs.fs_target=True
+applyreg.inputs.target_file=mri
+applyreg.inputs.transformed_file=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-none_ref-none_trc-FDG_pet_ants.nii.gz'
 applyreg.run()
 
-print("PET to MRI co-registration completed successfully.")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] PET to MRI co-registration completed.")
 
 ## Nipype implementation (commented out)
 # reg = RegistrationSynQuick()

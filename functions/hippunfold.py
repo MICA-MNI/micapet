@@ -8,7 +8,7 @@ The script requires the following arguments:
     -ses        : Session. (eg. 01)
     -bids       : Path to BIDS directory ( . or FULL PATH)
     -hippunfold_img: Path to HippUnfold .sif image.
-    -output_dir : Specify path to HippUnfold output directory. (Default: hippunfold subdirectory in BIDS derivatives directory.)
+    -hippunfold_dir : Specify path to HippUnfold output directory. (Default: hippunfold subdirectory in BIDS derivatives directory.)
     -tmpdir    : (Optional) Path to temporary directory. (Default /tmp)
     -cachedir  : (Optional) Set HIPPUNFOLD_CACHE_DIR manually. (Default ~/.cache)
     -B          : (Optional) Bind pathway for Singularity (eg. /host or /host,/opt etc)
@@ -31,7 +31,7 @@ from spython.main import Client
 import shutil
 
 # Load utilities functions from utils.py
-# from utils import *
+import utils
 
 # Set the working directory to the script's location
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -46,7 +46,7 @@ parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(St
 parser.add_argument("-hippunfold_img", dest="hippunfold_img", type=str, required=True, help="(Str) Specify path to HippUnfold singularity image.")
 parser.add_argument("-tmpdir", dest="tmpdir", type=str, help="(Str) Specify path to temporary directory.")
 parser.add_argument("-cachedir", dest="cachedir", type=str, help="(Str) Set HIPPUNFOLD_CACHE_DIR manually. (Default ~/.cache).")
-parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify path to HippUnfold output directory.")
+parser.add_argument("-hippunfold_dir", dest="hippunfold_dir", type=str, help="(Str) Specify path to HippUnfold output directory.")
 parser.add_argument("-B", dest="B",type=str, help="(Str) Specify paths to bind for Singularity. (eg. /host or /host,/opt etc)")
 parser.add_argument("-T1", dest="T1_path", type=str, help="(Str) Specify path to T1w image. (Default T1w image in BIDS directory).")
 parser.add_argument("-force", action='store_true', help="Force HippUnfold even if output exists.")
@@ -82,11 +82,11 @@ if args.B is None:
 else:
     bind = ["-B",f"{os.path.realpath(args.B)}"]
 
-if args.output_dir is None: #check if user inputted output_dir
-    output_dir = f"{bids_dir}/derivatives/hippunfold_v1.4.1"
-    os.makedirs(output_dir,exist_ok=True) #makes output_dir if it doesn't already exist
+if args.hippunfold_dir is None: #check if user inputted hippunfold_dir
+    hippunfold_dir = f"{bids_dir}/derivatives/hippunfold_v1.4.1"
+    os.makedirs(hippunfold_dir,exist_ok=True) #makes hippunfold_dir if it doesn't already exist
 else:
-    output_dir = os.path.realpath(args.output_dir)
+    hippunfold_dir = os.path.realpath(args.hippunfold_dir)
 
 if args.T1_path is None: #check if user inputted T1_path 
     if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"): # if not T1_path inputted, does T1w image exist already in BIDS?
@@ -100,13 +100,13 @@ else:
 force = args.force
 force_command=[]
 
-if os.path.exists(f"{output_dir}/hippunfold/sub-{subject}/ses-{session}") and force==False: #check if HippUnfold run already & if no force flag
+if os.path.exists(f"{hippunfold_dir}/hippunfold/sub-{subject}/ses-{session}") and force==False: #check if HippUnfold run already & if no force flag
     print("HippUnfold already run. Please rerun with -force flag to overwrite.")
     sys.exit(1)
-elif os.path.exists(f"{output_dir}/hippunfold/sub-{subject}/ses-{session}") and force==True: #if
+elif os.path.exists(f"{hippunfold_dir}/hippunfold/sub-{subject}/ses-{session}") and force==True: #if
     force_command=["--force-output"]
 
-print(f"Starting HippUnfold for subject {subject}, session {session}.")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting HippUnfold for subject {subject}, session {session}.")
 # print(os.environ['HIPPUNFOLD_CACHE_DIR'])
 
 # Define HippUnfold args to run inside container
@@ -125,7 +125,7 @@ args.extend(force_command)
 # set Singularity options
 options=["--cleanenv",
         "-B", f"{bids_dir}:/bids_dir",
-        "-B", f"{output_dir}:/output_dir"
+        "-B", f"{hippunfold_dir}:/output_dir"
     ]
 options.extend(tmpdir)
 options.extend(cachedir)
@@ -139,14 +139,10 @@ options.extend(bind)
 # print(options)
 
 # Run using spython
-try:
-    Client.run(
-        image=hippunfold_img,
-        args=args,
-        options=options
-    )
-except Exception as e:
-    print(f"Error during HippUnfold execution: {e}")
-    sys.exit(1)
+Client.run(
+    image=hippunfold_img,
+    args=args,
+    options=options
+)
     
-print("HippUnfold completed.")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] HippUnfold completed.")

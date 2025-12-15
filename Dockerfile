@@ -22,8 +22,8 @@ ENV LC_ALL=C \
     FREESURFER_HOME="/opt/freesurfer-7.4.1" \
     SUBJECTS_DIR="$FREESURFER_HOME/subjects" \
     PATH="/opt/freesurfer-7.4.1/bin:$FREESURFER_HOME/mni/bin:$PATH" \
-    ANTSPATH="/opt/ants-2.4.3/" \
-    PATH="/opt/ants-2.4.3:$PATH" \
+    ANTSPATH="/opt/ants" \
+    PATH="/opt/ants:$PATH" \
     C3DPATH="/opt/convert3d-1.0.0" \
     PATH="/opt/convert3d-1.0.0/bin:$PATH" \
     CONDA_DIR="/opt/miniconda-latest" \
@@ -106,7 +106,7 @@ RUN mkdir -p $FREESURFER_HOME && \
 # Install ANTs
 #####################################################################
 ENV ANTSPATH=/opt/ants
-ENV PATH=$ANTSPATH:$PATH
+ENV PATH=$ANTSPATH/bin:$PATH
 
 RUN curl -fsSL -o /tmp/ants.zip \
     https://github.com/ANTsX/ANTs/releases/download/v2.4.3/ants-2.4.3-centos7-X64-gcc.zip && \

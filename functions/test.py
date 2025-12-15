@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import utils
 import os
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-repo_dir = os.path.dirname(script_dir)
+# pet_avg_file = utils.BIDSderivativeName(sub="PX001", ses="01", space="T1w",desc="pons",to="T1w",suffix="mask")
 
-print(script_dir)
-print(f'{repo_dir}/surfaces/fsLR-')
+# print(f"{pet_avg_file.build()}.nii.gz")
 
 
+print(mica_pet_version)
 # import fsqc
 
 # fsqc.run_fsqc(subjects_dir='/host/fladgate/local_raid/jack/FDG/MICA-PET/BIDS/derivatives/fastsurfer',        

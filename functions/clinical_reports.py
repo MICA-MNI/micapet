@@ -61,7 +61,7 @@ if (
                 print("Warning: pyvirtualdisplay not available, plotting may fail in headless environment")
 
 # Load utilities functions from utils.py
-# from utils import *
+import utils
 
 # Set the working directory to the script's location
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -91,6 +91,8 @@ subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
+mica_pet_version = os.environ['MICA_PET_VERSION']
+mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
 
 if args.max_value is not None:
     max_value = args.max_value
@@ -103,7 +105,7 @@ FSCommand.set_default_subjects_dir(args.subj_dir)
 if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
     print(f"Error: BIDS rawdata directory for subject {subject}, session {session} does not exist.")
     sys.exit(1)
-if not os.path.exists(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}"):
+if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):
     print(f"Error: BIDS derivatives directory for subject {subject}, session {session} does not exist.")
     sys.exit(1)
     
@@ -113,7 +115,7 @@ if not os.path.exists(qc_dir):
     print(f"Error: QC directory does not exist at {qc_dir}. Please create it first.")
     sys.exit(1)
     
-print(f"Starting clinical report generation for subject: {subject}, session: {session}")
+print(f"Starting clinical report generation for subject: {subject}, session: {session} [{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]")
 
 filename= f"/host/fladgate/local_raid/jack/FDG/sub-{subject}_ses-{session}_FDG_clinical_report.pdf"
 
@@ -203,8 +205,8 @@ def _load_data_sctx(
     return data_lh, data_rh
 
 def plot_SUVR(subject,session,bids_dir,qc_dir,pial_left,pial_right,mask,max_value):
-    tmp_pt_FDG_surf_L = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
-    tmp_pt_FDG_surf_R = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
+    tmp_pt_FDG_surf_L = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
+    tmp_pt_FDG_surf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
 
     to_plot = np.hstack((tmp_pt_FDG_surf_L,tmp_pt_FDG_surf_R))
     to_plot[~mask] = np.nan
@@ -239,9 +241,9 @@ def plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value):
     return img_stream
 
 def plot_hippunfold(subject,session,bids_dir,qc_dir,max_value):
-    tmp_hcsurf_L = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
+    tmp_hcsurf_L = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
 
-    tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")             
+    tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")             
 
     to_plot = np.hstack((np.expand_dims(tmp_hcsurf_L,axis=1),np.expand_dims(tmp_hcsurf_R,axis=1)))
 
@@ -252,9 +254,9 @@ def plot_hippunfold(subject,session,bids_dir,qc_dir,max_value):
     return img_stream
 
 def plot_hippunfold_AI(subject,session,bids_dir,qc_dir):
-    tmp_hcsurf_L = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
+    tmp_hcsurf_L = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
 
-    tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
+    tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
 
     AI_L = (tmp_hcsurf_L - tmp_hcsurf_R)/(0.5 * (tmp_hcsurf_L+tmp_hcsurf_R))             
 
@@ -269,8 +271,8 @@ def plot_hippunfold_AI(subject,session,bids_dir,qc_dir):
 # Plotting asymmetry -------------------------------------------------------------
     
 def plot_AI(subject,session,bids_dir,qc_dir,pial_left,pial_right):
-    tmp_pt_FDG_surf_L = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
-    tmp_pt_FDG_surf_R = nilearn.surface.load_surf_data(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
+    tmp_pt_FDG_surf_L = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
+    tmp_pt_FDG_surf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
 
     AI_R = (tmp_pt_FDG_surf_R - tmp_pt_FDG_surf_L)/ (0.5 * (tmp_pt_FDG_surf_R + tmp_pt_FDG_surf_L))
     AI_L = (tmp_pt_FDG_surf_L - tmp_pt_FDG_surf_R)/ (0.5 * (tmp_pt_FDG_surf_R + tmp_pt_FDG_surf_L))
@@ -318,7 +320,7 @@ def plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir):
     return cropped_image_path
 
 def plot_roi(subject,session,bids_dir,qc_dir):
-    pet_derivatives=f'{bids_dir}/derivatives/MICA-PET'
+    pet_derivatives=f'{mica_pet_derivatives}'
     mri_derivatives=f'{bids_dir}/derivatives/fastsurfer'
 
     img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_SUVR_plot_roi_clin_report.png"
@@ -336,7 +338,7 @@ def max_hist(data, bins=50):
     return max_value
 
 def plot_Zscore(subject,session,bids_dir,qc_dir):
-    pet_derivatives=f'{bids_dir}/derivatives/MICA-PET'
+    pet_derivatives=f'{mica_pet_derivatives}'
     mri_derivatives=f'{bids_dir}/derivatives/fastsurfer'
     pvc = 'none'
     Z_score_threhold = 1.96
@@ -455,7 +457,7 @@ def parcel_stats(subject,session,bids_dir,subj_dir,qc_dir):
         }
     }
     
-    src = nib.load(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-rbv_ref-pons_trc-FDG_pet.nii.gz")
+    src = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-rbv_ref-pons_trc-FDG_pet.nii.gz")
     pet_data = src.get_fdata()
     tgt = nib.load(f"{subj_dir}/sub-{subject}_ses-{session}/mri/aparc+aseg.mgz")
     # ^ change to f_surf_dir eventually
@@ -555,9 +557,9 @@ with rc.ReportCreator(
     ),
     rc.Group(
         rc.Metric(
-            heading="BLUE = Left < Right; RED = Right < Left",
-            label="Asymmetry Index interpretation",
-            value="AI = (L - R) / (0.5 * (L + R))"
+            heading="Asymmetry Index interpretation",
+            value="BLUE = Left < Right; RED = Right < Left",
+            label="AI = (L - R) / (0.5 * (L + R))"
         ),
     ),
     
@@ -580,32 +582,7 @@ with rc.ReportCreator(
                 index=False
             )
         ]
-    ),
-    
-    # rc.Group(
-    #         rc.Metric(
-    #            heading="Answer to Life, The Universe, and Everything",
-    #            value="42",
-    #         ),
-    #         rc.Metric(
-    #            heading="Author",
-    #            value="Douglas Adams",
-    #         ),
-    #   ),
-    #   rc.Bar(px.data.medals_long(),
-    #            x="nation",
-    #            y="count",
-    #            dimension="medal",
-    #            label="Bar Chart - Olympic Medals",
-    #   ),
-    #   rc.Scatter(
-    #         px.data.iris(),
-    #         x="sepal_width",
-    #         y="sepal_length",
-    #         dimension="species",
-    #         marginal="histogram",
-    #         label="Scatter Plot - Iris",
-    #   ),
+    )
    )
 
    report.save(view, f"{qc_dir}/sub-{subject}_ses-{session}_report.html")
@@ -615,4 +592,4 @@ if display_flag:
     display.stop()
     del display
 
-print("QC screenshots completed.")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] QC screenshots completed.")

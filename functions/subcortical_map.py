@@ -23,9 +23,10 @@ import nibabel as nib
 import numpy as np
 from nibabel.processing import resample_from_to
 import csv
+from datetime import datetime
 
 # Load utilities functions from utils.py
-# from utils import *
+import utils
 
 # Set the working directory to the script's location
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -54,8 +55,10 @@ bids_dir = os.path.realpath(args.bids_dir)
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
 
+mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{os.environ['MICA_PET_VERSION']}"   
+
 # Check BIDS directory structure if it doesn't exist
-if not os.path.exists(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}"):
+if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):
     print(f"Error: BIDS derivatives directory for subject {subject}, session {session} does not exist.")
     sys.exit(1)
     
@@ -65,7 +68,7 @@ if not os.path.exists(qc_dir):
     os.makedirs(qc_dir, exist_ok=True)
 
 # Begin processing
-print(f"Starting subcortical map generation for subject: {subject}, session: {session}")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting subcortical map generation for subject: {subject}, session: {session}.")
 
 # dict of FS labels for subcortical regions
 dict = {'Left-Accumbens-area': 26,
@@ -83,7 +86,7 @@ dict = {'Left-Accumbens-area': 26,
 'Right-Putamen': 51,
 'Right-Thalamus': 49}
 
-src = nib.load(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-rbv_ref-pons_trc-FDG_pet.nii.gz")
+src = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-rbv_ref-pons_trc-FDG_pet.nii.gz")
 pet_data = src.get_fdata()
 tgt = nib.load(f"{f_surf_dir}/mri/aparc+aseg.mgz")
 aseg_aparc_data = tgt.get_fdata()
@@ -105,4 +108,4 @@ with open(output_file, 'w', newline='') as f:
     writer.writerow(regions)
     writer.writerow(means)
 
-print("Subcortical map generation completed.")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Subcortical map generation completed.")

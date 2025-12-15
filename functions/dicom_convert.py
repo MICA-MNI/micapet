@@ -25,7 +25,7 @@ import dcm2niixpy
 # from nipype.interfaces.dcm2nii import Dcm2niix
 
 # Load utilities functions from utils.py
-# from utils import *
+import utils
 
 # Set the working directory to the script's location
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -58,7 +58,7 @@ if pet_mri == "mri":
     pet_mri = "anat"
 series = args.series
 
-print(f"Starting DICOM to NIfTI conversion for subject: {subject}, session: {session}, image type: {pet_mri}, series: {series}")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting DICOM to NIfTI conversion for subject: {subject}, session: {session}, image type: {pet_mri}, series: {series}.")
 
 # Create BIDS directory structure if it doesn't exist
 if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
@@ -81,4 +81,4 @@ elif pet_mri == "anat":
 
 dcm2niix.convert(dicom_dir,output_path=f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/{pet_mri}")
 
-print("DICOM to NIfTI conversion completed successfully.")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] DICOM to NIfTI conversion completed successfully.")

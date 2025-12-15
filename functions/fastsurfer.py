@@ -29,7 +29,7 @@ import shutil
 import subprocess
 
 # Load utilities functions from utils.py
-# from utils import *
+import utils
 
 # Set the working directory to the script's location
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -87,7 +87,7 @@ if os.path.exists(f"{subj_dir}/sub-{subject}_ses-{session}") and force==False:
 elif os.path.exists(f"{subj_dir}/sub-{subject}_ses-{session}") and force==True:
     shutil.rmtree(f"{subj_dir}/sub-{subject}_ses-{session}", ignore_errors=True)
 
-print(f"Starting FastSurfer for subject {subject}, session {session}.")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting FastSurfer for subject {subject}, session {session}.")
 
 # Define command to run inside container
 # command = [
@@ -115,6 +115,16 @@ command = [
     "--no_cereb",
     "--threads", str(threads)
 ]
+options=[
+    "--cleanenv",
+    "--writable-tmpfs",
+    "--containall",
+    "--no-home",
+    "-B", f"{subj_dir}:/output",
+    "-B", f"{tmpdir}:/tmpdir",
+    "-B", f"{T1_path}:/mnt/T1.nii.gz",
+    "-B", f"{fs_license}:/output/license.txt"
+]
 
 if os.path.exists(fastsurfer_img):
     print(f"Using FastSurfer image at {fastsurfer_img}")
@@ -123,7 +133,7 @@ else:
     sys.exit(1)
 
 # Run using spython
-print(f"Executing command in Singularity: {' '.join(command)}")
+print(f"Executing command in Singularity: \n{bcolors.BLUE}singularity exec {' '.join(options)} {fastsurfer_img} {' '.join(command)}{bcolors.RESET}")
 
 if shutil.which('singularity') is None:
     print("Error: 'singularity' executable not found in PATH. Please ensure Singularity is installed.")
@@ -133,19 +143,10 @@ try:
     Client.execute(
         image=fastsurfer_img,
         command=command,
-        options=[
-            "--cleanenv",
-            "--writable-tmpfs",
-            "--containall",
-            "--no-privs",
-            "-B", f"{subj_dir}:/output",
-            "-B", f"{tmpdir}:/tmpdir",
-            "-B", f"{T1_path}:/mnt/T1.nii.gz",
-            "-B", f"{fs_license}:/output/license.txt"
-        ]
+        options=options
     )
 except Exception as e:
     print(f"An error occurred during Singularity execution: {e}")
     sys.exit(1)
 
-print("FastSurfer completed.")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] FastSurfer completed.")
