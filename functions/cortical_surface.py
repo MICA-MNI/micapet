@@ -25,7 +25,7 @@ from nipype.interfaces.workbench.base import WBCommand
 import shutil
 
 # Load utilities functions from utils.py
-# from utils import *
+import utils
 
 # Set the working directory to the script's location
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -51,6 +51,8 @@ session = f"{args.ses.replace('ses-', '')}"
 subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
+mica_pet_version = os.environ['MICA_PET_VERSION']
+mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
 
 FSCommand.set_default_subjects_dir(args.subj_dir)
 
@@ -58,7 +60,7 @@ FSCommand.set_default_subjects_dir(args.subj_dir)
 if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
     print(f"Error: BIDS rawdata directory for subject {subject}, session {session} does not exist.")
     sys.exit(1)
-if not os.path.exists(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}"):
+if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):
     print(f"Error: BIDS derivatives directory for subject {subject}, session {session} does not exist.")
     sys.exit(1)
 
@@ -69,21 +71,7 @@ if missing_files:
     print(f"Error: missing surface files for subject {subject}, session {session}. Please ensure FreeSurfer/FastSurfer have been run properly.")
     sys.exit(1)
 
-print(f"Starting FreeSurfer/FastSurfer mapping to fsLR for subject: {subject}, session: {session}")
-
-# for hemi in ['lh','rh']:
-#     hemi_cap = 'L' if hemi=='lh' else 'R'
-#     for res in ['32k','5k']:      
-#         fs_white=f"{f_surf_dir}/surf/{hemi}.white"
-#         fs_pial=f"{f_surf_dir}/surf/{hemi}.pial"
-#         current_fs_sphere=f"{f_surf_dir}/surf/{hemi}.sphere.reg"
-#         # new_sphere=f"{script_dir}/surfaces/fsLR-{res}.{hemi_cap}.sphere.reg.surf.gii"
-#         new_sphere=f"{script_dir}/surfaces/fs_LR-deformed_to-fsaverage.{hemi_cap}.sphere.32k_fs_LR.surf.gii"
-#         midthickness_current_out=f"{f_surf_dir}/surf/sub-{subject}_ses-{session}_hemi-{hemi_cap}_surf-fsnative_label-midthickness.surf.gii"
-#         midthickness_new_out=f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi_cap}_space-T1w_surf-fsLR-{res}_label-midthickness.surf.gii"
-#         current_gifti_sphere_out=f"{f_surf_dir}/surf/sub-{subject}_ses-{session}_hemi-{hemi_cap}_surf-fsnative_label-sphere.surf.gii"
-        
-#         WBCommand(f'wb_shortcuts -freesurfer-resample-prep {fs_white} {fs_pial} {current_fs_sphere} {new_sphere} {midthickness_current_out} {midthickness_new_out} {current_gifti_sphere_out}').run()
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting FreeSurfer/FastSurfer mapping to fsLR for subject: {subject}, session: {session}.")
 
         
 def freesurfer_resample_prep(
@@ -160,8 +148,8 @@ for hemi in ['lh','rh']:
             new_sphere=f"{repo_dir}/surfaces/fsLR-{res}.{hemi_cap}.sphere.reg.surf.gii",
             # fs_LR-deformed_to-fsaverage.{hemi_cap}.sphere.{res}_fs_LR.surf.gii",
             midthickness_current_out=f"{f_surf_dir}/surf/sub-{subject}_ses-{session}_hemi-{hemi_cap}_surf-fsnative_label-midthickness.surf.gii",
-            midthickness_new_out=f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi_cap}_space-T1w_surf-fsLR-{res}_label-midthickness.surf.gii",
+            midthickness_new_out=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi_cap}_space-T1w_surf-fsLR-{res}_label-midthickness.surf.gii",
             current_gifti_sphere_out=f"{f_surf_dir}/surf/sub-{subject}_ses-{session}_hemi-{hemi_cap}_surf-fsnative_label-sphere.surf.gii"
         )
     
-print("Mapping to fsLR completed.")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Mapping to fsLR completed.")

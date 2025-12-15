@@ -23,11 +23,11 @@ import os
 import sys
 from datetime import datetime
 from nipype.interfaces import freesurfer
-from nipype.interfaces.freesurfer import FSCommand
+from nipype.interfaces.freesurfer import FSCommand, ApplyVolTransform
 import shutil
 
 # Load utilities functions from utils.py
-# from utils import *
+import utils
 
 # Set the working directory to the script's location
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -59,6 +59,9 @@ psf = args.psf
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 FSCommand.set_default_subjects_dir(args.subj_dir)
 
+mica_pet_version = os.environ['MICA_PET_VERSION']
+mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
+
 # gtmpvc.output 
 if args.pvc_dir is None: 
     pvc_dir = f"{f_surf_dir}/gtmpvc.output"
@@ -71,7 +74,7 @@ force = args.force
 if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
     print(f"Error: BIDS rawdata directory for subject {subject}, session {session} does not exist.")
     sys.exit(1)
-if not os.path.exists(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}"):
+if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):
     print(f"Error: BIDS derivatives directory for subject {subject}, session {session} does not exist.")
     sys.exit(1)
 
@@ -80,11 +83,11 @@ if not os.path.exists(f"{f_surf_dir}/mri/gtmseg.mgz"):
     print(f"Error: gtmseg.mgz for subject {subject}, session {session} does not exist. Please run gtm_seg.py first.")
     sys.exit(1)
 
-print(f"Starting GTMPVC for subject: {subject}, session: {session}")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting GTMPVC for subject: {subject}, session: {session}.")
 
 gtmpvc = freesurfer.GTMPVC()
 gtmpvc.inputs.in_file = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet.nii.gz"
-gtmpvc.inputs.reg_file = f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet_to_T1w_xfm.reg.lta'
+gtmpvc.inputs.reg_file = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-FDG_pet_to_T1w_xfm.reg.lta'
 gtmpvc.inputs.psf = psf
 gtmpvc.inputs.segmentation = f"{f_surf_dir}/mri/gtmseg.mgz"
 gtmpvc.inputs.auto_mask = (1, 0.01)
@@ -98,6 +101,15 @@ print(gtmpvc.cmdline)
 # print(args.subj_dir)
 gtmpvc.run()
 
-shutil.copy(f"{pvc_dir}/rbv.nii.gz",f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-rbv_ref-none_trc-FDG_pet.nii.gz")
+# Resample RBV to T1w space
+mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+rbv = f"{pvc_dir}/rbv.nii.gz"
 
-print("Partial volume correction completed.")
+applyreg = ApplyVolTransform()
+applyreg.inputs.source_file= rbv
+applyreg.inputs.reg_header=True
+applyreg.inputs.target_file= mri
+applyreg.inputs.transformed_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-rbv_ref-none_trc-FDG_pet.nii.gz"
+applyreg.run()
+    
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Partial volume correction completed.")
