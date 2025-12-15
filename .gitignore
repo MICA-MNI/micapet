@@ -12,3 +12,11 @@ neurodocker-mica-pet2.Dockerfile
 neurodocker-mica-pet_cgpt.Dockerfile
 neurodocker-mica-pet_singularity.def
 freesurfer*
+docker_build_run.sh
+group.fake
+passwd.fake
+talairach.label_intensities.txt
+list_of_tests.txt
+.dockerignore
+.vscode/*
+functions/__pycache__/*
