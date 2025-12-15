@@ -143,6 +143,7 @@ for line in Client.run(
     image=hippunfold_img,
     args=args,
     options=options
-)
+):
+    print(line)
     
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] HippUnfold completed.")

@@ -20,3 +20,4 @@ list_of_tests.txt
 .dockerignore
 .vscode/*
 functions/__pycache__/*
+functions/test.py
