@@ -1,4 +1,4 @@
-micapet_v*.sif
+*.sif
 stderr.nipype
 stdout.nipype
 talairach.label*
