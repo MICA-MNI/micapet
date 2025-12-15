@@ -1,7 +1,8 @@
 *.sif
-stderr.nipype
-stdout.nipype
-talairach.label*
+*tar.gz
+functions/stderr.nipype
+functions/stdout.nipype
+functions/talairach.label*
 archive_Dockerfile
 pipfreeze.txt
 report.html
