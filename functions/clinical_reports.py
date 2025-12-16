@@ -93,6 +93,7 @@ f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
 mica_pet_version = os.environ['MICA_PET_VERSION']
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
+space = os.environ['PET_SPACE']
 
 if args.max_value is not None:
     max_value = args.max_value
@@ -122,9 +123,10 @@ filename= f"/host/fladgate/local_raid/jack/FDG/sub-{subject}_ses-{session}_FDG_c
 pial_left, pial_right = fetch_template_surface("fslr32k",join=False)
 mask = fetch_mask("fslr32k")
 
-sctx_left = read_surface(f"/app/surfaces/sctx.L.surf.gii", itype="gii")
-sctx_right = read_surface(f"/app/surfaces/sctx.R.surf.gii", itype="gii")
-
+# sctx_left = read_surface(f"/app/surfaces/sctx.L.surf.gii", itype="gii")
+# sctx_right = read_surface(f"/app/surfaces/sctx.R.surf.gii", itype="gii")
+sctx_left = read_surface(f"/host/fladgate/local_raid/jack/FDG/MICA-PET/scripts/surfaces/sctx.L.surf.gii", itype="gii")
+sctx_right = read_surface(f"/host/fladgate/local_raid/jack/FDG/MICA-PET/scripts/surfaces/sctx.R.surf.gii", itype="gii")
 # Utility functions ------------------------------------------------------------
 def map_subcortical_vertices(x) -> np.ndarray:
     """
@@ -325,7 +327,7 @@ def plot_roi(subject,session,bids_dir,qc_dir):
 
     img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_SUVR_plot_roi_clin_report.png"
 
-    plotting.plot_roi(f'{pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-none_ref-pons_trc-FDG_pet_desc-brainmask.nii.gz',bg_img=f'{mri_derivatives}/sub-{subject}_ses-{session}/mri/orig.mgz',display_mode='z',cut_coords=tuple(np.linspace(-75,75,15)),alpha=0.3,radiological=True, title=f'sub-{subject} ses-{session} FDG SUVR',dim=0,resampling_interpolation='continuous',output_file=img_stream)
+    plotting.plot_roi(f'{pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-pons_trc-FDG_pet_desc-brainmask.nii.gz',bg_img=f'{mri_derivatives}/sub-{subject}_ses-{session}/mri/orig.mgz',display_mode='z',cut_coords=tuple(np.linspace(-75,75,15)),alpha=0.3,radiological=True, title=f'sub-{subject} ses-{session} FDG SUVR',dim=0,resampling_interpolation='continuous',output_file=img_stream)
 
     return img_stream
 
@@ -367,7 +369,7 @@ def plot_Zscore(subject,session,bids_dir,qc_dir):
 
     return img_stream
 
-def parcel_stats(subject,session,bids_dir,subj_dir,qc_dir):
+def parcel_stats(subject,session,bids_dir,subj_dir,qc_dir,space):
     import nibabel as nib
     import numpy as np
     from nibabel.processing import resample_from_to
@@ -457,7 +459,7 @@ def parcel_stats(subject,session,bids_dir,subj_dir,qc_dir):
         }
     }
     
-    src = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-rbv_ref-pons_trc-FDG_pet.nii.gz")
+    src = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-rbv_ref-pons_trc-FDG_pet.nii.gz")
     pet_data = src.get_fdata()
     tgt = nib.load(f"{subj_dir}/sub-{subject}_ses-{session}/mri/aparc+aseg.mgz")
     # ^ change to f_surf_dir eventually
@@ -577,10 +579,19 @@ with rc.ReportCreator(
     rc.Select(
         blocks=[
             rc.DataTable(
-                parcel_stats(subject,session,bids_dir,args.subj_dir,qc_dir),
+                parcel_stats(subject,session,bids_dir,args.subj_dir,qc_dir,space),
                 label="Regional SUVR and Asymmetry Index Statistics",
                 index=False
             )
+        ]
+    ), 
+    rc.Select(
+        blocks=[
+            rc.Image(
+                f"{qc_dir}/sub-{subject}_ses-{session}_SUVR_mosaic_screenshot.png",
+                label="PET-MRI Overlay",
+                extra_css="width: 1300px; height: auto;"
+            ),
         ]
     )
    )

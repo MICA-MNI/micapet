@@ -77,6 +77,7 @@ ref_region = args.ref_region
 
 mica_pet_version = os.environ['MICA_PET_VERSION'] if 'MICA_PET_VERSION' in os.environ else "v0.0.3"
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
+space = os.environ['PET_SPACE']
 
 FSCommand.set_default_subjects_dir(args.subj_dir)
 
@@ -96,7 +97,7 @@ if not os.path.exists(qc_dir):
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting QC for subject: {subject}, session: {session}.")
 
 # Create brainmasked PET
-if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-none_ref-{ref_region}_trc-FDG_pet_desc-brainmask.nii.gz"):
+if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-FDG_pet_desc-brainmask.nii.gz"):
     print("Creating brainmasked PET image...")
     mc = MRIConvert()
     mc.inputs.in_file = f'{f_surf_dir}/mri/apas+head.mgz'
@@ -111,11 +112,11 @@ if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/s
     out_file = nib.Nifti1Image(tmp_data, in_file.affine, in_file.header)
     nib.save(out_file, f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/tmp.brainmask_bin.nii.gz')
     
-    pet_in_file = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-none_ref-{ref_region}_trc-FDG_pet.nii.gz")
+    pet_in_file = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-FDG_pet.nii.gz")
     pet_in_data = pet_in_file.get_fdata()
     brainmasked_data = pet_in_data * tmp_data
     out_pet_file = nib.Nifti1Image(brainmasked_data, pet_in_file.affine, pet_in_file.header)
-    nib.save(out_pet_file, f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-none_ref-{ref_region}_trc-FDG_pet_desc-brainmask.nii.gz")
+    nib.save(out_pet_file, f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-FDG_pet_desc-brainmask.nii.gz")
 
     # remove temp files
     os.remove(f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/tmp.brainmask.nii.gz')
@@ -140,7 +141,7 @@ tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subj
 to_plot = np.hstack((np.expand_dims(tmp_hcsurf_L,axis=1),np.expand_dims(tmp_hcsurf_R,axis=1)))
 hm.plotting.surfplot_canonical_foldunfold(to_plot,hemis=['L','R'],den='2mm',labels=['hipp'],embed_nb=False,transparent_bg=True,tighten_cwindow=True,screenshot=True,filename=f"{qc_dir}/sub-{subject}_ses-{session}_hippunfold_screenshot.png")
 
-plotting.plot_roi(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-none_ref-{ref_region}_trc-FDG_pet_desc-brainmask.nii.gz",
+plotting.plot_roi(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-FDG_pet_desc-brainmask.nii.gz",
     bg_img=f"{f_surf_dir}/mri/orig.mgz",
     display_mode='mosaic',
     cut_coords=15,
@@ -148,7 +149,7 @@ plotting.plot_roi(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{
     radiological=True,
     title=f"Subject {subject} SUVR QC",
     resampling_interpolation='continuous',
-    output_file=f"{qc_dir}/sub-{subject}_ses-{session}_SUVR_screenshot.png")
+    output_file=f"{qc_dir}/sub-{subject}_ses-{session}_SUVR_mosaic_screenshot.png")
 
 # Clean up display
 if display_flag:

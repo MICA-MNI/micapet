@@ -66,20 +66,27 @@ else:
         print("ERROR: FreeSurfer/FastSurfer directory does not exist. Please enter a valid -subj_dir.")
         sys.exit(1)
 
+mica_pet_version = os.environ['MICA_PET_VERSION']
+mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
+space = os.environ['PET_SPACE']
+
 pet = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet.nii.gz"
-mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+if space == 'nativepro':
+    mri = f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.mgz"
+else:
+    mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
 
 # Create BIDS directory structure if it doesn't exist
 if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
     os.makedirs(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}")
     os.makedirs(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat")
     os.makedirs(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet")
-if not os.path.exists(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}"):
-    os.makedirs(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}")
-    os.makedirs(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/anat")
-    os.makedirs(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet")
-    os.makedirs(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/surf")
-    os.makedirs(f"{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/xfm")
+if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):
+    os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}")
+    os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat")
+    os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet")
+    os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf")
+    os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm")
 
 # Check and copy PET and MRI files if provided
 if args.pet == None:
@@ -108,7 +115,7 @@ print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting PET to MRI co-
 #     fixed=fixed,
 #     moving=moving,
 #     type_of_transform='Rigid',
-#     outprefix=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to_T1w_'
+#     outprefix=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-T1w_'
 # )
 
 # pet_in_mri = ants.apply_transforms(
@@ -117,15 +124,15 @@ print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting PET to MRI co-
 #     transformlist=mytx['fwdtransforms'],
 #     interpolator='linear')
 
-# ants.image_write(pet_in_mri, f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-none_ref-none_trc-FDG_pet.nii.gz')
+# ants.image_write(pet_in_mri, f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-none_trc-FDG_pet.nii.gz')
 
 # os.environ["PATH"] += os.pathsep + '/opt/ants/bin'
 # FSCommand.set_default_subjects_dir(args.subj_dir)
 
 # # # convert ANTS mat to ITK txt
-# ants_mat = f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to_T1w_0GenericAffine.mat'
-# itk_txt = f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from_pet_to_T1w_xfm.txt'
-# out_lta = f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-FDG_pet_to_T1w_xfm.reg.lta'
+# ants_mat = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-T1w_0GenericAffine.mat'
+# itk_txt = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from_pet_to-T1w_xfm.txt'
+# out_lta = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-FDG_pet_to-T1w_xfm.reg.lta'
 # subprocess.call(['ConvertTransformFile', '3', 
 #     ants_mat,
 #     itk_txt])
@@ -142,22 +149,42 @@ print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting PET to MRI co-
 ## MRICoreg
 
 FSCommand.set_default_subjects_dir(subj_dir)
-coreg = MRICoreg()
-coreg.inputs.source_file=pet
-# coreg.inputs.reference_file=mri
-coreg.inputs.subject_id=f"sub-{subject}_ses-{session}"
-# coreg.inputs.subjects_dir=subj_dir
-coreg.inputs.out_lta_file=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to_T1w_xfm.reg.lta'
-print(coreg.cmdline)
-coreg.run()
+def mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,ref_image):
+    print(f"Co-registering PET to {ref_image} image...")
+    coreg = MRICoreg()
+    coreg.inputs.source_file=pet
+    if ref_image == 'FS': # use FreeSurfer mgz as reference
+        coreg.inputs.subjects_dir=subj_dir
+        coreg.inputs.subject_id=f"sub-{subject}_ses-{session}"
+    else: # use rawdata mri
+        coreg.inputs.reference_file=f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+    coreg.inputs.out_lta_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-{space}_xfm.reg.lta'
+    print(coreg.cmdline)
+    coreg.run()
 
-applyreg = ApplyVolTransform()
-applyreg.inputs.source_file=pet
-applyreg.inputs.reg_file=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-FDG_pet_to_T1w_xfm.reg.lta'
-# applyreg.inputs.fs_target=True
-applyreg.inputs.target_file=mri
-applyreg.inputs.transformed_file=f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-none_ref-none_trc-FDG_pet_ants.nii.gz'
-applyreg.run()
+def apply_transform(pet,subject,session,mica_pet_derivatives,space,ref_image):
+    applyreg = ApplyVolTransform()
+    applyreg.inputs.source_file=pet
+    applyreg.inputs.reg_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-{space}_xfm.reg.lta'
+    if ref_image == 'FS':
+        applyreg.inputs.fs_target=True
+    else:
+        applyreg.inputs.target_file=f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+    applyreg.inputs.transformed_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-none_trc-FDG_pet.nii.gz'
+    applyreg.run()
+    
+if space == 'nativepro':
+    # nativepro
+    mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,'nativepro','FS')
+    apply_transform(pet,subject,session,mica_pet_derivatives,'nativepro','FS')
+    
+    # T1w
+    mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,'T1w','T1w')
+    apply_transform(pet,subject,session,mica_pet_derivatives,'T1w','T1w')
+    
+else:
+    mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,'FS')
+    apply_transform(pet,subject,session,mica_pet_derivatives,space,'FS')
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] PET to MRI co-registration completed.")
 
@@ -167,7 +194,7 @@ print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] PET to MRI co-registrat
 # reg.inputs.moving_image = pet
 # reg.inputs.dimension = 3
 # reg.inputs.transform_type = 'r'  # rigid
-# reg.inputs.output_prefix = f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet_to_T1w_'
+# reg.inputs.output_prefix = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet_to-T1w_'
 # reg.inputs.num_threads = 6
 # print(reg.cmdline)
 
@@ -176,11 +203,11 @@ print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] PET to MRI co-registrat
 # at = ApplyTransforms()
 # at.inputs.input_image = pet
 # at.inputs.reference_image = mri
-# at.inputs.transforms = [f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet_to_T1w_0GenericAffine.mat']
+# at.inputs.transforms = [f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet_to-T1w_0GenericAffine.mat']
 # at.inputs.dimension = 3
 # at.inputs.interpolation = 'NearestNeighbor'
 # at.inputs.num_threads = 6
-# at.inputs.output_image = f'{bids_dir}/derivatives/MICA-PET/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_trc-FDG_pet.nii.gz'
+# at.inputs.output_image = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_trc-FDG_pet.nii.gz'
 # print(at.cmdline)
 
 # at.run()

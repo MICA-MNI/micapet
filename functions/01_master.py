@@ -28,8 +28,9 @@ The script takes the following arguments:
         -hippunfold_dir : Specify path to HippUnfold output directory. (Default: hippunfold_v1.4.1 subdirectory in BIDS derivatives directory.)
         -cachedir   : Set HIPPUNFOLD_CACHE_DIR manually where the trained UNet model will be stored. After running the first time, the model will be cached here. (Default ~/.cache)
         
-        -tmpdir    : (Optional) Path to temporary directory. (Default /tmp)
+        -tmpdir     : (Optional) Path to temporary directory. (Default /tmp)
         -B          : (Optional) Bind pathway for HippUnfold Singularity (eg. /host or /host,/opt etc)
+        -micapipe   : (Optional) If present, will use micapipe derived FastSurfer outputs. PET will be in nativepro space rather than T1w space.
         -force      : (Optional) Force run even if output exists.
     
     Select steps in the pipeline to run (if none of the following specified, all steps will be run):
@@ -55,12 +56,13 @@ from datetime import datetime
 import shutil
 import subprocess
 
-os.environ['FREESURFER_HOME'] = '/opt/freesurfer-7.4.1'
+#os.environ['FREESURFER_HOME'] = '/opt/freesurfer-7.4.1'
 
 # Load utilities functions from utils.py
 import utils
+from utils import bcolors
 
-def display_splash_screen(subject,session,bids_dir,subj_dir,psf,ref_region,seg_type,fastsurfer_img,hippunfold_img,hippunfold_dir,tmpdir,cachedir,force, run_all,fastsurfer_run,hippunfold_run,coreg_run,pvc_run,suvr_run,cortical_surface_run,project_pet_run,clinical_report_run,skip_FS,skip_hippunfold):
+def display_splash_screen(subject,session,bids_dir,subj_dir,psf,ref_region,seg_type,fastsurfer_img,hippunfold_img,hippunfold_dir,tmpdir,cachedir,micapipe_flag,force, run_all,fastsurfer_run,hippunfold_run,coreg_run,pvc_run,suvr_run,cortical_surface_run,project_pet_run,clinical_report_run,skip_FS,skip_hippunfold):
     """
     Prints a string centered inside a box made of '#' characters,
     sized to the full width of the terminal.
@@ -116,7 +118,7 @@ def display_splash_screen(subject,session,bids_dir,subj_dir,psf,ref_region,seg_t
     
     ### VERSION ###
     subtitle = f"MICA-PET Version: "
-    version = mica_pet_version
+    version = os.environ['MICA_PET_VERSION']
     if len(version) + len(subtitle) > max_text_len:
         # Truncate the text if necessary
         version = version[:max_text_len - len(subtitle) - 5] + "..."
@@ -217,6 +219,8 @@ def display_splash_screen(subject,session,bids_dir,subj_dir,psf,ref_region,seg_t
         print_splash_screen_line("Temporary Directory: ",tmpdir)
     if cachedir is not None:
         print_splash_screen_line("Cache Directory: ",cachedir)
+    if micapipe_flag:
+        print_splash_screen_line("Using micapipe nativepro space: ", "True")
     print_splash_screen_line("Force: ",str(force))
     print_splash_screen_line("Jobs to run: ",jobs_text)
     print(border)
@@ -354,6 +358,8 @@ def main():
     parser.add_argument("-B", dest="B",type=str, help="(Str) Specify paths to bind for Singularity. (eg. /host or /host,/opt etc)")
     parser.add_argument("-T1", dest="T1_path", type=str, help="(Str) Specify path to T1w image. (Default T1w image in BIDS directory).")    
     parser.add_argument("-pet", dest="pet_path", type=str, help="(Str) Specify path to PET image. (Default PET image in BIDS directory).")
+    
+    parser.add_argument("-micapipe", dest="micapipe", action='store_true', help="Use micapipe derived FastSurfer outputs. PET will be in nativepro space rather than T1w space.")
 
     parser.add_argument("-force", dest="force", action='store_true', help="Force HippUnfold even if output exists.")
     
@@ -395,6 +401,9 @@ def main():
         if not os.path.exists(subj_dir):
             print(f"{bcolors.ERROR}Error: FreeSurfer/FastSurfer directory does not exist. Please enter a valid -subj_dir.{bcolors.RESET}")
             sys.exit(1)
+            
+    mica_pet_version = os.environ['MICA_PET_VERSION']
+    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
 
     seg_type = args.seg_type.lower()
     ref_region = args.ref_region
@@ -455,7 +464,7 @@ def main():
             sys.exit(1)
         
     if args.tmpdir is None:
-        tmpdir = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}/sub-{subject}/ses-{session}/tmp"
+        tmpdir = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/tmp"
         os.makedirs(tmpdir, exist_ok=True)
     else:
         if not os.path.exists(os.path.realpath(args.tmpdir)):
@@ -480,6 +489,13 @@ def main():
         bind_flag = ["-B", f"{args.B}"]
     else:
         bind_flag = []
+        
+    if args.micapipe:
+        micapipe_flag = True
+        os.environ['PET_SPACE'] = 'nativepro'
+    else:
+        micapipe_flag = False
+        os.environ['PET_SPACE'] = 'T1w'
 
     # if T1 image not provided, check if it exists in BIDS rawdata
     if args.T1_path is None:
@@ -516,23 +532,23 @@ def main():
         if args.psf is None:
             print(f"{bcolors.ERROR}Error: PSF not specified. Please provide the scanner PSF in mm using -psf argument.{bcolors.RESET}")
             sys.exit(1)
-        
+
     # create derivatives directories if they don't exist
-    os.makedirs(f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}/sub-{subject}/ses-{session}/anat", exist_ok=True)
-    os.makedirs(f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}/sub-{subject}/ses-{session}/pet", exist_ok=True)
-    os.makedirs(f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}/sub-{subject}/ses-{session}/surf", exist_ok=True)
-    os.makedirs(f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}/sub-{subject}/ses-{session}/xfm", exist_ok=True)
+    os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat", exist_ok=True)
+    os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet", exist_ok=True)
+    os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf", exist_ok=True)
+    os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm", exist_ok=True)
     os.makedirs(f"{bids_dir}/derivatives/fastsurfer", exist_ok=True)
     os.makedirs(f"{bids_dir}/derivatives/hippunfold_v1.4.1", exist_ok=True)
             
-    display_splash_screen(subject,session,bids_dir,subj_dir,args.psf,ref_region,seg_type,fastsurfer_img,hippunfold_img,hippunfold_dir,tmpdir,cachedir,args.force,run_all,fastsurfer_run,hippunfold_run,args.coreg_run,args.pvc_run,args.suvr_run,args.cortical_surface_run,args.project_pet_run,args.clinical_report_run,skip_FS,skip_hippunfold)
+    display_splash_screen(subject,session,bids_dir,subj_dir,args.psf,ref_region,seg_type,fastsurfer_img,hippunfold_img,hippunfold_dir,tmpdir,cachedir,micapipe_flag,args.force,run_all,fastsurfer_run,hippunfold_run,args.coreg_run,args.pvc_run,args.suvr_run,args.cortical_surface_run,args.project_pet_run,args.clinical_report_run,skip_FS,skip_hippunfold)
     
     # #### Run components of the pipeline ####
 
     # Define a log file
-    os.makedirs(f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}/sub-{subject}/ses-{session}/logs", exist_ok=True)
+    os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/logs", exist_ok=True)
     current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}/sub-{subject}/ses-{session}/logs/MICA-PET_{mica_pet_version}_{current_time}.log"
+    log_file = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/logs/MICA-PET_{mica_pet_version}_{current_time}.log"
 
     # Open the log file for appending
     with open(log_file, "a") as log:
@@ -573,7 +589,7 @@ def main():
         # GTM seg
         if run_all == True or args.pvc_run == True:
             display_subsection_splash_screen("Running GTM Segmentation + PVC...", log)
-            cmd = ['python', '-u', f'{script_dir}/gtm_seg.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-seg_type", f'{seg_type}']
+            cmd = ['python', '-u', f'{script_dir}/gtm_seg.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-seg_type", f'{seg_type}'] + force_flag
             run_command(cmd)
 
             # PVC

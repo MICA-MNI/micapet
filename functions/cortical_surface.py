@@ -53,6 +53,7 @@ bids_dir = os.path.realpath(args.bids_dir)
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 mica_pet_version = os.environ['MICA_PET_VERSION']
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
+space = os.environ['PET_SPACE']
 
 FSCommand.set_default_subjects_dir(args.subj_dir)
 
@@ -148,7 +149,7 @@ for hemi in ['lh','rh']:
             new_sphere=f"{repo_dir}/surfaces/fsLR-{res}.{hemi_cap}.sphere.reg.surf.gii",
             # fs_LR-deformed_to-fsaverage.{hemi_cap}.sphere.{res}_fs_LR.surf.gii",
             midthickness_current_out=f"{f_surf_dir}/surf/sub-{subject}_ses-{session}_hemi-{hemi_cap}_surf-fsnative_label-midthickness.surf.gii",
-            midthickness_new_out=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi_cap}_space-T1w_surf-fsLR-{res}_label-midthickness.surf.gii",
+            midthickness_new_out=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi_cap}_space-{space}_surf-fsLR-{res}_label-midthickness.surf.gii",
             current_gifti_sphere_out=f"{f_surf_dir}/surf/sub-{subject}_ses-{session}_hemi-{hemi_cap}_surf-fsnative_label-sphere.surf.gii"
         )
     

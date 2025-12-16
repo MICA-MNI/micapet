@@ -77,6 +77,7 @@ hippocampal = args.hippocampal
 
 mica_pet_version = os.environ['MICA_PET_VERSION']
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
+space = os.environ['PET_SPACE']
 
 FSCommand.set_default_subjects_dir(args.subj_dir)
 
@@ -111,7 +112,7 @@ if cortical:
         for pvc in pvc_options:
             for ref in ref_region:
                 print(f"Processing PVC method: {pvc}, reference region: {ref}, hemisphere: {hemi}...")
-                SUVR_map=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
+                SUVR_map=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
                 
                 surf_fsnative=f'{f_surf_dir}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-fsnative_label-midthickness.surf.gii'
                 
@@ -131,7 +132,7 @@ if cortical:
                     
                     for smooth in [5,10]:
                         print(f"Smoothing with {smooth}mm kernel...")
-                        midthick_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-T1w_surf-{surf}_label-midthickness.surf.gii'
+                        midthick_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-{space}_surf-{surf}_label-midthickness.surf.gii'
                         
                         SUVR_resampled_smooth_out=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-{surf}_label-midthickness_pvc-{pvc}_ref-{ref}_smooth-{smooth}mm_trc-FDG_pet.func.gii'
                         
@@ -145,7 +146,11 @@ if hippocampal:
                 print(f"Processing PVC method: {pvc}, reference region: {ref}, hemisphere: {hemi}...")
                 SUVR_map=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
                 
-                hipp_surf=f'{hippunfold_dir}/hippunfold/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-T1w_den-2mm_label-hipp_midthickness.surf.gii' #_ses-{session}
+                if os.path.exists(SUVR_map) is False:
+                    print(f"Error: SUVR map in T1w space does not exist... Needed for HippUnfold projection.")
+                    sys.exit(1)
+                
+                hipp_surf=f'{hippunfold_dir}/hippunfold/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-T1w_den-2mm_label-hipp_midthickness.surf.gii' #hippunfold space always T1w
                 
                 SUVR_on_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-hipp_den-2mm_label-midthickness_pvc-{pvc}_ref-{ref}_trc-FDG_pet.func.gii'
                 

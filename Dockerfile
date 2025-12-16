@@ -155,3 +155,5 @@ ENV FS_LICENSE=/app/license.txt \
     MESA_GL_VERSION_OVERRIDE=3.3
 
 ENTRYPOINT ["conda", "run", "-n", "mica-pet", "python", "/app/functions/01_master.py"]
+
+# docker build -t micalab/micapet:v.alpha.0.3 .

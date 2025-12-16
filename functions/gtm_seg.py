@@ -59,7 +59,7 @@ force = args.force
 os.environ['SUBJECTS_DIR'] = os.path.realpath(args.subj_dir)
 mica_pet_version = os.environ['MICA_PET_VERSION']
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
-
+space = os.environ['PET_SPACE']
 
 # Check BIDS directory structure if it doesn't exist
 if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
@@ -117,15 +117,25 @@ elif seg_type == 'fastsurfer':
 # mc.inputs.out_type = 'niigz'
 # mc.run()
 
-# Resample GTMseg to T1w space
-mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+# Resample GTMseg to T1w/nativepro space
+def resample_gtmseg(gtm,mri,space):
+    print(f"Resampling GTMseg to {space} space...")
+    applyreg = ApplyVolTransform()
+    applyreg.inputs.source_file= gtm
+    applyreg.inputs.reg_header=True
+    applyreg.inputs.interp = 'nearest'
+    applyreg.inputs.target_file= mri
+    applyreg.inputs.transformed_file=f'{f_surf_dir}/mri/gtmseg_space-{space}.nii.gz'
+    applyreg.run()
+    
 gtm = f'{f_surf_dir}/mri/gtmseg.mgz'
 
-applyreg = ApplyVolTransform()
-applyreg.inputs.source_file= gtm
-applyreg.inputs.reg_header=True
-applyreg.inputs.target_file= mri
-applyreg.inputs.transformed_file=f'{f_surf_dir}/mri/gtmseg.nii.gz'
-applyreg.run()
+if space == 'nativepro':
+    mri = f"{f_surf_dir}/mri/orig.mgz"
+    resample_gtmseg(gtm,mri,'nativepro')
+
+mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+resample_gtmseg(gtm,mri,'T1w')
+# need to run T1w even if space is nativepro, for hippunfold compatibility
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] GTM segmentation completed.")

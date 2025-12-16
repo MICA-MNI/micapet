@@ -56,6 +56,7 @@ f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
 
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{os.environ['MICA_PET_VERSION']}"   
+space = os.environ['PET_SPACE']
 
 # Check BIDS directory structure if it doesn't exist
 if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):
@@ -86,7 +87,7 @@ dict = {'Left-Accumbens-area': 26,
 'Right-Putamen': 51,
 'Right-Thalamus': 49}
 
-src = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-rbv_ref-pons_trc-FDG_pet.nii.gz")
+src = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-rbv_ref-pons_trc-FDG_pet.nii.gz")
 pet_data = src.get_fdata()
 tgt = nib.load(f"{f_surf_dir}/mri/aparc+aseg.mgz")
 aseg_aparc_data = tgt.get_fdata()
