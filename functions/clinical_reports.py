@@ -499,7 +499,7 @@ with rc.ReportCreator(
    title="MICA-PET Report",
    description=f"**Subject**: {subject} | **Session**: {session} | **Modality**: FDG PET",
    footer="Multimodal Imaging and Computational Anatomy (MICA) Lab - McGill University. For research use only.",
-   logo=f"https://box.bic.mni.mcgill.ca/s/cRx3liWIlIB52tr/download",
+   logo=f"https://box.bic.mni.mcgill.ca/s/GbLcj26GmYWBfLL/download"
 ) as report:
 
    view = rc.Block(

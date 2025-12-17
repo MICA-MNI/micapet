@@ -30,6 +30,7 @@ import subprocess
 
 # Load utilities functions from utils.py
 import utils
+from utils import bcolors
 
 # Set the working directory to the script's location
 script_dir = os.path.dirname(os.path.abspath(__file__))

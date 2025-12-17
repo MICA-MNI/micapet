@@ -139,11 +139,13 @@ options.extend(bind)
 # print(options)
 
 # Run using spython
-for line in Client.run(
+result = Client.run(
     image=hippunfold_img,
     args=args,
-    options=options
-):
-    print(line)
+    options=options,
+    return_result=True
+)
+if result:
+    print(result)
     
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] HippUnfold completed.")

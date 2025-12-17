@@ -19,7 +19,7 @@ Copyright (c) 2025 MICA-MNI
 import argparse
 import os
 from datetime import datetime
-from nipype.interfaces.freesurfer import FSCommand, MRIConvert
+from nipype.interfaces.freesurfer import FSCommand, MRIConvert, ApplyVolTransform
 import nibabel as nib
 import sys
 import numpy as np
@@ -99,11 +99,18 @@ print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting QC for subject
 # Create brainmasked PET
 if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-FDG_pet_desc-brainmask.nii.gz"):
     print("Creating brainmasked PET image...")
-    mc = MRIConvert()
-    mc.inputs.in_file = f'{f_surf_dir}/mri/apas+head.mgz'
-    mc.inputs.out_file = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/tmp.brainmask.nii.gz'
-    mc.inputs.out_type = 'niigz'
-    mc.run()
+    # mc = MRIConvert()
+    # mc.inputs.in_file = f'{f_surf_dir}/mri/apas+head.mgz'
+    # mc.inputs.out_file = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/tmp.brainmask.nii.gz'
+    # mc.inputs.out_type = 'niigz'
+    # mc.run()
+    
+    applyreg = ApplyVolTransform()
+    applyreg.inputs.source_file=f'{f_surf_dir}/mri/apas+head.mgz'
+    applyreg.inputs.reg_header=True
+    applyreg.inputs.target_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-FDG_pet.nii.gz"
+    applyreg.inputs.transformed_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/tmp.brainmask.nii.gz'
+    applyreg.run()
 
     in_file = nib.load(f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/tmp.brainmask.nii.gz')
     in_data = in_file.get_fdata()

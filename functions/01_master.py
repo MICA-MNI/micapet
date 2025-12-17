@@ -21,7 +21,7 @@ The script takes the following arguments:
         
         -skip_FS    : (Optional) Skip FreeSurfer/FastSurfer. Assumes segmentation already exists in subjects directory.
         -fastsurfer_img: Provide path to FastSurfer .sif image. Requires version 2.4.2+.
-        -fs_license : If running FastSurfer, provide path to FreeSurfer license. (eg. license.txt).
+        -fs_license : If running FastSurfer, provide full path to FreeSurfer license (ex. /home/user/license.txt). The license may be obtained here: https://surfer.nmr.mgh.harvard.edu/registration.html
         
         -skip_hippunfold : (Optional) Skip HippUnfold. Assumes HippUnfold has already been run.
         -hippunfold_img: Path to HippUnfold .sif image. Requires version 1.4.1+.
@@ -344,7 +344,7 @@ def main():
 
     parser.add_argument("-skip_FS", dest="skip_FS", action='store_true', help="Skip FreeSurfer/FastSurfer. Assumes segmentation already exists in subjects directory.")
     parser.add_argument("-fastsurfer_img", dest="fastsurfer_img", type=str, help="(Str) Specify path to FastSurfer singularity image.")
-    parser.add_argument("-fs_license", dest="fs_license", type=str, help="(Str) Specify path to FreeSurfer license.")
+    parser.add_argument("-fs_license", dest="fs_license", type=str, help="(Str) Specify full path to FreeSurfer license (ex. /home/user/license.txt). The license may be obtained here: https://surfer.nmr.mgh.harvard.edu/registration.html")
     
     parser.add_argument("-skip_hippunfold", dest="skip_hippunfold", action='store_true', help="Skip HippUnfold. Assumes HippUnfold has already been run.")
     parser.add_argument("-hippunfold_img", dest="hippunfold_img", type=str, help="(Str) Specify path to HippUnfold singularity image.")
@@ -399,8 +399,10 @@ def main():
     else:
         subj_dir = os.path.realpath(args.subj_dir)
         if not os.path.exists(subj_dir):
-            print(f"{bcolors.ERROR}Error: FreeSurfer/FastSurfer directory does not exist. Please enter a valid -subj_dir.{bcolors.RESET}")
-            sys.exit(1)
+            # print(f"{bcolors.ERROR}Error: FreeSurfer/FastSurfer directory does not exist. Please enter a valid -subj_dir.{bcolors.RESET}")
+            # sys.exit(1)
+            print(f"{bcolors.WARNING}Warning: FreeSurfer/FastSurfer directory does not exist. Creating it now.{bcolors.RESET}")
+            os.makedirs(subj_dir, exist_ok=True)
             
     mica_pet_version = os.environ['MICA_PET_VERSION']
     mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"

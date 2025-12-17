@@ -183,8 +183,8 @@ if space == 'nativepro':
     apply_transform(pet,subject,session,mica_pet_derivatives,'T1w','T1w')
     
 else:
-    mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,'FS')
-    apply_transform(pet,subject,session,mica_pet_derivatives,space,'FS')
+    mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,'T1w')
+    apply_transform(pet,subject,session,mica_pet_derivatives,space,'T1w')
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] PET to MRI co-registration completed.")
 
