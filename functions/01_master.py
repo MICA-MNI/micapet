@@ -9,29 +9,31 @@ The script takes the following arguments:
     Mandatory arguments:
         -sub        : Subject identification. (ex. PX001)
         -ses        : Session. (ex. 01)
-        -bids       : Path to BIDS directory ( . or FULL PATH)
-        -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory. (Default fastsurfer subdirectory in BIDS derivatives directory.)
+        -bids       : Path to BIDS directory (ex. /data/user/BIDS_FDGPET).
         -psf        : Scanner PSF FWHM in mm (ex. 4.5)
         -ref_region : Options: 'pons', 'cerebellarGM', 'composite' (supratentorial white matter, cerebellum, brainstem), 'none' (Default: 'pons')
         
-    Optional arguments:
-        -T1         : (Optional) Path to T1w image. (Default: T1w image in BIDS rawdata directory).
-        -pet        : (Optional) Path to PET image. (Default: PET image in BIDS rawdata directory).
-        -seg_type   : If FastSurfer/FreeSurfer already run, specify if 'freesurfer' or 'fastsurfer' was done. (Default: 'fastsurfer')
-        
-        -skip_FS    : (Optional) Skip FreeSurfer/FastSurfer. Assumes segmentation already exists in subjects directory.
+    If running FastSurfer, the following are mandatory:
         -fastsurfer_img: Provide path to FastSurfer .sif image. Requires version 2.4.2+.
         -fs_license : If running FastSurfer, provide full path to FreeSurfer license (ex. /home/user/license.txt). The license may be obtained here: https://surfer.nmr.mgh.harvard.edu/registration.html
         
-        -skip_hippunfold : (Optional) Skip HippUnfold. Assumes HippUnfold has already been run.
+    If running HippUnfold, the following are mandatory:
         -hippunfold_img: Path to HippUnfold .sif image. Requires version 1.4.1+.
         -hippunfold_dir : Specify path to HippUnfold output directory. (Default: hippunfold_v1.4.1 subdirectory in BIDS derivatives directory.)
-        -cachedir   : Set HIPPUNFOLD_CACHE_DIR manually where the trained UNet model will be stored. After running the first time, the model will be cached here. (Default ~/.cache)
         
-        -tmpdir     : (Optional) Path to temporary directory. (Default /tmp)
-        -B          : (Optional) Bind pathway for HippUnfold Singularity (eg. /host or /host,/opt etc)
-        -micapipe   : (Optional) If present, will use micapipe derived FastSurfer outputs. PET will be in nativepro space rather than T1w space.
-        -force      : (Optional) Force run even if output exists.
+    Optional arguments:
+        -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory. (Default: 'fastsurfer' subdirectory in BIDS derivatives directory.)
+        -T1         : Path to T1w image. (Default: T1w image in BIDS rawdata directory).
+        -pet        : Path to PET image. (Default: PET image in BIDS rawdata directory).
+
+        -skip_FS    : Skip FreeSurfer/FastSurfer. Assumes segmentation already exists in subjects directory and subjects are named sub-{subject}_ses-{session}.
+        -skip_hippunfold : Skip HippUnfold. Assumes HippUnfold has already been run.
+        
+        -cachedir   : Set HIPPUNFOLD_CACHE_DIR manually where the trained UNet model will be stored. After running the first time, the model will be cached here. (Default ~/.cache)
+        -tmpdir     : Path to temporary directory. (Default /tmp)
+        -B          : Bind pathway for HippUnfold Singularity (eg. /host or /host,/opt etc)
+        -micapipe   : If present, will use micapipe derived FastSurfer outputs. PET will be in micapipe nativepro space rather than native T1w space.
+        -force      : Force run even if output exists.
     
     Select steps in the pipeline to run (if none of the following specified, all steps will be run):
         -fastsurfer : Run FastSurfer for cortical surface generation.
@@ -339,10 +341,9 @@ def main():
     parser.add_argument("-sub", type=str, required=True, help="(Str) Subject identifier (eg. '0001')")
     parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '01')")
     parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
-    parser.add_argument("-subj_dir", dest="subj_dir", type=str, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
-    parser.add_argument("-seg_type", dest="seg_type", type=str, help="'freesurfer' or 'fastsurfer'. Default: 'fastsurfer'.", choices=['freesurfer','fastsurfer'], default="fastsurfer")
+    parser.add_argument("-subj_dir", dest="subj_dir", type=str, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory. (Default: 'fastsurfer' subdirectory in BIDS derivatives directory.)")
 
-    parser.add_argument("-skip_FS", dest="skip_FS", action='store_true', help="Skip FreeSurfer/FastSurfer. Assumes segmentation already exists in subjects directory.")
+    parser.add_argument("-skip_FS", dest="skip_FS", action='store_true', help="Skip FreeSurfer/FastSurfer. Assumes segmentation already exists in subjects directory and subjects are named sub-{subject}_ses-{session}.")
     parser.add_argument("-fastsurfer_img", dest="fastsurfer_img", type=str, help="(Str) Specify path to FastSurfer singularity image.")
     parser.add_argument("-fs_license", dest="fs_license", type=str, help="(Str) Specify full path to FreeSurfer license (ex. /home/user/license.txt). The license may be obtained here: https://surfer.nmr.mgh.harvard.edu/registration.html")
     
@@ -407,11 +408,18 @@ def main():
     mica_pet_version = os.environ['MICA_PET_VERSION']
     mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
 
-    seg_type = args.seg_type.lower()
+    
     ref_region = args.ref_region
 
     # Validate FastSurfer arguments if running FastSurfer
     skip_FS = args.skip_FS
+    seg_type = 'fastsurfer'
+    if skip_FS: # check if fastsurfer or freesurfer
+        if not os.path.exists(f'{subj_dir}/sub-{subject}_ses-{session}/scripts/deep-seg.log'): #deep-seg only exists in fastsurfer
+            seg_type = 'freesurfer'
+        else:
+            seg_type = 'fastsurfer'
+    
     fastsurfer_img = os.path.realpath(args.fastsurfer_img) if args.fastsurfer_img else None
     fs_license = os.path.realpath(args.fs_license) if args.fs_license else None
     
