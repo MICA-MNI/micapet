@@ -19,9 +19,9 @@ The script takes the following arguments:
         
     If running HippUnfold, the following are mandatory:
         -hippunfold_img: Path to HippUnfold .sif image. Requires version 1.4.1+.
-        -hippunfold_dir : Specify path to HippUnfold output directory. (Default: hippunfold_v1.4.1 subdirectory in BIDS derivatives directory.)
         
     Optional arguments:
+        -hippunfold_dir : Specify path to HippUnfold output directory. (Default: hippunfold_v1.4.1 subdirectory in BIDS derivatives directory.)
         -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory. (Default: 'fastsurfer' subdirectory in BIDS derivatives directory.)
         -T1         : Path to T1w image. (Default: T1w image in BIDS rawdata directory).
         -pet        : Path to PET image. (Default: PET image in BIDS rawdata directory).
@@ -57,6 +57,7 @@ import sys
 from datetime import datetime
 import shutil
 import subprocess
+from nipype.interfaces.freesurfer import MRIConvert
 
 #os.environ['FREESURFER_HOME'] = '/opt/freesurfer-7.4.1'
 
@@ -520,7 +521,12 @@ def main():
             # make rawdata directories if they don't exist
             os.makedirs(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat", exist_ok=True)
             
-            shutil.copyfile(os.path.realpath(args.T1_path), f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz")
+            # shutil.copyfile(os.path.realpath(args.T1_path), f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz")
+            mc = MRIConvert()
+            mc.inputs.in_file = os.path.realpath(args.T1_path)
+            mc.inputs.out_file = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+            mc.inputs.out_type = 'niigz'
+            mc.run()
             
     # if PET image not provided, check if it exists in BIDS rawdata
     if args.pet_path is None:
