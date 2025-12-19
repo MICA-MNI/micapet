@@ -93,7 +93,7 @@ f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
 mica_pet_version = os.environ['MICA_PET_VERSION']
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
-space = os.environ['PET_SPACE']
+space = os.environ['MICA_PET_SPACE']
 
 if args.max_value is not None:
     max_value = args.max_value

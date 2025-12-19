@@ -62,7 +62,7 @@ f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
 
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{os.environ['MICA_PET_VERSION']}" 
-petspace = os.environ['PET_SPACE']
+petspace = os.environ['MICA_PET_SPACE']
 if petspace == 'nativepro':
     spacelist = ['nativepro','T1w']
 else:

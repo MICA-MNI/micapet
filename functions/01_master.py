@@ -32,7 +32,7 @@ The script takes the following arguments:
         -cachedir   : Set HIPPUNFOLD_CACHE_DIR manually where the trained UNet model will be stored. After running the first time, the model will be cached here. (Default ~/.cache)
         -tmpdir     : Path to temporary directory. (Default /tmp)
         -B          : Bind pathway for HippUnfold Singularity (eg. /host or /host,/opt etc)
-        -micapipe   : If present, will use micapipe derived FastSurfer outputs. PET will be in micapipe nativepro space rather than native T1w space.
+        -nativepro  : If present, will use micapipe-derived FastSurfer outputs. PET will be in micapipe nativepro space rather than native T1w space.
         -force      : Force run even if output exists.
     
     Select steps in the pipeline to run (if none of the following specified, all steps will be run):
@@ -65,7 +65,7 @@ from nipype.interfaces.freesurfer import MRIConvert
 import utils
 from utils import bcolors
 
-def display_splash_screen(subject,session,bids_dir,subj_dir,psf,ref_region,seg_type,fastsurfer_img,hippunfold_img,hippunfold_dir,tmpdir,cachedir,micapipe_flag,force, run_all,fastsurfer_run,hippunfold_run,coreg_run,pvc_run,suvr_run,cortical_surface_run,project_pet_run,clinical_report_run,skip_FS,skip_hippunfold):
+def display_splash_screen(subject,session,bids_dir,subj_dir,psf,ref_region,seg_type,fastsurfer_img,hippunfold_img,hippunfold_dir,tmpdir,cachedir,nativepro_flag,force, run_all,fastsurfer_run,hippunfold_run,coreg_run,pvc_run,suvr_run,cortical_surface_run,project_pet_run,clinical_report_run,skip_FS,skip_hippunfold):
     """
     Prints a string centered inside a box made of '#' characters,
     sized to the full width of the terminal.
@@ -222,8 +222,9 @@ def display_splash_screen(subject,session,bids_dir,subj_dir,psf,ref_region,seg_t
         print_splash_screen_line("Temporary Directory: ",tmpdir)
     if cachedir is not None:
         print_splash_screen_line("Cache Directory: ",cachedir)
-    if micapipe_flag:
+    if nativepro_flag:
         print_splash_screen_line("Using micapipe nativepro space: ", "True")
+    print_splash_screen_line("Space: ",os.environ['MICA_PET_SPACE'])
     print_splash_screen_line("Force: ",str(force))
     print_splash_screen_line("Jobs to run: ",jobs_text)
     print(border)
@@ -361,7 +362,7 @@ def main():
     parser.add_argument("-T1", dest="T1_path", type=str, help="(Str) Specify path to T1w image. (Default T1w image in BIDS directory).")    
     parser.add_argument("-pet", dest="pet_path", type=str, help="(Str) Specify path to PET image. (Default PET image in BIDS directory).")
     
-    parser.add_argument("-micapipe", dest="micapipe", action='store_true', help="Use micapipe derived FastSurfer outputs. PET will be in nativepro space rather than T1w space.")
+    parser.add_argument("-nativepro", dest="nativepro", action='store_true', help="Use micapipe derived FastSurfer outputs. PET will be in nativepro space rather than T1w space.")
 
     parser.add_argument("-force", dest="force", action='store_true', help="Force HippUnfold even if output exists.")
     
@@ -387,7 +388,7 @@ def main():
         run_all = True
     else:
         run_all = False
-        
+
     # Normalize paths and variables
     session = f"{args.ses.replace('ses-', '')}"
     subject = f"{args.sub.replace('sub-', '')}"
@@ -414,12 +415,6 @@ def main():
 
     # Validate FastSurfer arguments if running FastSurfer
     skip_FS = args.skip_FS
-    seg_type = 'fastsurfer'
-    if skip_FS: # check if fastsurfer or freesurfer
-        if not os.path.exists(f'{subj_dir}/sub-{subject}_ses-{session}/scripts/deep-seg.log'): #deep-seg only exists in fastsurfer
-            seg_type = 'freesurfer'
-        else:
-            seg_type = 'fastsurfer'
     
     fastsurfer_img = os.path.realpath(args.fastsurfer_img) if args.fastsurfer_img else None
     fs_license = os.path.realpath(args.fs_license) if args.fs_license else None
@@ -444,7 +439,16 @@ def main():
                 sys.exit(1)
     else:
         fastsurfer_run = False
-        
+    
+    # Determine segmentation type   
+    if os.path.exists(f'{subj_dir}/sub-{subject}_ses-{session}/scripts/deep-seg.log'): #deep-seg only exists in fastsurfer
+        seg_type = 'fastsurfer'
+    else:
+        if fastsurfer_run == True:
+            seg_type = 'fastsurfer'
+        else:
+            seg_type = 'freesurfer'
+            
     # Validate HippUnfold arguments if running HippUnfold 
     skip_hippunfold = args.skip_hippunfold
     hippunfold_img = os.path.realpath(args.hippunfold_img) if args.hippunfold_img else None
@@ -501,12 +505,12 @@ def main():
     else:
         bind_flag = []
         
-    if args.micapipe:
-        micapipe_flag = True
-        os.environ['PET_SPACE'] = 'nativepro'
+    if args.nativepro:
+        nativepro_flag = True
+        os.environ['MICA_PET_SPACE'] = 'nativepro'
     else:
-        micapipe_flag = False
-        os.environ['PET_SPACE'] = 'T1w'
+        nativepro_flag = False
+        os.environ['MICA_PET_SPACE'] = 'T1w'
 
     # if T1 image not provided, check if it exists in BIDS rawdata
     if args.T1_path is None:
@@ -557,7 +561,7 @@ def main():
     os.makedirs(f"{bids_dir}/derivatives/fastsurfer", exist_ok=True)
     os.makedirs(f"{bids_dir}/derivatives/hippunfold_v1.4.1", exist_ok=True)
             
-    display_splash_screen(subject,session,bids_dir,subj_dir,args.psf,ref_region,seg_type,fastsurfer_img,hippunfold_img,hippunfold_dir,tmpdir,cachedir,micapipe_flag,args.force,run_all,fastsurfer_run,hippunfold_run,args.coreg_run,args.pvc_run,args.suvr_run,args.cortical_surface_run,args.project_pet_run,args.clinical_report_run,skip_FS,skip_hippunfold)
+    display_splash_screen(subject,session,bids_dir,subj_dir,args.psf,ref_region,seg_type,fastsurfer_img,hippunfold_img,hippunfold_dir,tmpdir,cachedir,nativepro_flag,args.force,run_all,fastsurfer_run,hippunfold_run,args.coreg_run,args.pvc_run,args.suvr_run,args.cortical_surface_run,args.project_pet_run,args.clinical_report_run,skip_FS,skip_hippunfold)
     
     # #### Run components of the pipeline ####
 

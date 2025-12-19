@@ -77,7 +77,7 @@ hippocampal = args.hippocampal
 
 mica_pet_version = os.environ['MICA_PET_VERSION']
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
-space = os.environ['PET_SPACE']
+space = os.environ['MICA_PET_SPACE']
 
 FSCommand.set_default_subjects_dir(args.subj_dir)
 

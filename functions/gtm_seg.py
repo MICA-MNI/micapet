@@ -59,7 +59,7 @@ force = args.force
 os.environ['SUBJECTS_DIR'] = os.path.realpath(args.subj_dir)
 mica_pet_version = os.environ['MICA_PET_VERSION']
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
-space = os.environ['PET_SPACE']
+space = os.environ['MICA_PET_SPACE']
 
 # Check BIDS directory structure if it doesn't exist
 if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):

@@ -68,7 +68,7 @@ else:
 
 mica_pet_version = os.environ['MICA_PET_VERSION']
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
-space = os.environ['PET_SPACE']
+space = os.environ['MICA_PET_SPACE']
 
 pet = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet.nii.gz"
 if space == 'nativepro':
@@ -183,7 +183,7 @@ if space == 'nativepro':
     apply_transform(pet,subject,session,mica_pet_derivatives,'T1w','T1w')
     
 else:
-    mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,'T1w')
+    mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,'FS')
     apply_transform(pet,subject,session,mica_pet_derivatives,space,'T1w')
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] PET to MRI co-registration completed.")
