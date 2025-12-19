@@ -68,13 +68,9 @@ else:
 
 mica_pet_version = os.environ['MICA_PET_VERSION']
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
-space = os.environ['MICA_PET_SPACE']
 
 pet = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet.nii.gz"
-if space == 'nativepro':
-    mri = f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.mgz"
-else:
-    mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
 
 # Create BIDS directory structure if it doesn't exist
 if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
@@ -149,11 +145,11 @@ print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting PET to MRI co-
 ## MRICoreg
 
 FSCommand.set_default_subjects_dir(subj_dir)
-def mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,ref_image):
-    print(f"Co-registering PET to {ref_image} image...")
+def mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space):
+    print(f"Co-registering PET to {space}...")
     coreg = MRICoreg()
     coreg.inputs.source_file=pet
-    if ref_image == 'FS': # use FreeSurfer mgz as reference
+    if space == 'T1wFS': # use FreeSurfer mgz as reference
         coreg.inputs.subjects_dir=subj_dir
         coreg.inputs.subject_id=f"sub-{subject}_ses-{session}"
     else: # use rawdata mri
@@ -161,30 +157,20 @@ def mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,ref_image):
     coreg.inputs.out_lta_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-{space}_xfm.reg.lta'
     print(coreg.cmdline)
     coreg.run()
-
-def apply_transform(pet,subject,session,mica_pet_derivatives,space,ref_image):
+    
     applyreg = ApplyVolTransform()
     applyreg.inputs.source_file=pet
     applyreg.inputs.reg_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-{space}_xfm.reg.lta'
-    if ref_image == 'FS':
+    if space == 'T1wFS':
         applyreg.inputs.fs_target=True
     else:
         applyreg.inputs.target_file=f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
     applyreg.inputs.transformed_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-none_trc-FDG_pet.nii.gz'
     applyreg.run()
-    
-if space == 'nativepro':
-    # nativepro
-    mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,'nativepro','FS')
-    apply_transform(pet,subject,session,mica_pet_derivatives,'nativepro','FS')
-    
-    # T1w
-    mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,'T1w','T1w')
-    apply_transform(pet,subject,session,mica_pet_derivatives,'T1w','T1w')
-    
-else:
-    mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,'FS')
-    apply_transform(pet,subject,session,mica_pet_derivatives,space,'T1w')
+
+
+for space in ['T1wFS','T1wNative']:
+    mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space)
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] PET to MRI co-registration completed.")
 

@@ -53,7 +53,6 @@ bids_dir = os.path.realpath(args.bids_dir)
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 mica_pet_version = os.environ['MICA_PET_VERSION']
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
-space = os.environ['MICA_PET_SPACE']
 
 FSCommand.set_default_subjects_dir(args.subj_dir)
 
@@ -139,6 +138,7 @@ def freesurfer_resample_prep(
         "sphere_gifti": current_gifti_sphere_out,
     }
     
+space='T1wFS'
 for hemi in ['lh','rh']:
     hemi_cap = 'L' if hemi=='lh' else 'R'
     for res in ['32k','5k']: 
