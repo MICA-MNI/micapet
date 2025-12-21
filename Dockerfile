@@ -148,9 +148,9 @@ COPY functions /app/functions
 COPY surfaces /app/surfaces
 # COPY group.fake passwd.fake environment.yml /app/
 # COPY license.txt /app/license.txt
+# FS_LICENSE=/app/license.txt \
 
-ENV FS_LICENSE=/app/license.txt \
-    PATH=$FREESURFER_HOME/bin:$PATH \
+ENV PATH=$FREESURFER_HOME/bin:$PATH \
     VTK_DEFAULT_OPENGL_WINDOW='vtkOSOpenGLRenderWindow' \
     MESA_GL_VERSION_OVERRIDE=3.3
 
