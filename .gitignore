@@ -21,3 +21,4 @@ list_of_tests.txt
 .vscode/*
 functions/__pycache__/*
 functions/test.py
+qsub_micapet_singularity.sh

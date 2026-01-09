@@ -349,6 +349,7 @@ def plot_Zscore(subject,session,bids_dir,qc_dir,mica_pet_derivatives):
     # FDG_surf_ctrl_hist_norm_std = np.genfromtxt(f'/host/fladgate/local_raid/jack/FDG/FDG_surf_ctrl_hist_norm_std.csv', delimiter=',', missing_values='""', filling_values=np.nan)
     FDG_surf_ctrl_hist_norm_mean = np.genfromtxt(f'/app/surfaces/FDG_surf_ctrl_hist_norm_mean.csv', delimiter=',', missing_values='""', filling_values=np.nan)
     FDG_surf_ctrl_hist_norm_std = np.genfromtxt(f'/app/surfaces/FDG_surf_ctrl_hist_norm_std.csv', delimiter=',', missing_values='""', filling_values=np.nan)
+    
     tmp_L = nilearn.surface.load_surf_data(f'{pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-{pvc}_ref-pons_smooth-10mm_trc-FDG_pet.func.gii');
     tmp_R = nilearn.surface.load_surf_data(f'{pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-{pvc}_ref-pons_smooth-10mm_trc-FDG_pet.func.gii');
 
