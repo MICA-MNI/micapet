@@ -93,7 +93,7 @@ f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
 mica_pet_version = os.environ['MICA_PET_VERSION']
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
-space = os.environ['MICA_PET_SPACE']
+space='T1wFS'
 
 if args.max_value is not None:
     max_value = args.max_value
@@ -123,10 +123,10 @@ filename= f"/host/fladgate/local_raid/jack/FDG/sub-{subject}_ses-{session}_FDG_c
 pial_left, pial_right = fetch_template_surface("fslr32k",join=False)
 mask = fetch_mask("fslr32k")
 
-# sctx_left = read_surface(f"/app/surfaces/sctx.L.surf.gii", itype="gii")
-# sctx_right = read_surface(f"/app/surfaces/sctx.R.surf.gii", itype="gii")
-sctx_left = read_surface(f"/host/fladgate/local_raid/jack/FDG/MICA-PET/scripts/surfaces/sctx.L.surf.gii", itype="gii")
-sctx_right = read_surface(f"/host/fladgate/local_raid/jack/FDG/MICA-PET/scripts/surfaces/sctx.R.surf.gii", itype="gii")
+sctx_left = read_surface(f"/app/surfaces/sctx.L.surf.gii", itype="gii")
+sctx_right = read_surface(f"/app/surfaces/sctx.R.surf.gii", itype="gii")
+# sctx_left = read_surface(f"/host/fladgate/local_raid/jack/FDG/MICA-PET/scripts/surfaces/sctx.L.surf.gii", itype="gii")
+# sctx_right = read_surface(f"/host/fladgate/local_raid/jack/FDG/MICA-PET/scripts/surfaces/sctx.R.surf.gii", itype="gii")
 # Utility functions ------------------------------------------------------------
 def map_subcortical_vertices(x) -> np.ndarray:
     """
@@ -206,7 +206,7 @@ def _load_data_sctx(
     data_rh = feat_map[25910:]
     return data_lh, data_rh
 
-def plot_SUVR(subject,session,bids_dir,qc_dir,pial_left,pial_right,mask,max_value):
+def plot_SUVR(subject,session,bids_dir,qc_dir,pial_left,pial_right,mask,max_value,mica_pet_derivatives):
     tmp_pt_FDG_surf_L = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
     tmp_pt_FDG_surf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
 
@@ -242,7 +242,7 @@ def plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value):
 
     return img_stream
 
-def plot_hippunfold(subject,session,bids_dir,qc_dir,max_value):
+def plot_hippunfold(subject,session,bids_dir,qc_dir,max_value,mica_pet_derivatives):
     tmp_hcsurf_L = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
 
     tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")             
@@ -255,7 +255,7 @@ def plot_hippunfold(subject,session,bids_dir,qc_dir,max_value):
 
     return img_stream
 
-def plot_hippunfold_AI(subject,session,bids_dir,qc_dir):
+def plot_hippunfold_AI(subject,session,bids_dir,qc_dir,mica_pet_derivatives):
     tmp_hcsurf_L = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
 
     tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
@@ -272,7 +272,7 @@ def plot_hippunfold_AI(subject,session,bids_dir,qc_dir):
 
 # Plotting asymmetry -------------------------------------------------------------
     
-def plot_AI(subject,session,bids_dir,qc_dir,pial_left,pial_right):
+def plot_AI(subject,session,bids_dir,qc_dir,pial_left,pial_right,mica_pet_derivatives):
     tmp_pt_FDG_surf_L = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
     tmp_pt_FDG_surf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-10mm_trc-FDG_pet.func.gii");
 
@@ -321,7 +321,7 @@ def plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir):
 
     return cropped_image_path
 
-def plot_roi(subject,session,bids_dir,qc_dir):
+def plot_roi(subject,session,bids_dir,qc_dir,mica_pet_derivatives):
     pet_derivatives=f'{mica_pet_derivatives}'
     mri_derivatives=f'{bids_dir}/derivatives/fastsurfer'
 
@@ -339,15 +339,17 @@ def max_hist(data, bins=50):
     max_value = bin_centers[max_index]
     return max_value
 
-def plot_Zscore(subject,session,bids_dir,qc_dir):
+def plot_Zscore(subject,session,bids_dir,qc_dir,mica_pet_derivatives):
     pet_derivatives=f'{mica_pet_derivatives}'
     mri_derivatives=f'{bids_dir}/derivatives/fastsurfer'
     pvc = 'none'
     Z_score_threhold = 1.96
 
-    FDG_surf_ctrl_hist_norm_mean = np.genfromtxt(f'/host/fladgate/local_raid/jack/FDG/FDG_surf_ctrl_hist_norm_mean.csv', delimiter=',', missing_values='""', filling_values=np.nan)
-    FDG_surf_ctrl_hist_norm_std = np.genfromtxt(f'/host/fladgate/local_raid/jack/FDG/FDG_surf_ctrl_hist_norm_std.csv', delimiter=',', missing_values='""', filling_values=np.nan)
-
+    # FDG_surf_ctrl_hist_norm_mean = np.genfromtxt(f'/host/fladgate/local_raid/jack/FDG/FDG_surf_ctrl_hist_norm_mean.csv', delimiter=',', missing_values='""', filling_values=np.nan)
+    # FDG_surf_ctrl_hist_norm_std = np.genfromtxt(f'/host/fladgate/local_raid/jack/FDG/FDG_surf_ctrl_hist_norm_std.csv', delimiter=',', missing_values='""', filling_values=np.nan)
+    FDG_surf_ctrl_hist_norm_mean = np.genfromtxt(f'/app/surfaces/FDG_surf_ctrl_hist_norm_mean.csv', delimiter=',', missing_values='""', filling_values=np.nan)
+    FDG_surf_ctrl_hist_norm_std = np.genfromtxt(f'/app/surfaces/FDG_surf_ctrl_hist_norm_std.csv', delimiter=',', missing_values='""', filling_values=np.nan)
+    
     tmp_L = nilearn.surface.load_surf_data(f'{pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-{pvc}_ref-pons_smooth-10mm_trc-FDG_pet.func.gii');
     tmp_R = nilearn.surface.load_surf_data(f'{pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-{pvc}_ref-pons_smooth-10mm_trc-FDG_pet.func.gii');
 
@@ -369,7 +371,7 @@ def plot_Zscore(subject,session,bids_dir,qc_dir):
 
     return img_stream
 
-def parcel_stats(subject,session,bids_dir,subj_dir,qc_dir,space):
+def parcel_stats(subject,session,bids_dir,subj_dir,qc_dir,space,mica_pet_derivatives):
     import nibabel as nib
     import numpy as np
     from nibabel.processing import resample_from_to
@@ -493,7 +495,7 @@ def parcel_stats(subject,session,bids_dir,subj_dir,qc_dir,space):
     return df
 
 
-cortical_SUVR, max_value = plot_SUVR(subject,session,bids_dir,qc_dir, pial_left, pial_right, mask,max_value)
+cortical_SUVR, max_value = plot_SUVR(subject,session,bids_dir,qc_dir, pial_left, pial_right, mask,max_value,mica_pet_derivatives)
 
 with rc.ReportCreator(
    title="MICA-PET Report",
@@ -526,7 +528,7 @@ with rc.ReportCreator(
     rc.Select(
         blocks=[
             rc.Image(
-                plot_hippunfold(subject,session,bids_dir,qc_dir,max_value),
+                plot_hippunfold(subject,session,bids_dir,qc_dir,max_value,mica_pet_derivatives),
                 label="Hippocampal FDG SUVR",
                 extra_css="width: 450px; height: auto;",
             ),
@@ -542,7 +544,7 @@ with rc.ReportCreator(
             # Each `rc.Image()` block specifies the path to an image file and provides a label for
             # that image.
             rc.Image(
-                plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right),
+                plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives),
                 label="Cortical FDG SUVR AI"
             ),
             rc.Image(
@@ -550,7 +552,7 @@ with rc.ReportCreator(
                 label="Subcortical FDG SUVR AI"
             ),
             rc.Image(
-                plot_hippunfold_AI(subject,session,bids_dir,qc_dir),
+                plot_hippunfold_AI(subject,session,bids_dir,qc_dir,mica_pet_derivatives),
                 label="Hippocampal FDG SUVR AI",
             ),
             
@@ -570,7 +572,7 @@ with rc.ReportCreator(
     rc.Select(
         blocks=[
             rc.Image(
-                plot_Zscore(subject,session,bids_dir,qc_dir),
+                plot_Zscore(subject,session,bids_dir,qc_dir,mica_pet_derivatives),
                 label="FDG PET Z score",
                 extra_css="width: 900px; height: auto;"
             ),
@@ -579,7 +581,7 @@ with rc.ReportCreator(
     rc.Select(
         blocks=[
             rc.DataTable(
-                parcel_stats(subject,session,bids_dir,args.subj_dir,qc_dir,space),
+                parcel_stats(subject,session,bids_dir,args.subj_dir,qc_dir,space,mica_pet_derivatives),
                 label="Regional SUVR and Asymmetry Index Statistics",
                 index=False
             )

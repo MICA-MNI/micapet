@@ -14,6 +14,7 @@ The script requires the following arguments:
     -pvc        : Presence of flag will project partial volume corrected data + non-PVC data.
     -cortical   : Presence of flag will perform cortical surface projection.
     -hippocampal: Presence of flag will perform hippocampal surface projection.
+    -tmpdir     : Path to temporary directory. 
 
 The script is intended for use by researchers and developers working with PET imaging data, particularly in the context of the MICA lab at McGill University.
 It is part of a larger pipeline for processing and analyzing neuroimaging data.
@@ -24,7 +25,7 @@ import argparse
 import os
 import sys
 from datetime import datetime
-from nipype.interfaces.freesurfer import FSCommand
+from nipype.interfaces.freesurfer import FSCommand, MRICoreg, ApplyVolTransform
 from nipype.interfaces.workbench.base import WBCommand
 
 import shutil
@@ -47,6 +48,7 @@ parser.add_argument("-ref_region",dest="ref_region", type=str, action='store',na
 parser.add_argument("-pvc", action='store_true', dest="pvc", help="(Flag) If present, project both partial volume corrected data and non-PVC data.")
 parser.add_argument("-cortical", action='store_true', dest="cortical", help="(Flag) If present, perform cortical surface projection.")
 parser.add_argument("-hippocampal", action='store_true', dest="hippocampal", help="(Flag) If present, perform hippocampal surface projection.")
+parser.add_argument("-tmpdir", dest="tmpdir", type=str, help="(Str) Specify path to temporary directory.")
 
 args = parser.parse_args()
 
@@ -74,10 +76,10 @@ ref_region.append('none')
 pvc_options = ['none', 'rbv'] if args.pvc else ['none']
 cortical = args.cortical
 hippocampal = args.hippocampal
+tmpdir = args.tmpdir
 
 mica_pet_version = os.environ['MICA_PET_VERSION']
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
-space = os.environ['MICA_PET_SPACE']
 
 FSCommand.set_default_subjects_dir(args.subj_dir)
 
@@ -106,6 +108,7 @@ if hippocampal:
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting PET data projection to surface for subject: {subject}, session: {session}.")
 
+space='T1wFS'
 if cortical:
     print("Doing cortical surface projection.")
     for hemi in ['L','R']:
@@ -140,17 +143,34 @@ if cortical:
 
 if hippocampal:
     print("Doing hippocampal surface projection.")
-    for hemi in ['L','R']:
+    # register FS T1w to hippunfold T1w, as they may be in different spaces
+    coreg = MRICoreg()
+    coreg.inputs.source_file=f'{hippunfold_dir}/hippunfold/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_desc-preproc_T1w.nii.gz'
+    coreg.inputs.subjects_dir=args.subj_dir
+    coreg.inputs.subject_id=f"sub-{subject}_ses-{session}"
+    coreg.inputs.out_lta_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-T1wHippUnfold_to-T1wFS_xfm.reg.lta'
+    coreg.run()
+    
+    
+    for ref in ref_region:
         for pvc in pvc_options:
-            for ref in ref_region:
+            # apply inverse transforms to PET images -> they will be in hippunfold T1w space
+            applyreg = ApplyVolTransform()
+            applyreg.inputs.source_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wFS_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
+            applyreg.inputs.lta_inv_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-T1wHippUnfold_to-T1wFS_xfm.reg.lta'
+            applyreg.inputs.target_file=f'{hippunfold_dir}/hippunfold/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_desc-preproc_T1w.nii.gz'
+            applyreg.inputs.transformed_file=f'{tmpdir}/sub-{subject}_ses-{session}_space-T1wHippUnfold_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
+            applyreg.run()
+            
+            for hemi in ['L','R']:
                 print(f"Processing PVC method: {pvc}, reference region: {ref}, hemisphere: {hemi}...")
-                SUVR_map=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1w_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
+                SUVR_map=f'{tmpdir}/sub-{subject}_ses-{session}_space-T1wHippUnfold_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
                 
                 if os.path.exists(SUVR_map) is False:
                     print(f"Error: SUVR map in T1w space does not exist... Needed for HippUnfold projection.")
                     sys.exit(1)
                 
-                hipp_surf=f'{hippunfold_dir}/hippunfold/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-T1w_den-2mm_label-hipp_midthickness.surf.gii' #hippunfold space always T1w
+                hipp_surf=f'{hippunfold_dir}/hippunfold/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-T1w_den-2mm_label-hipp_midthickness.surf.gii'
                 
                 SUVR_on_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-hipp_den-2mm_label-midthickness_pvc-{pvc}_ref-{ref}_trc-FDG_pet.func.gii'
                 

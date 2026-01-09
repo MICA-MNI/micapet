@@ -59,7 +59,6 @@ force = args.force
 os.environ['SUBJECTS_DIR'] = os.path.realpath(args.subj_dir)
 mica_pet_version = os.environ['MICA_PET_VERSION']
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
-space = os.environ['MICA_PET_SPACE']
 
 # Check BIDS directory structure if it doesn't exist
 if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
@@ -130,11 +129,14 @@ def resample_gtmseg(gtm,mri,space):
     
 gtm = f'{f_surf_dir}/mri/gtmseg.mgz'
 
-if space == 'nativepro':
-    mri = f"{f_surf_dir}/mri/orig.mgz"
-    resample_gtmseg(gtm,mri,'nativepro')
+for space in ['T1wFS','T1wNative']:
+    if space == 'T1wFS':
+        mri = f"{f_surf_dir}/mri/orig.mgz"
+    else: 
+        mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+    resample_gtmseg(gtm,mri,space)
 
-mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+
 resample_gtmseg(gtm,mri,'T1w')
 # need to run T1w even if space is nativepro, for hippunfold compatibility
 

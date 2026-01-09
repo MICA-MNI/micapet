@@ -62,11 +62,6 @@ f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
 
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{os.environ['MICA_PET_VERSION']}" 
-petspace = os.environ['MICA_PET_SPACE']
-if petspace == 'nativepro':
-    spacelist = ['nativepro','T1w']
-else:
-    spacelist = ['T1w']
 
 FSCommand.set_default_subjects_dir(args.subj_dir)
 
@@ -79,8 +74,8 @@ if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):
     sys.exit(1)
 
 # Check if gtmseg.mgz exists
-if not os.path.exists(f"{f_surf_dir}/mri/gtmseg_space-{petspace}.nii.gz"):
-    print(f"Error: gtmseg_space-{petspace}.nii.gz for subject {subject}, session {session} does not exist. Please run gtm_seg.py first.")
+if not os.path.exists(f"{f_surf_dir}/mri/gtmseg.mgz"):
+    print(f"Error: gtmseg.mgz for subject {subject}, session {session} does not exist. Please run gtm_seg.py first.")
     sys.exit(1)
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting reference region creation and SUVR calculation for subject: {subject}, session: {session}.")
@@ -130,7 +125,7 @@ def combineROIs(ref,mica_pet_derivatives,subject,session,space):
         os.remove(mask)
         
 ## Create ROIs and calculate SUVR       
-for space in spacelist:
+for space in ['T1wFS','T1wNative']:
     for ref in ref_region:
         print(f"Processing reference region: {ref}...")
         if ref == 'pons':

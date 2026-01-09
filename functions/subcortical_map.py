@@ -54,9 +54,9 @@ subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
+space='T1wFS'
 
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{os.environ['MICA_PET_VERSION']}"   
-space = os.environ['MICA_PET_SPACE']
 
 # Check BIDS directory structure if it doesn't exist
 if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):

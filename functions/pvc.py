@@ -61,7 +61,6 @@ FSCommand.set_default_subjects_dir(args.subj_dir)
 
 mica_pet_version = os.environ['MICA_PET_VERSION']
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
-space = os.environ['MICA_PET_SPACE']
 
 # gtmpvc.output 
 if args.pvc_dir is None: 
@@ -88,7 +87,7 @@ print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting GTMPVC for sub
 
 gtmpvc = freesurfer.GTMPVC()
 gtmpvc.inputs.in_file = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet.nii.gz"
-gtmpvc.inputs.reg_file = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-{space}_xfm.reg.lta'
+gtmpvc.inputs.reg_file = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-T1wFS_xfm.reg.lta'
 gtmpvc.inputs.psf = psf
 gtmpvc.inputs.segmentation = f"{f_surf_dir}/mri/gtmseg.mgz"
 gtmpvc.inputs.auto_mask = (1, 0.01)
@@ -114,12 +113,13 @@ def resample_RBV(rbv,mri,mica_pet_derivatives,subject,session,space):
 
 rbv = f"{pvc_dir}/rbv.nii.gz"
 
-if space == 'nativepro':
-    mri = f"{args.subj_dir}/sub-{subject}_ses-{session}/mri/orig.mgz"
-    resample_RBV(rbv,mri,mica_pet_derivatives,subject,session,'nativepro')
+for space in ['T1wFS','T1wNative']:
+    if space == 'T1wFS':
+        mri = f"{f_surf_dir}/mri/orig.mgz"
+    else: 
+        mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+    resample_RBV(rbv,mri,mica_pet_derivatives,subject,session,space)
 
-mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
-resample_RBV(rbv,mri,mica_pet_derivatives,subject,session,'T1w')
 # if space is nativepro, running both nativepro and T1w space for hippunfold compatibility
     
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Partial volume correction completed.")
