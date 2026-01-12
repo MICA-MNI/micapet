@@ -12,6 +12,7 @@ dependencies:
   - nipype
   - traits             # nipype runtime dependency
   - snakemake
+  - snakebids           # Add snakebids to conda dependencies
   - pip
   - matplotlib==3.6.0
   - pip:
