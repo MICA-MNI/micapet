@@ -13,6 +13,7 @@ dependencies:
   - traits             # nipype runtime dependency
   - snakemake
   - snakebids           # Add snakebids to conda dependencies
+  - cmake>=3.25         # Required for pyarrow (snakebids dependency)
   - pip
   - matplotlib==3.6.0
   - pip:

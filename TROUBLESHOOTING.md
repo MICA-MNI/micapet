@@ -1,8 +1,10 @@
-# Fix for Python 2.7 Environment Issue
+# Troubleshooting Guide
+
+## Issue 1: Python 2.7 Environment
 
 Your current `micapet` conda environment is using Python 2.7 instead of Python 3.10 as specified in `environment.yml`.
 
-## Solution: Recreate the environment
+### Solution: Recreate the environment
 
 Run these commands on the server:
 
@@ -23,6 +25,23 @@ python --version
 # Verify snakebids is installed
 python -c "import snakebids; print(snakebids.__version__)"
 ```
+
+## Issue 2: CMake Version Too Old
+
+If you get an error like "CMake 3.25 or higher is required. You are running version 3.10.2", this is because pyarrow (a snakebids dependency) needs a newer CMake.
+
+### Solution: CMake is now included in environment.yml
+
+The updated `environment.yml` now includes `cmake>=3.25`. Simply recreate the environment:
+
+```bash
+conda deactivate
+conda env remove -n micapet
+conda env create -f environment.yml
+conda activate micapet
+```
+
+This will install the correct CMake version in your conda environment.
 
 ## Why this happened
 
