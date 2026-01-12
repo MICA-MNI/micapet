@@ -74,8 +74,8 @@ print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting gtmseg for sub
 if seg_type == 'freesurfer':
     # check if gtmseg was run already
     if os.path.exists(f"{f_surf_dir}/mri/gtmseg.mgz") and force==False:
-        print(f"GTMseg was run already for subject {subject}. Exiting.")
-        sys.exit(1)
+        print(f"GTMseg was run already for subject {subject}. Re-run with -force flag to rerun GTMseg.")
+        
     else:
         gtmseg = freesurfer.GTMSeg()
         gtmseg.inputs.subject_id = f"sub-{subject}_ses-{session}"
