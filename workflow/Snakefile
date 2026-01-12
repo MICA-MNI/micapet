@@ -1,0 +1,29 @@
+import os
+
+# CONFIGURATION
+config_file = config.get("configfile_path", "config/snakebids.yml")
+
+# Global variables derived from config
+MICA_PET_VERSION = config.get("mica_pet_version", "v.alpha.0.3")
+MICAPET_DIR_NAME = f"MICA-PET_{MICA_PET_VERSION}"
+FASTSURFER_DIR_NAME = "fastsurfer"
+HIPPUNFOLD_DIR_NAME = "hippunfold_v1.4.1"
+
+BIDS_DIR = config.get("bids_dir", ".")
+
+# Set PYTHONPATH to include functions directory so scripts can import utils
+os.environ["PYTHONPATH"] = os.path.join(workflow.basedir, "../functions") + os.pathsep + os.environ.get("PYTHONPATH", "")
+
+# Rules
+include: "rules/anatomy.smk"
+include: "rules/pet.smk"
+include: "rules/report.smk"
+
+rule all:
+    input:
+        expand(
+            "qc/sub-{subject}_ses-{session}_report.html",
+            zip,
+            subject=inputs.pet.entities["subject"],
+            session=inputs.pet.entities["session"]
+        )

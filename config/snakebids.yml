@@ -1,0 +1,57 @@
+pybids_inputs:
+  T1w:
+    filters:
+      suffix: 'T1w'
+      extension: '.nii.gz'
+      datatype: 'anat'
+      scope: 'raw'
+    wildcards:
+      - subject
+      - session
+
+  pet:
+    filters:
+      suffix: 'pet'
+      extension: '.nii.gz'
+      datatype: 'pet'
+      trc: 'FDG'
+      scope: 'raw'
+    wildcards:
+      - subject
+      - session
+
+targets_by_analysis_level:
+  participant:
+    - ''
+
+# Pipeline Configuration
+# ----------------------
+
+# Paths provided via CLI or defaults
+fastsurfer_img: ''  # REQUIRED: path to fastsurfer.sif
+hippunfold_img: ''  # REQUIRED: path to hippunfold.sif
+fs_license: ''      # REQUIRED: path to license.txt
+
+# Processing options
+psf: 4.5                    # Scanner PSF FWHM in mm
+ref_region: 'pons'          # Options: pons, cerebellarGM, composite, none
+threads: 8                  # Threads for multithreaded steps
+hippunfold_cache_dir: ''    # Path to hippunfold cache directory
+
+# MICA-PET version used for derivatives folder naming matching the scripts
+mica_pet_version: 'v.alpha.0.3'
+
+# Toggles (if you want to implement logic to skip steps, though snakemake handles dependencies)
+skip_fastsurfer: false
+skip_hippunfold: false
+
+# Debugging
+parse_args: # Help snakebids parse CLI args that shouldn't be interpreted as BIDS filters
+  - --fastsurfer_img
+  - --hippunfold_img
+  - --fs_license
+  - --psf
+  - --ref_region
+  - --threads
+  - --mica_pet_version
+  - --hippunfold_cache_dir
