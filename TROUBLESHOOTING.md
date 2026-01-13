@@ -43,6 +43,28 @@ conda activate micapet
 
 This will install the correct CMake version in your conda environment.
 
+## Issue 3: "prefix already exists" or "EnvironmentLocationNotFound"
+
+If conda says the environment prefix exists but can't remove it, manually delete the directory:
+
+```bash
+# Make sure you're NOT in the micapet environment
+conda deactivate
+
+# Manually remove the environment directory
+rm -rf /data_/mica1/03_projects/enning/conda_envs/micapet
+
+# Now create fresh
+conda env create -f environment.yml
+
+# Activate
+conda activate micapet
+
+# Verify everything works
+python --version
+python -c "import snakebids; print('Success!')"
+```
+
 ## Why this happened
 
 The existing `micapet` environment was created with Python 2.7, possibly from an older version of the `environment.yml` file. Conda doesn't automatically update the Python version when you update the environment file.
