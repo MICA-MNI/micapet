@@ -2,6 +2,7 @@
 
 # Hardcoded paths based on the provided information
 BIDS_DIR="/host/fladgate/local_raid/jack/FDG/MICA-PET/BIDS_MICs_FDG"
+OUTPUT_DIR="/host/cassio/export03/data/enning/micapet_output"
 FASTSURFER_IMG="/host/verges/tank/data/jack/fastsurfer-cpu-v2.4.2.sif"
 HIPPUNFOLD_IMG="/host/verges/tank/data/jack/hippunfold_v1.4.1.sif"
 FS_LICENSE="/host/verges/tank/data/jack/license.txt"
@@ -20,6 +21,14 @@ for path in "$BIDS_DIR" "$FASTSURFER_IMG" "$HIPPUNFOLD_IMG" "$FS_LICENSE" "$HIPP
     fi
 done
 
+# Create output directory if it doesn't exist
+if [ ! -d "$OUTPUT_DIR" ]; then
+    echo "Creating output directory: $OUTPUT_DIR"
+    mkdir -p "$OUTPUT_DIR"
+else
+    echo "Output directory exists: $OUTPUT_DIR"
+fi
+
 echo "Running micapet pipeline (Dry Run)..."
 
 # Run snakebids app
@@ -33,7 +42,7 @@ echo "Running micapet pipeline (Dry Run)..."
     8 \
     "$HIPP_CACHE" \
     "$BIDS_DIR" \
-    "$BIDS_DIR/derivatives" \
+    "$OUTPUT_DIR" \
     participant \
     --participant_label "$SUBJECT_LABEL" \
     -n
