@@ -92,6 +92,7 @@ python ./run.py \
     --psf 4.5 \
     --ref-region pons \
     --threads 8 \
+    --cores 8 \
     $DRY_RUN
 
 echo ""
