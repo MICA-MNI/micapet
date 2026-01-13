@@ -45,19 +45,16 @@ mica_pet_version: 'v.alpha.0.3'
 skip_fastsurfer: false
 skip_hippunfold: false
 
-# Custom CLI arguments
+# Custom CLI arguments - these become positional arguments
 parse_args:
   fastsurfer_img:
     help: "Path to FastSurfer Singularity image (.sif)"
-    required: true
     nargs: "?"
   hippunfold_img:
     help: "Path to HippUnfold Singularity image (.sif)"
-    required: true
     nargs: "?"
   fs_license:
     help: "Path to FreeSurfer license.txt"
-    required: true
     nargs: "?"
   psf:
     help: "Scanner PSF FWHM in mm"
