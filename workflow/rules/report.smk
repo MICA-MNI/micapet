@@ -7,22 +7,24 @@ rule clinical_report:
         func_R = rules.project_pet_data.output.func_R,
         hipp_func_L = rules.project_pet_data.output.hipp_func_L,
         hipp_func_R = rules.project_pet_data.output.hipp_func_R,
-        csv = rules.subcortical_map.output.csv
+        csv = rules.subcortical_map.output.csv,
     output:
-        report = "qc/sub-{subject}_ses-{session}_report.html"
+        report = os.path.join(root, "qc", "sub-{subject}_ses-{session}_report.html"),
     params:
         bids_dir = config["bids_dir"],
-        subj_dir = f"derivatives/{FASTSURFER_DIR_NAME}",
-        ref_region = config.get("ref_region", "pons")
+        subj_dir = lambda wildcards: os.path.join(root, FASTSURFER_DIR_NAME),
+        ref_region = config.get("ref_region", "pons"),
+        output_dir = root,
     log:
-        "logs/clinical_report/sub-{subject}_ses-{session}.log"
+        os.path.join(root, "logs", "clinical_report", "sub-{subject}_ses-{session}.log")
     shell:
         """
-        python functions/clinical_reports.py \
+        python {workflow.basedir}/../functions/clinical_reports.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
             -subj_dir {params.subj_dir} \
+            -output_dir {params.output_dir} \
             -ref_region {params.ref_region} \
             > {log} 2>&1
         """

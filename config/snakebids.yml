@@ -1,3 +1,11 @@
+# MICA-PET Pipeline Configuration
+# ================================
+# This configuration file defines the BIDS inputs and CLI arguments
+# for the MICA-PET neuroimaging pipeline.
+
+# --- BIDS Input Configuration ---
+# Defines how to find and parse input files from the BIDS dataset
+
 pybids_inputs:
   T1w:
     filters:
@@ -20,57 +28,77 @@ pybids_inputs:
       - subject
       - session
 
+
+# --- Analysis Levels ---
+# BIDS App standard analysis levels
+
+analysis_levels:
+  - participant
+
+
+# --- Target Rules by Analysis Level ---
+# Maps analysis levels to snakemake target rules
+
 targets_by_analysis_level:
   participant:
-    - ''
+    - ''  # Empty string means use the first rule (rule all)
 
-# Pipeline Configuration
-# ----------------------
 
-# Paths provided via CLI or defaults
-fastsurfer_img: ''  # REQUIRED: path to fastsurfer.sif
-hippunfold_img: ''  # REQUIRED: path to hippunfold.sif
-fs_license: ''      # REQUIRED: path to license.txt
+# --- Pipeline Configuration ---
+# Default values for pipeline parameters
 
-# Processing options
+# MICA-PET version used for derivatives folder naming
+mica_pet_version: 'v.alpha.0.3'
+
+# Processing options with defaults
 psf: 4.5                    # Scanner PSF FWHM in mm
 ref_region: 'pons'          # Options: pons, cerebellarGM, composite, none
 threads: 8                  # Threads for multithreaded steps
-hippunfold_cache_dir: ''    # Path to hippunfold cache directory
 
-# MICA-PET version used for derivatives folder naming matching the scripts
-mica_pet_version: 'v.alpha.0.3'
 
-# Toggles (if you want to implement logic to skip steps, though snakemake handles dependencies)
-skip_fastsurfer: false
-skip_hippunfold: false
+# --- Custom CLI Arguments ---
+# These arguments are added to the command-line interface
+# Each entry becomes a call to argparse.add_argument()
 
-# Custom CLI arguments - these become positional arguments
 parse_args:
-  fastsurfer_img:
+  --fastsurfer-img:
     help: "Path to FastSurfer Singularity image (.sif)"
-    nargs: "?"
-  hippunfold_img:
+    dest: fastsurfer_img
+    required: true
+  
+  --hippunfold-img:
     help: "Path to HippUnfold Singularity image (.sif)"
-    nargs: "?"
-  fs_license:
+    dest: hippunfold_img
+    required: true
+  
+  --fs-license:
     help: "Path to FreeSurfer license.txt"
-    nargs: "?"
-  psf:
-    help: "Scanner PSF FWHM in mm"
+    dest: fs_license
+    required: true
+  
+  --psf:
+    help: "Scanner PSF FWHM in mm (default: 4.5)"
+    dest: psf
     type: float
     default: 4.5
-    nargs: "?"
-  ref_region:
-    help: "Reference region (pons, cerebellarGM, composite, none)"
+  
+  --ref-region:
+    help: "Reference region for SUVR (pons, cerebellarGM, composite, none)"
+    dest: ref_region
     default: "pons"
-    nargs: "?"
-  threads:
-    help: "Number of threads for multithreaded steps"
+    choices:
+      - pons
+      - cerebellarGM
+      - composite
+      - none
+  
+  --threads:
+    help: "Number of threads for multithreaded steps (default: 8)"
+    dest: threads
     type: int
     default: 8
-    nargs: "?"
-  hippunfold_cache_dir:
-    help: "Path to hippunfold cache directory"
+  
+  --hippunfold-cache-dir:
+    help: "Path to hippunfold cache directory (optional)"
+    dest: hippunfold_cache_dir
     default: ""
-    nargs: "?"

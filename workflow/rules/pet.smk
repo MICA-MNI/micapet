@@ -1,31 +1,36 @@
 # PET processing rules: Linear Coreg, PVC, SUVR, Project PET, Subcortical Map
 
+# Helper to get reference region from config
+def get_ref_region():
+    return config.get("ref_region", "pons")
+
 rule linear_coreg:
     input:
-        pet = inputs.pet.path,
-        t1 = inputs.T1w.path,
-        # Implicit dependency on fastsurfer dir existence, although script checks it.
-        # We can add a file from fastsurfer to ensure it ran.
-        fs_check = rules.fastsurfer.output.norm
+        pet = inputs['pet'].path,
+        t1 = inputs['T1w'].path,
+        # Ensure fastsurfer completed
+        fs_check = rules.fastsurfer.output.norm,
     output:
         # Reg lta files
-        reg_lta_fs = f"derivatives/{MICAPET_DIR_NAME}/sub-{{subject}}/ses-{{session}}/pet/sub-{{subject}}_ses-{{session}}_trc-FDG_pet_to_T1wFS_xfm.reg.lta",
-        reg_lta_native = f"derivatives/{MICAPET_DIR_NAME}/sub-{{subject}}/ses-{{session}}/pet/sub-{{subject}}_ses-{{session}}_trc-FDG_pet_to_T1wNative_xfm.reg.lta",
+        reg_lta_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_trc-FDG_pet_to_T1wFS_xfm.reg.lta"),
+        reg_lta_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_trc-FDG_pet_to_T1wNative_xfm.reg.lta"),
         # Coregistered PET
-        pet_fs = f"derivatives/{MICAPET_DIR_NAME}/sub-{{subject}}/ses-{{session}}/pet/sub-{{subject}}_ses-{{session}}_space-T1wFS_pvc-none_ref-none_trc-FDG_pet.nii.gz",
-        pet_native = f"derivatives/{MICAPET_DIR_NAME}/sub-{{subject}}/ses-{{session}}/pet/sub-{{subject}}_ses-{{session}}_space-T1wNative_pvc-none_ref-none_trc-FDG_pet.nii.gz"
+        pet_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wFS_pvc-none_ref-none_trc-FDG_pet.nii.gz"),
+        pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNative_pvc-none_ref-none_trc-FDG_pet.nii.gz"),
     params:
         bids_dir = config["bids_dir"],
-        subj_dir = f"derivatives/{FASTSURFER_DIR_NAME}"
+        subj_dir = lambda wildcards: os.path.join(root, FASTSURFER_DIR_NAME),
+        output_dir = root,
     log:
-        "logs/linear_coreg/sub-{subject}_ses-{session}.log"
+        os.path.join(root, "logs", "linear_coreg", "sub-{subject}_ses-{session}.log")
     shell:
         """
-        python functions/linear_coreg.py \
+        python {workflow.basedir}/../functions/linear_coreg.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
             -subj_dir {params.subj_dir} \
+            -output_dir {params.output_dir} \
             -pet {input.pet} \
             -mri {input.t1} \
             > {log} 2>&1
@@ -33,27 +38,28 @@ rule linear_coreg:
 
 rule pvc:
     input:
-        pet_fs = rules.linear_coreg.output.pet_fs,  # Actually script uses original pet + lta
-        pet_raw = inputs.pet.path,
+        pet_fs = rules.linear_coreg.output.pet_fs,
+        pet_raw = inputs['pet'].path,
         lta = rules.linear_coreg.output.reg_lta_fs,
-        gtmseg = rules.gtm_seg.output.gtmseg
+        gtmseg = rules.gtm_seg.output.gtmseg,
     output:
-        pvc_pet_fs = f"derivatives/{MICAPET_DIR_NAME}/sub-{{subject}}/ses-{{session}}/pet/sub-{{subject}}_ses-{{session}}_space-T1wFS_pvc-rbv_ref-none_trc-FDG_pet.nii.gz",
-        # pcv.py output list also includes native space? Checking list_of_tests.txt... yes.
-        pvc_pet_native = f"derivatives/{MICAPET_DIR_NAME}/sub-{{subject}}/ses-{{session}}/pet/sub-{{subject}}_ses-{{session}}_space-T1wNative_pvc-rbv_ref-none_trc-FDG_pet.nii.gz"
+        pvc_pet_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wFS_pvc-rbv_ref-none_trc-FDG_pet.nii.gz"),
+        pvc_pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNative_pvc-rbv_ref-none_trc-FDG_pet.nii.gz"),
     params:
         bids_dir = config["bids_dir"],
-        subj_dir = f"derivatives/{FASTSURFER_DIR_NAME}",
-        psf = config.get("psf", 4.5)
+        subj_dir = lambda wildcards: os.path.join(root, FASTSURFER_DIR_NAME),
+        psf = config.get("psf", 4.5),
+        output_dir = root,
     log:
-        "logs/pvc/sub-{subject}_ses-{session}.log"
+        os.path.join(root, "logs", "pvc", "sub-{subject}_ses-{session}.log")
     shell:
         """
-        python functions/pvc.py \
+        python {workflow.basedir}/../functions/pvc.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
             -subj_dir {params.subj_dir} \
+            -output_dir {params.output_dir} \
             -psf {params.psf} \
             > {log} 2>&1
         """
@@ -61,26 +67,25 @@ rule pvc:
 rule suvr:
     input:
         pvc_pet_fs = rules.pvc.output.pvc_pet_fs,
-        pvc_pet_native = rules.pvc.output.pvc_pet_native
+        pvc_pet_native = rules.pvc.output.pvc_pet_native,
     output:
-        # The outputs depend on the ref_region parameter. Default is 'pons'.
-        # We'll assume 'pons' for the rule, but user config might change it.
-        # Ideally, we should use dynamic output or just list the one defined in config.
-        suvr_pet_fs = f"derivatives/{MICAPET_DIR_NAME}/sub-{{subject}}/ses-{{session}}/pet/sub-{{subject}}_ses-{{session}}_space-T1wFS_pvc-rbv_ref-{config.get('ref_region', 'pons')}_trc-FDG_pet.nii.gz",
-        suvr_pet_native = f"derivatives/{MICAPET_DIR_NAME}/sub-{{subject}}/ses-{{session}}/pet/sub-{{subject}}_ses-{{session}}_space-T1wNative_pvc-rbv_ref-{config.get('ref_region', 'pons')}_trc-FDG_pet.nii.gz"
+        suvr_pet_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wFS_pvc-rbv_ref-" + get_ref_region() + "_trc-FDG_pet.nii.gz"),
+        suvr_pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNative_pvc-rbv_ref-" + get_ref_region() + "_trc-FDG_pet.nii.gz"),
     params:
         bids_dir = config["bids_dir"],
-        subj_dir = f"derivatives/{FASTSURFER_DIR_NAME}",
-        ref_region = config.get("ref_region", "pons")
+        subj_dir = lambda wildcards: os.path.join(root, FASTSURFER_DIR_NAME),
+        ref_region = get_ref_region(),
+        output_dir = root,
     log:
-        "logs/suvr/sub-{subject}_ses-{session}.log"
+        os.path.join(root, "logs", "suvr", "sub-{subject}_ses-{session}.log")
     shell:
         """
-        python functions/suvr.py \
+        python {workflow.basedir}/../functions/suvr.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
             -subj_dir {params.subj_dir} \
+            -output_dir {params.output_dir} \
             -ref_region {params.ref_region} \
             > {log} 2>&1
         """
@@ -91,29 +96,31 @@ rule project_pet_data:
         surf_L = rules.cortical_surface.output.fsnative_L,
         surf_R = rules.cortical_surface.output.fsnative_R,
         hipp_L = rules.hippunfold.output.hipp_lh,
-        hipp_R = rules.hippunfold.output.hipp_rh
+        hipp_R = rules.hippunfold.output.hipp_rh,
     output:
         # Cortical projection
-        func_L = f"derivatives/{MICAPET_DIR_NAME}/sub-{{subject}}/ses-{{session}}/surf/sub-{{subject}}_ses-{{session}}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-{config.get('ref_region', 'pons')}_smooth-10mm_trc-FDG_pet.func.gii",
-        func_R = f"derivatives/{MICAPET_DIR_NAME}/sub-{{subject}}/ses-{{session}}/surf/sub-{{subject}}_ses-{{session}}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-{config.get('ref_region', 'pons')}_smooth-10mm_trc-FDG_pet.func.gii",
+        func_L = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-" + get_ref_region() + "_smooth-10mm_trc-FDG_pet.func.gii"),
+        func_R = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-" + get_ref_region() + "_smooth-10mm_trc-FDG_pet.func.gii"),
         # Hippocampal projection
-        hipp_func_L = f"derivatives/{MICAPET_DIR_NAME}/sub-{{subject}}/ses-{{session}}/surf/sub-{{subject}}_ses-{{session}}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-{config.get('ref_region', 'pons')}_trc-FDG_pet.func.gii",
-        hipp_func_R = f"derivatives/{MICAPET_DIR_NAME}/sub-{{subject}}/ses-{{session}}/surf/sub-{{subject}}_ses-{{session}}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-{config.get('ref_region', 'pons')}_trc-FDG_pet.func.gii"
+        hipp_func_L = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-" + get_ref_region() + "_trc-FDG_pet.func.gii"),
+        hipp_func_R = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-" + get_ref_region() + "_trc-FDG_pet.func.gii"),
     params:
         bids_dir = config["bids_dir"],
-        subj_dir = f"derivatives/{FASTSURFER_DIR_NAME}",
-        hippunfold_dir = f"derivatives/{HIPPUNFOLD_DIR_NAME}",
-        ref_region = config.get("ref_region", "pons")
+        subj_dir = lambda wildcards: os.path.join(root, FASTSURFER_DIR_NAME),
+        hippunfold_dir = lambda wildcards: os.path.join(root, HIPPUNFOLD_DIR_NAME),
+        ref_region = get_ref_region(),
+        output_dir = root,
     log:
-        "logs/project_pet_data/sub-{subject}_ses-{session}.log"
+        os.path.join(root, "logs", "project_pet_data", "sub-{subject}_ses-{session}.log")
     shell:
         """
-        python functions/project_pet_data.py \
+        python {workflow.basedir}/../functions/project_pet_data.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
             -subj_dir {params.subj_dir} \
             -hippunfold_dir {params.hippunfold_dir} \
+            -output_dir {params.output_dir} \
             -ref_region {params.ref_region} \
             -pvc \
             -cortical \
@@ -124,22 +131,24 @@ rule project_pet_data:
 rule subcortical_map:
     input:
         suvr_pet_fs = rules.suvr.output.suvr_pet_fs,
-        aparc_aseg = rules.fastsurfer.output.aparc_aseg
+        aparc_aseg = rules.fastsurfer.output.aparc_aseg,
     output:
-        csv = f"qc/sub-{{subject}}/ses-{{session}}/sub-{{subject}}_ses-{{session}}_subcortical_means_pvc-rbv_ref-{config.get('ref_region', 'pons')}_trc-FDG_pet.csv"
+        csv = os.path.join(root, "qc", "sub-{subject}", "ses-{session}", "sub-{subject}_ses-{session}_subcortical_means_pvc-rbv_ref-" + get_ref_region() + "_trc-FDG_pet.csv"),
     params:
         bids_dir = config["bids_dir"],
-        subj_dir = f"derivatives/{FASTSURFER_DIR_NAME}",
-        ref_region = config.get("ref_region", "pons")
+        subj_dir = lambda wildcards: os.path.join(root, FASTSURFER_DIR_NAME),
+        ref_region = get_ref_region(),
+        output_dir = root,
     log:
-        "logs/subcortical_map/sub-{subject}_ses-{session}.log"
+        os.path.join(root, "logs", "subcortical_map", "sub-{subject}_ses-{session}.log")
     shell:
         """
-        python functions/subcortical_map.py \
+        python {workflow.basedir}/../functions/subcortical_map.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
             -subj_dir {params.subj_dir} \
+            -output_dir {params.output_dir} \
             -ref_region {params.ref_region} \
             > {log} 2>&1
         """

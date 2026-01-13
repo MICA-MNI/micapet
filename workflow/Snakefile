@@ -1,29 +1,52 @@
+# ---- snakebids boilerplate ----
 import os
+import snakebids
+from snakebids import bids, generate_inputs
 
-# CONFIGURATION
-config_file = config.get("configfile_path", "config/snakebids.yml")
 
-# Global variables derived from config
+configfile: "config/snakebids.yml"
+
+
+# --- Generate inputs from BIDS dataset ---
+# This parses the BIDS directory and creates the 'inputs' object
+# which contains paths and wildcards for each input type
+inputs = generate_inputs(
+    bids_dir=config["bids_dir"],
+    pybids_inputs=config["pybids_inputs"],
+    participant_label=config.get("participant_label"),
+    exclude_participant_label=config.get("exclude_participant_label"),
+)
+
+
+# --- Global variables derived from config ---
 MICA_PET_VERSION = config.get("mica_pet_version", "v.alpha.0.3")
 MICAPET_DIR_NAME = f"MICA-PET_{MICA_PET_VERSION}"
 FASTSURFER_DIR_NAME = "fastsurfer"
 HIPPUNFOLD_DIR_NAME = "hippunfold_v1.4.1"
 
-BIDS_DIR = config.get("bids_dir", ".")
+# Output root directory (from snakebids app or config)
+root = config.get("output_dir", os.path.join(config["bids_dir"], "derivatives"))
 
 # Set PYTHONPATH to include functions directory so scripts can import utils
-os.environ["PYTHONPATH"] = os.path.join(workflow.basedir, "../functions") + os.pathsep + os.environ.get("PYTHONPATH", "")
+os.environ["PYTHONPATH"] = os.path.join(workflow.basedir, "..", "functions") + os.pathsep + os.environ.get("PYTHONPATH", "")
 
-# Rules
+
+# --- Wildcard constraints ---
+wildcard_constraints:
+    subject="[a-zA-Z0-9]+",
+    session="[a-zA-Z0-9]+",
+
+
+# --- Include rule files ---
 include: "rules/anatomy.smk"
 include: "rules/pet.smk"
 include: "rules/report.smk"
 
+
+# --- Target rule ---
 rule all:
     input:
-        expand(
-            "qc/sub-{subject}_ses-{session}_report.html",
-            zip,
-            subject=inputs.pet.entities["subject"],
-            session=inputs.pet.entities["session"]
+        inputs['pet'].expand(
+            os.path.join(root, "qc", "sub-{subject}_ses-{session}_report.html"),
+            allow_missing=True,
         )
