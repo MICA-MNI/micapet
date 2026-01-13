@@ -49,21 +49,31 @@ skip_hippunfold: false
 parse_args:
   fastsurfer_img:
     help: "Path to FastSurfer Singularity image (.sif)"
+    required: true
+    nargs: "?"
   hippunfold_img:
     help: "Path to HippUnfold Singularity image (.sif)"
+    required: true
+    nargs: "?"
   fs_license:
     help: "Path to FreeSurfer license.txt"
+    required: true
+    nargs: "?"
   psf:
     help: "Scanner PSF FWHM in mm"
     type: float
     default: 4.5
+    nargs: "?"
   ref_region:
     help: "Reference region (pons, cerebellarGM, composite, none)"
     default: "pons"
+    nargs: "?"
   threads:
     help: "Number of threads for multithreaded steps"
     type: int
     default: 8
+    nargs: "?"
   hippunfold_cache_dir:
     help: "Path to hippunfold cache directory"
     default: ""
+    nargs: "?"

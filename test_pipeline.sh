@@ -25,16 +25,17 @@ echo "Running micapet pipeline (Dry Run)..."
 # Run snakebids app
 # We use -n for dry-run. Remove it to actually execute.
 ./run.py \
+    "$FASTSURFER_IMG" \
+    "$HIPPUNFOLD_IMG" \
+    "$FS_LICENSE" \
+    4.5 \
+    pons \
+    8 \
+    "$HIPP_CACHE" \
     "$BIDS_DIR" \
     "$BIDS_DIR/derivatives" \
     participant \
     --participant_label "$SUBJECT_LABEL" \
-    --fastsurfer_img "$FASTSURFER_IMG" \
-    --hippunfold_img "$HIPPUNFOLD_IMG" \
-    --fs_license "$FS_LICENSE" \
-    --hippunfold_cache_dir "$HIPP_CACHE" \
-    --psf 4.5 \
-    --ref_region pons \
     -n
 
 echo "---------------------------------------------------"
