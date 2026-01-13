@@ -15,10 +15,12 @@ rule clinical_report:
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         ref_region = config.get("ref_region", "pons"),
         output_dir = root,
+        log_dir = os.path.join(root, "logs", "clinical_report"),
     log:
         os.path.join(root, "logs", "clinical_report", "sub-{subject}_ses-{session}.log")
     shell:
         """
+        mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/clinical_reports.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \

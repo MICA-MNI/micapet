@@ -23,11 +23,13 @@ rule fastsurfer:
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         # Required tmpdir argument
         tmpdir = "/tmp",
+        log_dir = os.path.join(root, "logs", "fastsurfer"),
     log:
         os.path.join(root, "logs", "fastsurfer", "sub-{subject}_ses-{session}.log")
     threads: 8
     shell:
         """
+        mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/fastsurfer.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
@@ -52,11 +54,13 @@ rule hippunfold:
         # hippunfold.py uses -hippunfold_dir NOT -output_dir
         hippunfold_dir = os.path.join(root, HIPPUNFOLD_DIR_NAME),
         cachedir_arg = lambda wildcards: f"-cachedir {config['hippunfold_cache_dir']}" if config.get("hippunfold_cache_dir") else "",
+        log_dir = os.path.join(root, "logs", "hippunfold"),
     log:
         os.path.join(root, "logs", "hippunfold", "sub-{subject}_ses-{session}.log")
     threads: 8
     shell:
         """
+        mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/hippunfold.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
@@ -86,10 +90,12 @@ rule cortical_surface:
         bids_dir = config["bids_dir"],
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         output_dir = root,
+        log_dir = os.path.join(root, "logs", "cortical_surface"),
     log:
         os.path.join(root, "logs", "cortical_surface", "sub-{subject}_ses-{session}.log")
     shell:
         """
+        mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/cortical_surface.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
@@ -111,10 +117,12 @@ rule gtm_seg:
         # gtm_seg.py uses -subj_dir
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         seg_type = "fastsurfer",
+        log_dir = os.path.join(root, "logs", "gtm_seg"),
     log:
         os.path.join(root, "logs", "gtm_seg", "sub-{subject}_ses-{session}.log")
     shell:
         """
+        mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/gtm_seg.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \

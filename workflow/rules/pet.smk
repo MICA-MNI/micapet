@@ -21,10 +21,12 @@ rule linear_coreg:
         bids_dir = config["bids_dir"],
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         output_dir = root,
+        log_dir = os.path.join(root, "logs", "linear_coreg"),
     log:
         os.path.join(root, "logs", "linear_coreg", "sub-{subject}_ses-{session}.log")
     shell:
         """
+        mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/linear_coreg.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
@@ -50,10 +52,12 @@ rule pvc:
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         psf = config.get("psf", 4.5),
         output_dir = root,
+        log_dir = os.path.join(root, "logs", "pvc"),
     log:
         os.path.join(root, "logs", "pvc", "sub-{subject}_ses-{session}.log")
     shell:
         """
+        mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/pvc.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
@@ -76,10 +80,12 @@ rule suvr:
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         ref_region = get_ref_region(),
         output_dir = root,
+        log_dir = os.path.join(root, "logs", "suvr"),
     log:
         os.path.join(root, "logs", "suvr", "sub-{subject}_ses-{session}.log")
     shell:
         """
+        mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/suvr.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
@@ -110,10 +116,12 @@ rule project_pet_data:
         hippunfold_dir = os.path.join(root, HIPPUNFOLD_DIR_NAME),
         ref_region = get_ref_region(),
         output_dir = root,
+        log_dir = os.path.join(root, "logs", "project_pet_data"),
     log:
         os.path.join(root, "logs", "project_pet_data", "sub-{subject}_ses-{session}.log")
     shell:
         """
+        mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/project_pet_data.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
@@ -139,10 +147,12 @@ rule subcortical_map:
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         ref_region = get_ref_region(),
         output_dir = root,
+        log_dir = os.path.join(root, "logs", "subcortical_map"),
     log:
         os.path.join(root, "logs", "subcortical_map", "sub-{subject}_ses-{session}.log")
     shell:
         """
+        mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/subcortical_map.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
