@@ -45,13 +45,25 @@ mica_pet_version: 'v.alpha.0.3'
 skip_fastsurfer: false
 skip_hippunfold: false
 
-# Debugging
-parse_args: # Help snakebids parse CLI args that shouldn't be interpreted as BIDS filters
-  - --fastsurfer_img
-  - --hippunfold_img
-  - --fs_license
-  - --psf
-  - --ref_region
-  - --threads
-  - --mica_pet_version
-  - --hippunfold_cache_dir
+# Custom CLI arguments
+parse_args:
+  fastsurfer_img:
+    help: "Path to FastSurfer Singularity image (.sif)"
+  hippunfold_img:
+    help: "Path to HippUnfold Singularity image (.sif)"
+  fs_license:
+    help: "Path to FreeSurfer license.txt"
+  psf:
+    help: "Scanner PSF FWHM in mm"
+    type: float
+    default: 4.5
+  ref_region:
+    help: "Reference region (pons, cerebellarGM, composite, none)"
+    default: "pons"
+  threads:
+    help: "Number of threads for multithreaded steps"
+    type: int
+    default: 8
+  hippunfold_cache_dir:
+    help: "Path to hippunfold cache directory"
+    default: ""
