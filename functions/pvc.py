@@ -40,6 +40,7 @@ parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '0
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
 parser.add_argument("-psf", dest="psf", type=float, required=True, help="Scanner PSF in mm. Ask your PET physicist if unknown.", default=4.5)
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
+parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}")
 parser.add_argument("-pvc_dir", dest="pvc_dir", type=str, help="(Str) Specify PVC output directory. (Default {subj_dir}/sub-{subject}_ses-{session}/gtmpvc.output)")
 parser.add_argument("-force", action='store_true', help="Force PVC even if output exists.")
 
@@ -60,7 +61,11 @@ f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 FSCommand.set_default_subjects_dir(args.subj_dir)
 
 mica_pet_version = os.environ['MICA_PET_VERSION']
-mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
+# Support custom output_dir or default to bids_dir/derivatives
+if args.output_dir is not None:
+    mica_pet_derivatives = os.path.join(os.path.realpath(args.output_dir), f"MICA-PET_{mica_pet_version}")
+else:
+    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
 
 # gtmpvc.output 
 if args.pvc_dir is None: 

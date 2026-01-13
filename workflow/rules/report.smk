@@ -12,7 +12,7 @@ rule clinical_report:
         report = os.path.join(root, "qc", "sub-{subject}_ses-{session}_report.html"),
     params:
         bids_dir = config["bids_dir"],
-        subj_dir = lambda wildcards: os.path.join(root, FASTSURFER_DIR_NAME),
+        subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         ref_region = config.get("ref_region", "pons"),
         output_dir = root,
     log:

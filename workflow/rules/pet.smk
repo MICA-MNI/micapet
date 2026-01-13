@@ -11,15 +11,15 @@ rule linear_coreg:
         # Ensure fastsurfer completed
         fs_check = rules.fastsurfer.output.norm,
     output:
-        # Reg lta files
-        reg_lta_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_trc-FDG_pet_to_T1wFS_xfm.reg.lta"),
-        reg_lta_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_trc-FDG_pet_to_T1wNative_xfm.reg.lta"),
+        # Reg lta files - Note: Python outputs to /xfm/ subdirectory with _from-pet_to-{space}_xfm.reg.lta naming
+        reg_lta_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "xfm", "sub-{subject}_ses-{session}_from-pet_to-T1wFS_xfm.reg.lta"),
+        reg_lta_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "xfm", "sub-{subject}_ses-{session}_from-pet_to-T1wNative_xfm.reg.lta"),
         # Coregistered PET
         pet_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wFS_pvc-none_ref-none_trc-FDG_pet.nii.gz"),
         pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNative_pvc-none_ref-none_trc-FDG_pet.nii.gz"),
     params:
         bids_dir = config["bids_dir"],
-        subj_dir = lambda wildcards: os.path.join(root, FASTSURFER_DIR_NAME),
+        subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         output_dir = root,
     log:
         os.path.join(root, "logs", "linear_coreg", "sub-{subject}_ses-{session}.log")
@@ -47,7 +47,7 @@ rule pvc:
         pvc_pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNative_pvc-rbv_ref-none_trc-FDG_pet.nii.gz"),
     params:
         bids_dir = config["bids_dir"],
-        subj_dir = lambda wildcards: os.path.join(root, FASTSURFER_DIR_NAME),
+        subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         psf = config.get("psf", 4.5),
         output_dir = root,
     log:
@@ -73,7 +73,7 @@ rule suvr:
         suvr_pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNative_pvc-rbv_ref-" + get_ref_region() + "_trc-FDG_pet.nii.gz"),
     params:
         bids_dir = config["bids_dir"],
-        subj_dir = lambda wildcards: os.path.join(root, FASTSURFER_DIR_NAME),
+        subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         ref_region = get_ref_region(),
         output_dir = root,
     log:
@@ -106,8 +106,8 @@ rule project_pet_data:
         hipp_func_R = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-" + get_ref_region() + "_trc-FDG_pet.func.gii"),
     params:
         bids_dir = config["bids_dir"],
-        subj_dir = lambda wildcards: os.path.join(root, FASTSURFER_DIR_NAME),
-        hippunfold_dir = lambda wildcards: os.path.join(root, HIPPUNFOLD_DIR_NAME),
+        subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
+        hippunfold_dir = os.path.join(root, HIPPUNFOLD_DIR_NAME),
         ref_region = get_ref_region(),
         output_dir = root,
     log:
@@ -136,7 +136,7 @@ rule subcortical_map:
         csv = os.path.join(root, "qc", "sub-{subject}", "ses-{session}", "sub-{subject}_ses-{session}_subcortical_means_pvc-rbv_ref-" + get_ref_region() + "_trc-FDG_pet.csv"),
     params:
         bids_dir = config["bids_dir"],
-        subj_dir = lambda wildcards: os.path.join(root, FASTSURFER_DIR_NAME),
+        subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         ref_region = get_ref_region(),
         output_dir = root,
     log:

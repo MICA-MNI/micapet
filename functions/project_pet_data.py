@@ -44,6 +44,7 @@ parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '0
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
 parser.add_argument("-hippunfold_dir", dest="hippunfold_dir", type=str, help="(Str) Specify path to HippUnfold output directory.")
+parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}")
 parser.add_argument("-ref_region",dest="ref_region", type=str, action='store',nargs='*', default=['pons'],help="Specify reference region(s). eg: '-ref_region pons cerebellarGM composite'. Default: pons.")
 parser.add_argument("-pvc", action='store_true', dest="pvc", help="(Flag) If present, project both partial volume corrected data and non-PVC data.")
 parser.add_argument("-cortical", action='store_true', dest="cortical", help="(Flag) If present, perform cortical surface projection.")
@@ -79,7 +80,11 @@ hippocampal = args.hippocampal
 tmpdir = args.tmpdir
 
 mica_pet_version = os.environ['MICA_PET_VERSION']
-mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
+# Support custom output_dir or default to bids_dir/derivatives
+if args.output_dir is not None:
+    mica_pet_derivatives = os.path.join(os.path.realpath(args.output_dir), f"MICA-PET_{mica_pet_version}")
+else:
+    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
 
 FSCommand.set_default_subjects_dir(args.subj_dir)
 

@@ -19,7 +19,10 @@ rule fastsurfer:
         fs_license = config.get("fs_license"),
         img = config.get("fastsurfer_img"),
         threads = config.get("threads", 8),
-        output_dir = root,
+        # FastSurfer uses -subj_dir to specify where to write outputs
+        subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
+        # Required tmpdir argument
+        tmpdir = "/tmp",
     log:
         os.path.join(root, "logs", "fastsurfer", "sub-{subject}_ses-{session}.log")
     threads: 8
@@ -29,9 +32,10 @@ rule fastsurfer:
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
-            -threads {threads} \
+            -threads {params.threads} \
             -fastsurfer_img {params.img} \
-            -output_dir {params.output_dir} \
+            -subj_dir {params.subj_dir} \
+            -tmpdir {params.tmpdir} \
             -fs_license {params.fs_license} \
             > {log} 2>&1
         """
@@ -45,8 +49,9 @@ rule hippunfold:
     params:
         bids_dir = config["bids_dir"],
         img = config.get("hippunfold_img"),
+        # hippunfold.py uses -hippunfold_dir NOT -output_dir
+        hippunfold_dir = os.path.join(root, HIPPUNFOLD_DIR_NAME),
         cachedir_arg = lambda wildcards: f"-cachedir {config['hippunfold_cache_dir']}" if config.get("hippunfold_cache_dir") else "",
-        output_dir = root,
     log:
         os.path.join(root, "logs", "hippunfold", "sub-{subject}_ses-{session}.log")
     threads: 8
@@ -57,7 +62,7 @@ rule hippunfold:
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
             -hippunfold_img {params.img} \
-            -output_dir {params.output_dir} \
+            -hippunfold_dir {params.hippunfold_dir} \
             {params.cachedir_arg} \
             > {log} 2>&1
         """
@@ -79,7 +84,7 @@ rule cortical_surface:
         fsnative_R = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-R_surf-fsnative_label-midthickness.surf.gii"),
     params:
         bids_dir = config["bids_dir"],
-        subj_dir = lambda wildcards: os.path.join(root, FASTSURFER_DIR_NAME),
+        subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         output_dir = root,
     log:
         os.path.join(root, "logs", "cortical_surface", "sub-{subject}_ses-{session}.log")
@@ -103,7 +108,8 @@ rule gtm_seg:
         gtmseg = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg.mgz"),
     params:
         bids_dir = config["bids_dir"],
-        subj_dir = lambda wildcards: os.path.join(root, FASTSURFER_DIR_NAME),
+        # gtm_seg.py uses -subj_dir
+        subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         seg_type = "fastsurfer",
     log:
         os.path.join(root, "logs", "gtm_seg", "sub-{subject}_ses-{session}.log")

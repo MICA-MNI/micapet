@@ -73,6 +73,7 @@ parser.add_argument("-sub", type=str, required=True, help="(Str) Subject identif
 parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '01')")
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
+parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}")
 parser.add_argument("-ref_region",dest="ref_region", type=str, choices=['pons','cerebellarGM','composite'], default='pons',help="Specify reference region. Default: pons.")
 parser.add_argument("-max_value", dest="max_value", type=float, help="(Float) Maximum SUVR value for color scale. Default: 1.5 times the maximum SUVR value in the data.")
 
@@ -92,7 +93,15 @@ bids_dir = os.path.realpath(args.bids_dir)
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
 mica_pet_version = os.environ['MICA_PET_VERSION']
-mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
+
+# Support custom output_dir or default to bids_dir/derivatives
+if args.output_dir is not None:
+    mica_pet_derivatives = os.path.join(os.path.realpath(args.output_dir), f"MICA-PET_{mica_pet_version}")
+    qc_dir = os.path.join(os.path.realpath(args.output_dir), "qc", f"sub-{subject}", f"ses-{session}")
+else:
+    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
+    qc_dir = f"{bids_dir}/qc/sub-{subject}/ses-{session}"
+
 space='T1wFS'
 
 if args.max_value is not None:
@@ -111,7 +120,6 @@ if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):
     sys.exit(1)
     
 # Check if QC directory made    
-qc_dir = f"{bids_dir}//qc/sub-{subject}/ses-{session}"
 if not os.path.exists(qc_dir):
     print(f"Error: QC directory does not exist at {qc_dir}. Please create it first.")
     sys.exit(1)
