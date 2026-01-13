@@ -22,7 +22,7 @@ pybids_inputs:
       suffix: 'pet'
       extension: '.nii.gz'
       datatype: 'pet'
-      trc: 'FDG'
+      tracer: 'FDG'
       scope: 'raw'
     wildcards:
       - subject
