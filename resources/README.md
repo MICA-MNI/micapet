@@ -1,0 +1,2 @@
+# Place 'freesurfer-linux-centos7_x86_64-7.4.1.tar.gz' in this directory to use it during Docker build.
+# Otherwise, it will be downloaded automatically.

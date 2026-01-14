@@ -82,8 +82,16 @@ RUN git clone https://github.com/apptainer/apptainer.git /usr/local/src/apptaine
 #####################################################################
 # Install FreeSurfer (minimal)
 #####################################################################
-# COPY freesurfer-linux-centos7_x86_64-7.4.1.tar.gz /tmp/fs.tar.gz 
-RUN wget -O /tmp/fs.tar.gz https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.4.1/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz && \
+# Copy resources directory (containing FS tar.gz if available)
+COPY resources/ /tmp/resources/
+
+RUN if [ -f /tmp/resources/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz ]; then \
+        echo "Found local FreeSurfer archive"; \
+        mv /tmp/resources/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz /tmp/fs.tar.gz; \
+    else \
+        echo "Downloading FreeSurfer archive..."; \
+        wget -O /tmp/fs.tar.gz https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.4.1/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz; \
+    fi && \
     mkdir -p $FREESURFER_HOME && \
     tar -xzf /tmp/fs.tar.gz -C $FREESURFER_HOME --strip-components=1 \
     --exclude='average/mult-comp-cor' \
