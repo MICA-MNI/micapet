@@ -42,7 +42,7 @@ parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument("-sub", type=str, required=True, help="(Str) Subject identifier (eg. '0001')")
 parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '01')")
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
-# parser.add_argument("-threads", dest="threads", type=int, help="(Int) Number of threads to use", default=15)
+parser.add_argument("-threads", dest="threads", type=str, help="(Int/Str) Number of threads to use", default="8")
 parser.add_argument("-hippunfold_img", dest="hippunfold_img", type=str, required=True, help="(Str) Specify path to HippUnfold singularity image.")
 parser.add_argument("-tmpdir", dest="tmpdir", type=str, help="(Str) Specify path to temporary directory.")
 parser.add_argument("-cachedir", dest="cachedir", type=str, help="(Str) Set HIPPUNFOLD_CACHE_DIR manually. (Default ~/.cache).")
@@ -77,6 +77,8 @@ else:
     cachedir = ["--env",f"HIPPUNFOLD_CACHE_DIR={os.path.realpath(args.cachedir)}","-B",os.path.realpath(args.cachedir)]
     os.environ['HIPPUNFOLD_CACHE_DIR'] = args.cachedir
 
+threads = args.threads
+
 if args.B is None:
     bind = []
 else:
@@ -104,7 +106,7 @@ if os.path.exists(f"{hippunfold_dir}/hippunfold/sub-{subject}/ses-{session}") an
     print("HippUnfold already run. Please rerun with -force flag to overwrite.")
     sys.exit(1)
 elif os.path.exists(f"{hippunfold_dir}/hippunfold/sub-{subject}/ses-{session}") and force==True: #if
-    force_command=["--force-output"]
+    force_command=["--force-output", "--rerun-incomplete"] # ensure Snakemake reruns incomplete files
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting HippUnfold for subject {subject}, session {session}.")
 # print(os.environ['HIPPUNFOLD_CACHE_DIR'])
@@ -117,15 +119,22 @@ args = [
     "--participant-label",f"{subject}",
     "--modality", "T1w",
     "--output-density","2mm",
-    "--cores", "all"
+    "--cores", str(threads)
     ]
 args.extend(T1_path)
 args.extend(force_command)
 
+# Create fake home for Singularity to avoid cache issues
+user_home = os.path.expanduser("~")
+fake_home = f"{hippunfold_dir}/fake_home"
+os.makedirs(fake_home, exist_ok=True)
+
 # set Singularity options
 options=["--cleanenv",
+        "--no-home",
         "-B", f"{bids_dir}:/bids_dir",
-        "-B", f"{hippunfold_dir}:/output_dir"
+        "-B", f"{hippunfold_dir}:/output_dir",
+        "-B", f"{fake_home}:{user_home}"
     ]
 options.extend(tmpdir)
 options.extend(cachedir)
@@ -145,7 +154,12 @@ result = Client.run(
     options=options,
     return_result=True
 )
-if result:
+
+if isinstance(result, dict) and result.get('return_code', 0) != 0:
+    print(result.get('message', ''))
+    print(f"HippUnfold failed with return code {result['return_code']}")
+    sys.exit(result['return_code'])
+elif isinstance(result, str):
     print(result)
-    
+
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] HippUnfold completed.")

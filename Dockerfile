@@ -144,16 +144,18 @@ RUN conda run -n mica-pet pip install --extra-index-url https://wheels.vtk.org v
 #####################################################################
 WORKDIR /app
 
-COPY functions /app/functions
-COPY surfaces /app/surfaces
-# COPY group.fake passwd.fake environment.yml /app/
-# COPY license.txt /app/license.txt
-# FS_LICENSE=/app/license.txt \
+# Copy the entire application structure
+COPY . /app
+
+# Ensure correct permissions
+RUN chmod +x /app/run.py
 
 ENV PATH=$FREESURFER_HOME/bin:$PATH \
     VTK_DEFAULT_OPENGL_WINDOW='vtkOSOpenGLRenderWindow' \
     MESA_GL_VERSION_OVERRIDE=3.3
 
-ENTRYPOINT ["conda", "run", "-n", "mica-pet", "python", "/app/functions/01_master.py"]
+# Set the entrypoint to the Snakebids app (run.py)
+ENTRYPOINT ["conda", "run", "-n", "mica-pet", "python", "/app/run.py"]
 
-# docker build -t micalab/micapet:v.alpha.0.3 .
+# docker build -t micalab/micapet .
+

@@ -18,7 +18,6 @@ rule fastsurfer:
         bids_dir = config["bids_dir"],
         fs_license = config.get("fs_license"),
         img = config.get("fastsurfer_img"),
-        threads = config.get("threads", 8),
         # FastSurfer uses -subj_dir to specify where to write outputs
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         # Required tmpdir argument
@@ -26,7 +25,7 @@ rule fastsurfer:
         log_dir = os.path.join(root, "logs", "fastsurfer"),
     log:
         os.path.join(root, "logs", "fastsurfer", "sub-{subject}_ses-{session}.log")
-    threads: 8
+    threads: config.get("threads", 8)
     shell:
         """
         mkdir -p {params.log_dir}
@@ -34,11 +33,12 @@ rule fastsurfer:
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
-            -threads {params.threads} \
+            -threads {threads} \
             -fastsurfer_img {params.img} \
             -subj_dir {params.subj_dir} \
             -tmpdir {params.tmpdir} \
             -fs_license {params.fs_license} \
+            -force \
             > {log} 2>&1
         """
 
@@ -57,7 +57,7 @@ rule hippunfold:
         log_dir = os.path.join(root, "logs", "hippunfold"),
     log:
         os.path.join(root, "logs", "hippunfold", "sub-{subject}_ses-{session}.log")
-    threads: 8
+    threads: config.get("threads", 8)
     shell:
         """
         mkdir -p {params.log_dir}
@@ -67,7 +67,9 @@ rule hippunfold:
             -bids {params.bids_dir} \
             -hippunfold_img {params.img} \
             -hippunfold_dir {params.hippunfold_dir} \
+            -threads {threads} \
             {params.cachedir_arg} \
+            -force \
             > {log} 2>&1
         """
 
@@ -95,6 +97,8 @@ rule cortical_surface:
         os.path.join(root, "logs", "cortical_surface", "sub-{subject}_ses-{session}.log")
     shell:
         """
+        export FREESURFER_HOME=/opt/freesurfer-7.4.1
+        source $FREESURFER_HOME/SetUpFreeSurfer.sh
         mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/cortical_surface.py \
             -sub {wildcards.subject} \
@@ -122,6 +126,8 @@ rule gtm_seg:
         os.path.join(root, "logs", "gtm_seg", "sub-{subject}_ses-{session}.log")
     shell:
         """
+        export FREESURFER_HOME=/opt/freesurfer-7.4.1
+        source $FREESURFER_HOME/SetUpFreeSurfer.sh
         mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/gtm_seg.py \
             -sub {wildcards.subject} \
@@ -129,5 +135,6 @@ rule gtm_seg:
             -bids {params.bids_dir} \
             -subj_dir {params.subj_dir} \
             -seg_type {params.seg_type} \
+            -force \
             > {log} 2>&1
         """
