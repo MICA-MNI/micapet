@@ -4,9 +4,16 @@ set -e
 # ============================================================================
 # MICA-PET: Build SIF Image
 # ============================================================================
+# Usage: ./build_sif.sh [--skip-docker]
+#
 # This script builds the Docker image and then converts it to a Singularity (SIF)
-# image, ensuring the Singularity cache is located on large storage to avoid
-# "disk quota exceeded" errors.
+# image. Use --skip-docker to only rebuild the SIF from an existing Docker image.
+
+# --- Argument Parsing ---
+SKIP_DOCKER=false
+if [[ "$1" == "--skip-docker" ]]; then
+    SKIP_DOCKER=true
+fi
 
 # --- Configuration ---
 IMAGE_NAME="micapet_snakebids"
@@ -24,11 +31,15 @@ TMP_DIR="$HOST_STORAGE/singularity_tmp"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-echo "====================================================================="
-echo "1. Building Docker Image..."
-echo "====================================================================="
-# Builds the image tagged 'micapet_snakebids:latest' from the Dockerfile in project root
-docker build -t ${IMAGE_NAME}:${TAG} "$PROJECT_ROOT"
+if [ "$SKIP_DOCKER" = true ]; then
+    echo "Skipping Docker build (--skip-docker was set)."
+else
+    echo "====================================================================="
+    echo "1. Building Docker Image..."
+    echo "====================================================================="
+    # Builds the image tagged 'micapet_snakebids:latest' from the Dockerfile in project root
+    docker build -t ${IMAGE_NAME}:${TAG} "$PROJECT_ROOT"
+fi
 
 
 echo ""
