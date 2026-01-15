@@ -7,24 +7,27 @@ set -e
 # Tests the pipeline logic without running heavy processing (-n flag).
 
 # --- 1. Define Paths ---
+# ROOT PATH: Moving all data/images here for speed
+DATA_ROOT="/export03/data/enning/micapet"
+
 # Inputs
-BIDS_DIR="/host/fladgate/local_raid/jack/FDG/MICA-PET/BIDS_PET_test"
+BIDS_DIR="$DATA_ROOT/BIDS_PET_test"
 
-# Outputs (Snakebids app requires an output directory argument)
-# MOVED to Enning's space for write access
-OUTPUT_DIR="/host/cassio/export03/data/enning/micapet/micapet_output"
-HIPP_CACHE="/host/cassio/export03/data/enning/micapet/hippunfold_cache"
+# Outputs
+OUTPUT_DIR="$DATA_ROOT/micapet_output"
+HIPP_CACHE="$DATA_ROOT/hippunfold_cache"
 
-# Container Images
-SIF_PATH="/host/cassio/export03/data/enning/micapet_snakebids.sif"
-FASTSURFER_SIF="/host/verges/tank/data/jack/fastsurfer-cpu-v2.4.2.sif"
-HIPPUNFOLD_SIF="/host/verges/tank/data/jack/hippunfold_v1.4.1.sif"
-FS_LICENSE="/host/verges/tank/data/jack/license.txt"
+# Container Images & License
+SIF_PATH="$DATA_ROOT/micapet_snakebids.sif"
+FASTSURFER_SIF="$DATA_ROOT/fastsurfer-cpu-v2.4.2.sif"
+HIPPUNFOLD_SIF="$DATA_ROOT/hippunfold_v1.4.1.sif"
+FS_LICENSE="$DATA_ROOT/license.txt"
 
 # Parameters
 PARTICIPANT_LABEL="MCH001"
 
 echo "Running Snakebids DRY RUN..."
+echo "Data Root: $DATA_ROOT"
 echo "SIF Image: $SIF_PATH"
 echo "BIDS Dir:  $BIDS_DIR"
 echo "Output:    $OUTPUT_DIR"
@@ -33,8 +36,9 @@ echo "---------------------------------------------------------"
 
 # --- 2. Run Singularity ---
 # Runs the SIF as an executable (BIDS App format)
+# Note: Binding /export03 to access data files
 singularity run --cleanenv \
-    -B /host:/host \
+    -B /export03:/export03 \
     "$SIF_PATH" \
     "$BIDS_DIR" \
     "$OUTPUT_DIR" \

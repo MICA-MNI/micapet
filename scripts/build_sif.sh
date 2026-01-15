@@ -14,7 +14,8 @@ TAG="latest"
 SIF_NAME="micapet_snakebids.sif"
 
 # PATHS: Adjust these to your large storage location
-HOST_STORAGE="/host/cassio/export03/data/enning"
+# UPDATED: Using faster storage path
+HOST_STORAGE="/export03/data/enning/micapet"
 EXPORT_DIR="$HOST_STORAGE"  # Where to save the final .sif
 CACHE_DIR="$HOST_STORAGE/singularity_cache"
 TMP_DIR="$HOST_STORAGE/singularity_tmp"
