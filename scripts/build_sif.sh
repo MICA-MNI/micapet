@@ -16,6 +16,9 @@ if [[ "$1" == "--skip-docker" ]]; then
 fi
 
 # --- Configuration ---
+# Fix for "remote trust data does not exist" error
+export DOCKER_CONTENT_TRUST=0
+
 IMAGE_NAME="micapet_snakebids"
 TAG="latest"
 SIF_NAME="micapet_snakebids.sif"
