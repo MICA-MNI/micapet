@@ -7,40 +7,44 @@ set -e
 # Executes the pipeline on the server.
 
 # --- 1. Define Paths ---
-# ROOT PATH: Moving all data/images here for speed
-DATA_ROOT="/export03/data/enning/micapet"
+# HOST_ROOT: The actual path on the server
+HOST_ROOT="/export03/data/enning/micapet"
 
-# Inputs
-BIDS_DIR="$DATA_ROOT/BIDS_PET_test"
+# CONTAINER_ROOT: Where we mount it inside the image
+# (Using a simple path avoids symlink/mount issues)
+CONT_ROOT="/micapet_data"
 
-# Outputs
-OUTPUT_DIR="$DATA_ROOT/micapet_output"
-HIPP_CACHE="$DATA_ROOT/hippunfold_cache"
+# Inputs (Inside Container)
+BIDS_DIR="$CONT_ROOT/BIDS_PET_test"
 
-# Container Images & License
-SIF_PATH="$DATA_ROOT/micapet_snakebids.sif"
-FASTSURFER_SIF="$DATA_ROOT/fastsurfer-cpu-v2.4.2.sif"
-HIPPUNFOLD_SIF="$DATA_ROOT/hippunfold_v1.4.1.sif"
-FS_LICENSE="$DATA_ROOT/license.txt"
+# Outputs (Inside Container)
+OUTPUT_DIR="$CONT_ROOT/micapet_output"
+HIPP_CACHE="$CONT_ROOT/hippunfold_cache"
+
+# Container Images & License (Inside Container)
+SIF_NAME="micapet_snakebids.sif"
+FASTSURFER_SIF="$CONT_ROOT/fastsurfer-cpu-v2.4.2.sif"
+HIPPUNFOLD_SIF="$CONT_ROOT/hippunfold_v1.4.1.sif"
+FS_LICENSE="$CONT_ROOT/license.txt"
 
 # Parameters
 PARTICIPANT_LABEL="MCH001"
 CORES=8
 
 echo "STARTING PIPELINE EXECUTION..."
-echo "Data Root: $DATA_ROOT"
-echo "SIF Image: $SIF_PATH"
-echo "BIDS Dir:  $BIDS_DIR"
-echo "Output:    $OUTPUT_DIR"
-echo "Cache:     $HIPP_CACHE"
+echo "Host Root:      $HOST_ROOT"
+echo "Container Root: $CONT_ROOT"
+echo "BIDS Dir:       $BIDS_DIR"
+echo "Output:         $OUTPUT_DIR"
 echo "---------------------------------------------------------"
 
 # --- 2. Run Singularity ---
-# Runs the SIF as an executable (BIDS App format)
+# Bind $HOST_ROOT -> $CONT_ROOT
+# Pass arguments using $CONT_ROOT paths
 singularity run --cleanenv \
-    -B /export03:/export03 \
-    --env XDG_CACHE_HOME="$DATA_ROOT/.cache" \
-    "$SIF_PATH" \
+    -B "$HOST_ROOT:$CONT_ROOT" \
+    --env XDG_CACHE_HOME="$CONT_ROOT/.cache" \
+    "$HOST_ROOT/$SIF_NAME" \
     "$BIDS_DIR" \
     "$OUTPUT_DIR" \
     participant \
