@@ -37,10 +37,10 @@ echo "---------------------------------------------------------"
 # --- 2. Run Singularity ---
 # Runs the SIF as an executable (BIDS App format)
 # Note: Binding /export03 to access data files
-# Note: Binding $HOME to write snakemake cache
+# Note: redirecting cache to data dir to avoid HOME permission issues
 singularity run --cleanenv \
     -B /export03:/export03 \
-    -B $HOME \
+    --env XDG_CACHE_HOME="$DATA_ROOT/.cache" \
     "$SIF_PATH" \
     "$BIDS_DIR" \
     "$OUTPUT_DIR" \

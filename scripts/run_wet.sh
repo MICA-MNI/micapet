@@ -39,7 +39,7 @@ echo "---------------------------------------------------------"
 # Runs the SIF as an executable (BIDS App format)
 singularity run --cleanenv \
     -B /export03:/export03 \
-    -B $HOME \
+    --env XDG_CACHE_HOME="$DATA_ROOT/.cache" \
     "$SIF_PATH" \
     "$BIDS_DIR" \
     "$OUTPUT_DIR" \
