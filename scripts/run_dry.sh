@@ -7,45 +7,46 @@ set -e
 # Tests the pipeline logic without running heavy processing (-n flag).
 
 # --- 1. Define Paths ---
-# HOST_ROOT: The actual path on the server
-# (Using the path provided by user, reverting the specific /host/cassio/ path)
+# HOST_ROOT: The directory on the server containing your data
 HOST_ROOT="/export03/data/enning/micapet"
 
-# CONTAINER_ROOT: Where we mount it inside the image
-# (Using a simple path avoids symlink/mount issues)
-CONT_ROOT="/micapet_data"
+# Inputs
+BIDS_DIR="$HOST_ROOT/BIDS_PET_test"
 
-# Inputs (Inside Container)
-BIDS_DIR="$CONT_ROOT/BIDS_PET_test"
+# Outputs
+OUTPUT_DIR="$HOST_ROOT/micapet_output"
+HIPP_CACHE="$HOST_ROOT/hippunfold_cache"
 
-# Outputs (Inside Container)
-OUTPUT_DIR="$CONT_ROOT/micapet_output"
-HIPP_CACHE="$CONT_ROOT/hippunfold_cache"
-
-# Container Images & License (Inside Container)
-# Note: Singularity sees the SIF at a bound path, but we launch it from host
-SIF_NAME="micapet_snakebids.sif"
-FASTSURFER_SIF="$CONT_ROOT/fastsurfer-cpu-v2.4.2.sif"
-HIPPUNFOLD_SIF="$CONT_ROOT/hippunfold_v1.4.1.sif"
-FS_LICENSE="$CONT_ROOT/license.txt"
+# Container Images & License
+SIF_PATH="$HOST_ROOT/micapet_snakebids.sif"
+FASTSURFER_SIF="$HOST_ROOT/fastsurfer-cpu-v2.4.2.sif"
+HIPPUNFOLD_SIF="$HOST_ROOT/hippunfold_v1.4.1.sif"
+FS_LICENSE="$HOST_ROOT/license.txt"
 
 # Parameters
 PARTICIPANT_LABEL="MCH001"
 
 echo "Running Snakebids DRY RUN..."
-echo "Host Root:      $HOST_ROOT"
-echo "Container Root: $CONT_ROOT"
-echo "BIDS Dir:       $BIDS_DIR"
-echo "Output:         $OUTPUT_DIR"
+echo "Root:    $HOST_ROOT"
+echo "BIDS:    $BIDS_DIR"
+echo "Output:  $OUTPUT_DIR"
 echo "---------------------------------------------------------"
 
+# Verify existence
+if [ ! -d "$BIDS_DIR" ]; then
+    echo "ERROR: BIDS Directory not found at $BIDS_DIR"
+    exit 1
+fi
+
 # --- 2. Run Singularity ---
-# Bind $HOST_ROOT -> $CONT_ROOT
-# Pass arguments using $CONT_ROOT paths
+# STRATEGY: Bind the parent /export03 directly to /export03.
+# This mimics the working 'jack' setup (-B /host:/host) but scoped to your data.
+# This prevents path confusion or symlink issues inside the container.
+
 singularity run --cleanenv \
-    -B "$HOST_ROOT:$CONT_ROOT" \
-    --env XDG_CACHE_HOME="$CONT_ROOT/.cache" \
-    "$HOST_ROOT/$SIF_NAME" \
+    -B /export03:/export03 \
+    --env XDG_CACHE_HOME="$HOST_ROOT/.cache" \
+    "$SIF_PATH" \
     "$BIDS_DIR" \
     "$OUTPUT_DIR" \
     participant \
