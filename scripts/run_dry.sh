@@ -7,8 +7,8 @@ set -e
 # Tests the pipeline logic without running heavy processing (-n flag).
 
 # --- 1. Define Paths ---
-# HOST_ROOT: The actual path on the server
-HOST_ROOT="/export03/data/enning/micapet"
+# HOST_ROOT: Using the FULL PHYSICAL PATH to avoid symlink binding issues
+HOST_ROOT="/host/cassio/export03/data/enning/micapet"
 
 # CONTAINER_ROOT: Where we mount it inside the image
 # (Using a simple path avoids symlink/mount issues)
