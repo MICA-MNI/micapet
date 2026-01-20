@@ -350,6 +350,7 @@ def main():
     parser.add_argument("-tmpdir", dest="tmpdir", type=str, help="(Str) Specify path to temporary directory.")
     parser.add_argument("-cachedir", dest="cachedir", type=str, help="(Str) Set HIPPUNFOLD_CACHE_DIR manually. (Default ~/.cache).")
     parser.add_argument("-hippunfold_dir", dest="hippunfold_dir", type=str, help="(Str) Specify path to HippUnfold output directory.")
+    parser.add_argument("-out_dir", dest="out_dir", type=str, help="(Str) Specify path to MICA-PET output directory (default: bids_dir/derivatives/MICA-PET_version).")
 
     parser.add_argument("-psf", dest="psf", type=float, help="Scanner PSF in mm. Ask your PET physicist if unknown.")
     parser.add_argument("-ref_region",dest="ref_region", type=str, action='store', default='pons',help="Specify reference region. eg: pons/cerebellarGM/composite. Default: pons.")
@@ -402,7 +403,11 @@ def main():
             os.makedirs(subj_dir, exist_ok=True)
             
     mica_pet_version = os.environ['MICA_PET_VERSION']
-    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
+    if args.out_dir:
+        out_root = os.path.realpath(args.out_dir)
+        mica_pet_derivatives = f"{out_root}/MICA-PET_{mica_pet_version}"
+    else:
+        mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
 
     
     ref_region = args.ref_region
