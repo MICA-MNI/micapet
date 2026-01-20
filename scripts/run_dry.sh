@@ -79,7 +79,9 @@ singularity run \
     --hippunfold-cache-dir "$HIPP_CACHE" \
     --psf 4.5 \
     --ref-region pons \
-    -n  # <--- DRY RUN FLAG
+    -n  \
+    --printshellcmds \
+    --reason
 
 echo "---------------------------------------------------------"
 echo "Dry run complete."

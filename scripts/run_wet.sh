@@ -91,7 +91,9 @@ singularity run \
     --psf 4.5 \
     --ref-region pons \
     --cores $CORES \
-    --rerun-incomplete
+    --rerun-incomplete \
+    --printshellcmds \
+    --reason
 
 echo "---------------------------------------------------------"
 echo "Pipeline finished."
