@@ -28,7 +28,10 @@ FS_LICENSE="/host/verges/tank/data/jack/license.txt"
 
 # Parameters
 PARTICIPANT_LABEL="PX003"
-CORES=8
+# Use more cores to allow parallel jobs
+# FastSurfer uses ~8 threads, HippUnfold uses ~8 threads
+# With 16+ cores, both can run in parallel
+CORES=16
 
 echo "STARTING PIPELINE EXECUTION..."
 echo "Root:    $HOST_ROOT"
