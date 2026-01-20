@@ -62,6 +62,8 @@ echo "=========================================="
 # We use 'singularity exec' to bypass the 'run.py' entrypoint and run '01_master.py' directly.
 # We also bind the local 'functions/' directory so the container runs the latest python code
 # (specifically the version with the new -out_dir argument).
+#time the running process
+start_time=$(date +%s)
 
 singularity exec --cleanenv \
     -B /host:/host \
@@ -87,6 +89,9 @@ singularity exec --cleanenv \
     -ref_region pons \
     -force
 
+end_time=$(date +%s)
+elapsed=$(( end_time - start_time ))
+echo "Pipeline completed in $elapsed seconds."
 echo "=========================================="
 echo "Pipeline Finished."
 echo "=========================================="
