@@ -148,6 +148,11 @@ options.extend(bind)
 # print(options)
 
 # Run using spython
+if not shutil.which('singularity') and not shutil.which('apptainer'):
+    print("ERROR: Singularity/Apptainer executable not found in PATH.")
+    print("Please ensure apptainer is installed in the container environment.")
+    sys.exit(127)
+
 result = Client.run(
     image=hippunfold_img,
     args=args,
