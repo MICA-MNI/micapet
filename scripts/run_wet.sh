@@ -52,7 +52,7 @@ if [ ! -d "$BIDS_DIR" ]; then
 fi
 
 # Create required output directories (prevents mount errors inside nested containers)
-mkdir -p "$OUTPUT_DIR"
+# mkdir -p "$OUTPUT_DIR"
 mkdir -p "$HIPP_CACHE"
 mkdir -p "$HOST_ROOT/.cache"
 
