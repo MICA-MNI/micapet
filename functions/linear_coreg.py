@@ -149,7 +149,11 @@ print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting PET to MRI co-
 
 ## MRICoreg
 
+# Set SUBJECTS_DIR both for nipype FSCommand and as environment variable
 FSCommand.set_default_subjects_dir(subj_dir)
+os.environ['SUBJECTS_DIR'] = subj_dir
+print(f"SUBJECTS_DIR set to: {subj_dir}")
+
 def mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space):
     print(f"Co-registering PET to {space}...")
     coreg = MRICoreg()
@@ -157,11 +161,29 @@ def mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space):
     if space == 'T1wFS': # use FreeSurfer mgz as reference
         coreg.inputs.subjects_dir=subj_dir
         coreg.inputs.subject_id=f"sub-{subject}_ses-{session}"
+        # Verify the subject directory exists
+        subj_path = os.path.join(subj_dir, f"sub-{subject}_ses-{session}")
+        print(f"Using subject directory: {subj_path}")
+        if not os.path.exists(subj_path):
+            raise FileNotFoundError(f"Subject directory not found: {subj_path}")
+        mri_dir = os.path.join(subj_path, "mri")
+        if os.path.exists(mri_dir):
+            print(f"Contents of {mri_dir}: {os.listdir(mri_dir)}")
     else: # use rawdata mri
         coreg.inputs.reference_file=f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
-    coreg.inputs.out_lta_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-{space}_xfm.reg.lta'
+    
+    out_lta = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-{space}_xfm.reg.lta'
+    coreg.inputs.out_lta_file=out_lta
+    print(f"Output LTA file: {out_lta}")
+    print(f"Output directory exists: {os.path.exists(os.path.dirname(out_lta))}")
     print(coreg.cmdline)
-    coreg.run()
+    
+    try:
+        result = coreg.run()
+        print(f"MRICoreg result: {result}")
+    except Exception as e:
+        print(f"ERROR running MRICoreg: {e}")
+        raise
     
     applyreg = ApplyVolTransform()
     applyreg.inputs.source_file=pet

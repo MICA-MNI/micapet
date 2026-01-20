@@ -29,8 +29,12 @@ rule linear_coreg:
         set +u  # Disable unbound variable check for FreeSurfer setup
         export FREESURFER_HOME=/opt/freesurfer-7.4.1
         source $FREESURFER_HOME/SetUpFreeSurfer.sh
-        set -u  # Re-enable strict mode
+        # Keep set +u - don't re-enable strict mode as it can cause issues
         mkdir -p {params.log_dir}
+        echo "Starting linear_coreg.py at $(date)" > {log} 2>&1
+        echo "FREESURFER_HOME=$FREESURFER_HOME" >> {log} 2>&1
+        echo "SUBJECTS_DIR=$SUBJECTS_DIR" >> {log} 2>&1
+        echo "which mri_coreg: $(which mri_coreg)" >> {log} 2>&1
         python {workflow.basedir}/../functions/linear_coreg.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
@@ -39,7 +43,7 @@ rule linear_coreg:
             -output_dir {params.output_dir} \
             -pet {input.pet} \
             -mri {input.t1} \
-            > {log} 2>&1
+            >> {log} 2>&1
         """
 
 rule pvc:
