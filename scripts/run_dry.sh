@@ -45,8 +45,8 @@ fi
 # --- 2. Run Singularity ---
 # STRATEGY: 
 #   - Bind /host:/host to reach Jack's data, and /export03 for your data.
-#   - Bind the host's singularity/apptainer binary into the container so nested
-#     container calls (hippunfold, fastsurfer) can work.
+#   - Bind ONLY the singularity binary (not the whole /usr/bin) to avoid GLIBC conflicts
+#   - Put it in /opt/host-bin which won't conflict with container libraries
 
 # Find the singularity or apptainer executable on the host
 SINGULARITY_BIN=$(which singularity 2>/dev/null || which apptainer 2>/dev/null || echo "")
@@ -54,23 +54,15 @@ if [ -z "$SINGULARITY_BIN" ]; then
     echo "ERROR: Neither singularity nor apptainer found on host!"
     exit 1
 fi
-SINGULARITY_DIR=$(dirname "$SINGULARITY_BIN")
 echo "Found Singularity/Apptainer at: $SINGULARITY_BIN"
 
-# Also need to bind the libexec directory for singularity helpers
-SINGULARITY_LIBEXEC=""
-if [ -d "/usr/libexec/singularity" ]; then
-    SINGULARITY_LIBEXEC="-B /usr/libexec/singularity:/usr/libexec/singularity"
-elif [ -d "/usr/libexec/apptainer" ]; then
-    SINGULARITY_LIBEXEC="-B /usr/libexec/apptainer:/usr/libexec/apptainer"
-fi
-
-singularity run --cleanenv \
+# Bind only the specific binary to a non-conflicting path
+# We'll put it in /opt/host-bin/singularity and add that to PATH
+singularity run \
     -B /host:/host \
     -B /export03:/export03 \
-    -B "$SINGULARITY_DIR:$SINGULARITY_DIR" \
-    $SINGULARITY_LIBEXEC \
-    --env PATH="$SINGULARITY_DIR:\$PATH" \
+    -B "$SINGULARITY_BIN:/opt/host-bin/singularity" \
+    --env PATH="/opt/host-bin:\$PATH" \
     --env XDG_CACHE_HOME="$HOST_ROOT/.cache" \
     "$SIF_PATH" \
     "$BIDS_DIR" \
