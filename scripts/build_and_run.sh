@@ -50,6 +50,13 @@ else
     echo "Found local FreeSurfer tarball: $FS_TAR_NAME"
 fi
 
+# Create symlink in current directory for Docker build context
+SYMLINK_NAME="freesurfer-linux-centos7_x86_64-7.4.1.tar.gz"
+if [ ! -L "$SYMLINK_NAME" ] && [ ! -f "$SYMLINK_NAME" ]; then
+    echo "Creating symlink to FreeSurfer tarball in build context..."
+    ln -s "$FS_TAR_NAME" "$SYMLINK_NAME"
+fi
+
 echo "=========================================="
 echo "Step 1.5: Building Docker Image..."
 echo "=========================================="

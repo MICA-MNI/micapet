@@ -82,7 +82,7 @@ RUN git clone https://github.com/apptainer/apptainer.git /usr/local/src/apptaine
 #####################################################################
 # Install FreeSurfer (minimal)
 #####################################################################
-COPY /export03/data/enning/micapet/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz /tmp/fs.tar.gz 
+COPY freesurfer-linux-centos7_x86_64-7.4.1.tar.gz /tmp/fs.tar.gz 
 RUN mkdir -p $FREESURFER_HOME && \
     tar -xzf /tmp/fs.tar.gz -C $FREESURFER_HOME --strip-components=1 \
     --exclude='average/mult-comp-cor' \
