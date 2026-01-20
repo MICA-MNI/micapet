@@ -73,7 +73,7 @@ if [ ! -d "$PROJECT_ROOT/functions" ]; then
     exit 1
 fi
 
-singularity run \
+singularity run --cleanenv \
     -B /host:/host \
     -B /export03:/export03 \
     -B "$PROJECT_ROOT/functions:/app/functions" \
@@ -81,6 +81,7 @@ singularity run \
     -B "$PROJECT_ROOT/config:/app/config" \
     -B "$PROJECT_ROOT/run.py:/app/run.py" \
     --env XDG_CACHE_HOME="$HOST_ROOT/.cache" \
+    --env PYTHONUNBUFFERED=1 \
     "$SIF_PATH" \
     "$BIDS_DIR" \
     "$OUTPUT_DIR" \
