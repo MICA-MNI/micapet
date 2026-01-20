@@ -29,7 +29,8 @@ echo ""
 echo "--- STEP 2: BUILD SIF IMAGE ---"
 # Check if build script exists
 if [ -f "scripts/build_sif.sh" ]; then
-    bash scripts/build_sif.sh
+    # Pass all arguments (like --skip-docker) to the build script
+    bash scripts/build_sif.sh "$@"
 else
     echo "ERROR: scripts/build_sif.sh not found!"
     exit 1
