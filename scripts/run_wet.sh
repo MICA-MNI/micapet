@@ -89,7 +89,8 @@ singularity run \
     --hippunfold-cache-dir "$HIPP_CACHE" \
     --psf 4.5 \
     --ref-region pons \
-    --cores $CORES
+    --cores $CORES \
+    --rerun-incomplete
 
 echo "---------------------------------------------------------"
 echo "Pipeline finished."
