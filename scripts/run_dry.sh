@@ -67,6 +67,8 @@ singularity run \
     -B /export03:/export03 \
     -B "$PROJECT_ROOT/functions:/app/functions" \
     -B "$PROJECT_ROOT/workflow:/app/workflow" \
+    -B "$PROJECT_ROOT/config:/app/config" \
+    -B "$PROJECT_ROOT/run.py:/app/run.py" \
     --env XDG_CACHE_HOME="$HOST_ROOT/.cache" \
     "$SIF_PATH" \
     "$BIDS_DIR" \
