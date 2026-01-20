@@ -144,7 +144,7 @@ def freesurfer_resample_prep(
         "sphere_gifti": current_gifti_sphere_out,
     }
     
-space='T1wFS'
+space='T1w'
 for hemi in ['lh','rh']:
     hemi_cap = 'L' if hemi=='lh' else 'R'
     for res in ['32k','5k']: 
