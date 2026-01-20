@@ -113,15 +113,14 @@ if hippocampal:
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting PET data projection to surface for subject: {subject}, session: {session}.")
 
-space_vol='T1wFS'  # For PET volumes
-space_surf='T1w'   # For surfaces
+space='T1wFS'
 if cortical:
     print("Doing cortical surface projection.")
     for hemi in ['L','R']:
         for pvc in pvc_options:
             for ref in ref_region:
                 print(f"Processing PVC method: {pvc}, reference region: {ref}, hemisphere: {hemi}...")
-                SUVR_map=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space_vol}_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
+                SUVR_map=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
                 
                 surf_fsnative=f'{f_surf_dir}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-fsnative_label-midthickness.surf.gii'
                 
@@ -141,7 +140,7 @@ if cortical:
                     
                     for smooth in [5,10]:
                         print(f"Smoothing with {smooth}mm kernel...")
-                        midthick_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-{space_surf}_surf-{surf}_label-midthickness.surf.gii'
+                        midthick_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-{space}_surf-{surf}_label-midthickness.surf.gii'
                         
                         SUVR_resampled_smooth_out=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-{surf}_label-midthickness_pvc-{pvc}_ref-{ref}_smooth-{smooth}mm_trc-FDG_pet.func.gii'
                         
