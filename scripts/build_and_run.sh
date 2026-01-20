@@ -9,9 +9,9 @@ set -e
 # It mimics the workflow used by Jack but points inputs/outputs to the correct locations.
 
 # --- Configuration ---
-IMAGE_NAME="micapet_snakebids"
+IMAGE_NAME="micapet_original"
 TAG="latest"
-SIF_NAME="micapet_snakebids.sif"
+SIF_NAME="micapet_original.sif"
 
 # PATHS
 # Use /export03/data/enning/micapet as the workspace
