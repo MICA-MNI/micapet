@@ -26,8 +26,10 @@ rule linear_coreg:
         os.path.join(root, "logs", "linear_coreg", "sub-{subject}_ses-{session}.log")
     shell:
         """
+        set +u  # Disable unbound variable check for FreeSurfer setup
         export FREESURFER_HOME=/opt/freesurfer-7.4.1
         source $FREESURFER_HOME/SetUpFreeSurfer.sh
+        set -u  # Re-enable strict mode
         mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/linear_coreg.py \
             -sub {wildcards.subject} \
@@ -59,8 +61,10 @@ rule pvc:
         os.path.join(root, "logs", "pvc", "sub-{subject}_ses-{session}.log")
     shell:
         """
+        set +u  # Disable unbound variable check for FreeSurfer setup
         export FREESURFER_HOME=/opt/freesurfer-7.4.1
         source $FREESURFER_HOME/SetUpFreeSurfer.sh
+        set -u  # Re-enable strict mode
         mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/pvc.py \
             -sub {wildcards.subject} \
@@ -90,8 +94,10 @@ rule suvr:
         os.path.join(root, "logs", "suvr", "sub-{subject}_ses-{session}.log")
     shell:
         """
+        set +u  # Disable unbound variable check for FreeSurfer setup
         export FREESURFER_HOME=/opt/freesurfer-7.4.1
         source $FREESURFER_HOME/SetUpFreeSurfer.sh
+        set -u  # Re-enable strict mode
         mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/suvr.py \
             -sub {wildcards.subject} \
@@ -128,8 +134,10 @@ rule project_pet_data:
         os.path.join(root, "logs", "project_pet_data", "sub-{subject}_ses-{session}.log")
     shell:
         """
+        set +u  # Disable unbound variable check for FreeSurfer setup
         export FREESURFER_HOME=/opt/freesurfer-7.4.1
         source $FREESURFER_HOME/SetUpFreeSurfer.sh
+        set -u  # Re-enable strict mode
         mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/project_pet_data.py \
             -sub {wildcards.subject} \

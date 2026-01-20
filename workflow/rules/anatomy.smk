@@ -97,8 +97,10 @@ rule cortical_surface:
         os.path.join(root, "logs", "cortical_surface", "sub-{subject}_ses-{session}.log")
     shell:
         """
+        set +u  # Disable unbound variable check for FreeSurfer setup
         export FREESURFER_HOME=/opt/freesurfer-7.4.1
         source $FREESURFER_HOME/SetUpFreeSurfer.sh
+        set -u  # Re-enable strict mode
         mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/cortical_surface.py \
             -sub {wildcards.subject} \
@@ -126,8 +128,10 @@ rule gtm_seg:
         os.path.join(root, "logs", "gtm_seg", "sub-{subject}_ses-{session}.log")
     shell:
         """
+        set +u  # Disable unbound variable check for FreeSurfer setup
         export FREESURFER_HOME=/opt/freesurfer-7.4.1
         source $FREESURFER_HOME/SetUpFreeSurfer.sh
+        set -u  # Re-enable strict mode
         mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/gtm_seg.py \
             -sub {wildcards.subject} \

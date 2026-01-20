@@ -66,6 +66,7 @@ singularity run \
     -B /host:/host \
     -B /export03:/export03 \
     -B "$PROJECT_ROOT/functions:/app/functions" \
+    -B "$PROJECT_ROOT/workflow:/app/workflow" \
     --env XDG_CACHE_HOME="$HOST_ROOT/.cache" \
     "$SIF_PATH" \
     "$BIDS_DIR" \
