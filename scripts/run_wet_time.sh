@@ -13,7 +13,7 @@ BIDS_DIR="/host/fladgate/local_raid/jack/FDG/MICA-PET/BIDS_MICs_FDG"
 OUTPUT_DIR="$HOST_STORAGE/micapet_output_wet_time"
 
 # --- 1. Prepare Output Directory ---
-mkdir -p "$OUTPUT_DIR"
+# mkdir -p "$OUTPUT_DIR"
 
 # --- 2. Run Pipeline with Timing ---
 echo "=========================================="
