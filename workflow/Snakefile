@@ -47,6 +47,6 @@ include: "rules/report.smk"
 rule all:
     input:
         inputs['pet'].expand(
-            os.path.join(root, "qc", "sub-{subject}_ses-{session}_report.html"),
+            os.path.join(root, "qc", "sub-{subject}", "ses-{session}", "sub-{subject}_ses-{session}_report.html"),
             allow_missing=True,
         )
