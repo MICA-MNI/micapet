@@ -12,6 +12,7 @@ set -e
 IMAGE_NAME="micapet_original"
 TAG="latest"
 SIF_NAME="micapet_original.sif"
+export DOCKER_CONTENT_TRUST=0
 
 # PATHS
 # Use /export03/data/enning/micapet as the workspace
