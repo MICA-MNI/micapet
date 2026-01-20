@@ -59,6 +59,16 @@ echo "Launching container..."
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
+echo "Script dir:    $SCRIPT_DIR"
+echo "Project root:  $PROJECT_ROOT"
+echo "Binding:       $PROJECT_ROOT/functions -> /app/functions"
+
+# Verify functions directory exists
+if [ ! -d "$PROJECT_ROOT/functions" ]; then
+    echo "ERROR: Functions directory not found at $PROJECT_ROOT/functions"
+    exit 1
+fi
+
 singularity run \
     -B /host:/host \
     -B /export03:/export03 \
