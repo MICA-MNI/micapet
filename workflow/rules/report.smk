@@ -9,7 +9,7 @@ rule clinical_report:
         hipp_func_R = rules.project_pet_data.output.hipp_func_R,
         csv = rules.subcortical_map.output.csv,
     output:
-        report = os.path.join(root, "qc", "sub-{subject}_ses-{session}_report.html"),
+        report = os.path.join(root, "qc", "sub-{subject}", "ses-{session}", "sub-{subject}_ses-{session}_report.html"),
     params:
         bids_dir = config["bids_dir"],
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
