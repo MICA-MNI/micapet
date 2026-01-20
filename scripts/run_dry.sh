@@ -16,7 +16,8 @@ BIDS_DIR="/host/fladgate/local_raid/jack/FDG/MICA-PET/BIDS_MICs_FDG"
 
 # Outputs (Stored in your user directory)
 OUTPUT_DIR="$HOST_ROOT/micapet_output"
-HIPP_CACHE="$HOST_ROOT/hippunfold_cache"
+# Use Jack's hippunfold cache (already has downloaded models)
+HIPP_CACHE="/host/verges/tank/data/jack/hippunfold_tmp"
 
 # Container Images & License
 # We use the Snakebids image you built, but external tools (FastSurfer/HippUnfold) from Jack's path
