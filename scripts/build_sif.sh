@@ -72,8 +72,22 @@ if [ -f "$SIF_PATH" ]; then
     rm "$SIF_PATH"
 fi
 
-echo "Converting docker-daemon://${IMAGE_NAME}:${TAG} -> $SIF_PATH"
-singularity build "$SIF_PATH" docker-daemon://${IMAGE_NAME}:${TAG}
+# STRATEGY CHANGE: 
+# The Docker daemon on the server seems to run out of space in /export01/docker/tmp
+# when attempting a direct stream to Singularity (docker-daemon://).
+# Workaround: Save to a tarball on the large partition (/export03) first.
+
+TAR_PATH="$EXPORT_DIR/${IMAGE_NAME}.tar"
+
+echo "1. Saving Docker image to tarball on large storage..."
+echo "   Path: $TAR_PATH"
+docker save "${IMAGE_NAME}:${TAG}" -o "$TAR_PATH"
+
+echo "2. Converting docker-archive tarball -> SIF..."
+singularity build "$SIF_PATH" "docker-archive://$TAR_PATH"
+
+echo "3. Cleaning up tarball..."
+rm "$TAR_PATH"
 
 echo ""
 echo "====================================================================="
