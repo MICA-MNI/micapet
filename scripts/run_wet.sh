@@ -55,9 +55,14 @@ mkdir -p "$HOST_ROOT/.cache"
 
 echo "Launching container..."
 
+# Get the project root on the host (where we pulled the latest code)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
 singularity run \
     -B /host:/host \
     -B /export03:/export03 \
+    -B "$PROJECT_ROOT/functions:/app/functions" \
     --env XDG_CACHE_HOME="$HOST_ROOT/.cache" \
     "$SIF_PATH" \
     "$BIDS_DIR" \
