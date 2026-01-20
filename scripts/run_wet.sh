@@ -15,7 +15,12 @@ HOST_ROOT="/export03/data/enning/micapet"
 BIDS_DIR="/host/fladgate/local_raid/jack/FDG/MICA-PET/BIDS_MICs_FDG"
 
 # Outputs (Stored in your user directory)
-OUTPUT_DIR="$HOST_ROOT/micapet_output"
+# Allow override via first argument
+if [ -n "$1" ]; then
+    OUTPUT_DIR="$1"
+else
+    OUTPUT_DIR="$HOST_ROOT/micapet_output"
+fi
 # Use Jack's hippunfold cache (already has downloaded models)
 HIPP_CACHE="/host/verges/tank/data/jack/hippunfold_tmp"
 
