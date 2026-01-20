@@ -29,7 +29,7 @@ rule fastsurfer:
     shell:
         """
         mkdir -p {params.log_dir}
-        python {workflow.basedir}/../functions/fastsurfer.py \
+        python -u {workflow.basedir}/../functions/fastsurfer.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
@@ -61,7 +61,7 @@ rule hippunfold:
     shell:
         """
         mkdir -p {params.log_dir}
-        python {workflow.basedir}/../functions/hippunfold.py \
+        python -u {workflow.basedir}/../functions/hippunfold.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
@@ -105,7 +105,7 @@ rule cortical_surface:
         mkdir -p {params.log_dir}
         echo "=== Starting cortical_surface.py at $(date) ===" > {log} 2>&1
         echo "FS_LICENSE=$FS_LICENSE" >> {log} 2>&1
-        python {workflow.basedir}/../functions/cortical_surface.py \
+        python -u {workflow.basedir}/../functions/cortical_surface.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
@@ -138,7 +138,7 @@ rule gtm_seg:
         source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
         mkdir -p {params.log_dir}
         echo "=== Starting gtm_seg.py at $(date) ===" > {log} 2>&1
-        python {workflow.basedir}/../functions/gtm_seg.py \
+        python -u {workflow.basedir}/../functions/gtm_seg.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
