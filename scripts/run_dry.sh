@@ -10,21 +10,24 @@ set -e
 # HOST_ROOT: The directory on the server containing your data
 HOST_ROOT="/export03/data/enning/micapet"
 
-# Inputs
-BIDS_DIR="$HOST_ROOT/BIDS_PET_test"
+# Inputs (Using Jack's shared data for reliability)
+# Note: We use Jack's BIDS directory and Container Images as they represent a known-good state.
+BIDS_DIR="/host/fladgate/local_raid/jack/FDG/MICA-PET/BIDS_MICs_FDG"
 
-# Outputs
+# Outputs (Stored in your user directory)
 OUTPUT_DIR="$HOST_ROOT/micapet_output"
 HIPP_CACHE="$HOST_ROOT/hippunfold_cache"
 
 # Container Images & License
+# We use the Snakebids image you built, but external tools (FastSurfer/HippUnfold) from Jack's path
 SIF_PATH="$HOST_ROOT/micapet_snakebids.sif"
-FASTSURFER_SIF="$HOST_ROOT/fastsurfer-cpu-v2.4.2.sif"
-HIPPUNFOLD_SIF="$HOST_ROOT/hippunfold_v1.4.1.sif"
-FS_LICENSE="$HOST_ROOT/license.txt"
+FASTSURFER_SIF="/host/verges/tank/data/jack/fastsurfer-cpu-v2.4.2.sif"
+HIPPUNFOLD_SIF="/host/verges/tank/data/jack/hippunfold_v1.4.1.sif"
+FS_LICENSE="/host/verges/tank/data/jack/license.txt"
 
 # Parameters
-PARTICIPANT_LABEL="MCH001"
+# Using a subject known to exist in Jack's dataset (e.g. PX003)
+PARTICIPANT_LABEL="PX003"
 
 echo "Running Snakebids DRY RUN..."
 echo "Root:    $HOST_ROOT"
@@ -35,15 +38,14 @@ echo "---------------------------------------------------------"
 # Verify existence
 if [ ! -d "$BIDS_DIR" ]; then
     echo "ERROR: BIDS Directory not found at $BIDS_DIR"
+    echo "Please ensure /host is mounted and accessible."
     exit 1
 fi
 
 # --- 2. Run Singularity ---
-# STRATEGY: Bind the parent /export03 directly to /export03.
-# This mimics the working 'jack' setup (-B /host:/host) but scoped to your data.
-# This prevents path confusion or symlink issues inside the container.
-
+# STRATEGY: Bind /host:/host to reach Jack's data, and /export03 for your data.
 singularity run --cleanenv \
+    -B /host:/host \
     -B /export03:/export03 \
     --env XDG_CACHE_HOME="$HOST_ROOT/.cache" \
     "$SIF_PATH" \
