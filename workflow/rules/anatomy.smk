@@ -100,15 +100,16 @@ rule cortical_surface:
         set +u  # Disable unbound variable check for FreeSurfer setup
         export FREESURFER_HOME=/opt/freesurfer-7.4.1
         source $FREESURFER_HOME/SetUpFreeSurfer.sh
-        set -u  # Re-enable strict mode
+        # Keep set +u - don't re-enable strict mode as it can cause issues
         mkdir -p {params.log_dir}
+        echo "Starting cortical_surface.py at $(date)" > {log} 2>&1
         python {workflow.basedir}/../functions/cortical_surface.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
             -subj_dir {params.subj_dir} \
             -output_dir {params.output_dir} \
-            > {log} 2>&1
+            >> {log} 2>&1
         """
 
 rule gtm_seg:
@@ -131,8 +132,9 @@ rule gtm_seg:
         set +u  # Disable unbound variable check for FreeSurfer setup
         export FREESURFER_HOME=/opt/freesurfer-7.4.1
         source $FREESURFER_HOME/SetUpFreeSurfer.sh
-        set -u  # Re-enable strict mode
+        # Keep set +u - don't re-enable strict mode as it can cause issues
         mkdir -p {params.log_dir}
+        echo "Starting gtm_seg.py at $(date)" > {log} 2>&1
         python {workflow.basedir}/../functions/gtm_seg.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
@@ -140,5 +142,5 @@ rule gtm_seg:
             -subj_dir {params.subj_dir} \
             -seg_type {params.seg_type} \
             -force \
-            > {log} 2>&1
+            >> {log} 2>&1
         """
