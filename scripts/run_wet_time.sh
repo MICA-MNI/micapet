@@ -23,7 +23,7 @@ echo "=========================================="
 start_time=$(date +%s)
 
 bash scripts/run_wet.sh \
-    --output "$OUTPUT_DIR" \
+    "$OUTPUT_DIR" \
     2>&1 | tee "$OUTPUT_DIR/pipeline_run.log"
 
 end_time=$(date +%s)
