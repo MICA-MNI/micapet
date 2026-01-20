@@ -50,6 +50,8 @@ else
     echo "Found local FreeSurfer tarball: $FS_TAR_NAME"
 fi
 
+
+
 echo "=========================================="
 echo "Step 2: Converting to SIF..."
 echo "=========================================="
