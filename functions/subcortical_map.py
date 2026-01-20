@@ -55,8 +55,7 @@ subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
-space='T1w'
-#originally T1wFS
+space='T1wFS'
 
 # Support custom output_dir or default to bids_dir/derivatives
 mica_pet_version = os.environ['MICA_PET_VERSION']
