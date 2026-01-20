@@ -26,11 +26,31 @@ HIPPUNFOLD_SIF="/host/verges/tank/data/jack/hippunfold_v1.4.1.sif"
 FS_LICENSE="/host/verges/tank/data/jack/license.txt"
 HIPP_CACHE="/host/verges/tank/data/jack/hippunfold_tmp"
 
+# Location of the FreeSurfer tarball required for Docker build
+FS_TAR_PATH="/host/fladgate/local_raid/jack/FDG/MICA-PET/scripts/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz"
+FS_TAR_NAME="freesurfer-linux-centos7_x86_64-7.4.1.tar.gz"
+
 # --- 1. Build SIF Image ---
 echo "=========================================="
 echo "Step 1: Building Docker Image..."
 echo "=========================================="
+
+# Check if FS tarball exists locally, if not copy from Jack's path
+if [ ! -f "$FS_TAR_NAME" ]; then
+    if [ -f "$FS_TAR_PATH" ]; then
+        echo "Copying FreeSurfer tarball from Jack's path..."
+        cp "$FS_TAR_PATH" .
+    else
+        echo "ERROR: FreeSurfer tarball not found at $FS_TAR_PATH"
+        echo "The Docker build requires this file."
+        exit 1
+    fi
+fi
+
 docker build -t $IMAGE_NAME:$TAG .
+
+# Clean up the large tarball after build to save space (optional, comment out if you want to keep it)
+# rm "$FS_TAR_NAME"
 
 echo "=========================================="
 echo "Step 2: Converting to SIF..."
