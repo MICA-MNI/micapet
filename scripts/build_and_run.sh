@@ -27,16 +27,28 @@ FS_LICENSE="/host/verges/tank/data/jack/license.txt"
 HIPP_CACHE="/host/verges/tank/data/jack/hippunfold_tmp"
 
 # Location of the FreeSurfer tarball required for Docker build
-FS_TAR_PATH="/host/fladgate/local_raid/jack/FDG/MICA-PET/scripts/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz"
 FS_TAR_NAME="freesurfer-linux-centos7_x86_64-7.4.1.tar.gz"
+FS_DOWNLOAD_URL="https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.4.1/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz"
 
 # --- 1. Build SIF Image ---
 echo "=========================================="
 echo "Step 1: Building Docker Image..."
 echo "=========================================="
 
-docker build -t $IMAGE_NAME:$TAG .
-
+# Check if FS tarball exists locally, if not download it
+if [ ! -f "$FS_TAR_NAME" ]; then
+    echo "FreeSurfer tarball not found locally."
+    echo "Downloading from $FS_DOWNLOAD_URL..."
+    wget -O "$FS_TAR_NAME" "$FS_DOWNLOAD_URL"
+    
+    if [ ! -f "$FS_TAR_NAME" ]; then
+        echo "ERROR: Download failed. File not found: $FS_TAR_NAME"
+        echo "If you have the file elsewhere, copy it to $(pwd) and try again."
+        exit 1
+    fi
+else
+    echo "Found local FreeSurfer tarball: $FS_TAR_NAME"
+fi
 
 echo "=========================================="
 echo "Step 2: Converting to SIF..."
