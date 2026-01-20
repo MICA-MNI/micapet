@@ -30,7 +30,7 @@ FS_LICENSE="/host/verges/tank/data/jack/license.txt"
 # Using a subject known to exist in Jack's dataset (e.g. PX003)
 PARTICIPANT_LABEL="PX003"
 # Use more cores to allow parallel jobs
-CORES=16
+CORES=32
 
 echo "Running Snakebids DRY RUN..."
 echo "Root:    $HOST_ROOT"

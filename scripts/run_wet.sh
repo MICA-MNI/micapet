@@ -31,7 +31,7 @@ PARTICIPANT_LABEL="PX003"
 # Use more cores to allow parallel jobs
 # FastSurfer uses ~8 threads, HippUnfold uses ~8 threads
 # With 16+ cores, both can run in parallel
-CORES=16
+CORES=32
 
 echo "STARTING PIPELINE EXECUTION..."
 echo "Root:    $HOST_ROOT"
