@@ -55,7 +55,8 @@ subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
-space='T1wFS'
+space='T1w'
+#originally T1wFS
 
 # Support custom output_dir or default to bids_dir/derivatives
 mica_pet_version = os.environ['MICA_PET_VERSION']
@@ -94,7 +95,7 @@ dict = {'Left-Accumbens-area': 26,
 'Right-Putamen': 51,
 'Right-Thalamus': 49}
 
-src = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-rbv_ref-pons_trc-FDG_pet.nii.gz")
+src = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-rbv_ref-{ref_region}_trc-FDG_pet.nii.gz")
 pet_data = src.get_fdata()
 tgt = nib.load(f"{f_surf_dir}/mri/aparc+aseg.mgz")
 aseg_aparc_data = tgt.get_fdata()
@@ -110,7 +111,7 @@ regions = list(dict.keys())
 means = [np.mean(pet_resampled_data[aseg_aparc_data == dict[region]]) for region in regions]
 
 # Write to CSV
-output_file = f"{bids_dir}/qc/sub-{subject}/ses-{session}/sub-{subject}_ses-{session}_subcortical_means_pvc-rbv_ref-{ref_region}_trc-FDG_pet.csv"
+output_file = f"{qc_dir}/sub-{subject}_ses-{session}_subcortical_means_pvc-rbv_ref-{ref_region}_trc-FDG_pet.csv"
 with open(output_file, 'w', newline='') as f:
     writer = csv.writer(f)
     writer.writerow(regions)

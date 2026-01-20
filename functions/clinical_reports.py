@@ -102,7 +102,7 @@ else:
     mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
     qc_dir = f"{bids_dir}/qc/sub-{subject}/ses-{session}"
 
-space='T1wFS'
+space='T1w'
 
 if args.max_value is not None:
     max_value = args.max_value

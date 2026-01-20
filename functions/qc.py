@@ -74,7 +74,7 @@ subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
-space='T1wFS'
+space='T1w'
 
 mica_pet_version = os.environ['MICA_PET_VERSION'] if 'MICA_PET_VERSION' in os.environ else "v0.0.3"
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"

@@ -113,7 +113,7 @@ if hippocampal:
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting PET data projection to surface for subject: {subject}, session: {session}.")
 
-space='T1wFS'
+space='T1w'
 if cortical:
     print("Doing cortical surface projection.")
     for hemi in ['L','R']:
