@@ -93,15 +93,18 @@ rule cortical_surface:
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         output_dir = root,
         log_dir = os.path.join(root, "logs", "cortical_surface"),
+        fs_license = config.get("fs_license"),
     log:
         os.path.join(root, "logs", "cortical_surface", "sub-{subject}_ses-{session}.log")
     shell:
         """
         set +eu  # Disable strict mode completely
         export FREESURFER_HOME=/opt/freesurfer-7.4.1
+        export FS_LICENSE={params.fs_license}
         source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
         mkdir -p {params.log_dir}
         echo "=== Starting cortical_surface.py at $(date) ===" > {log} 2>&1
+        echo "FS_LICENSE=$FS_LICENSE" >> {log} 2>&1
         python {workflow.basedir}/../functions/cortical_surface.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
@@ -124,12 +127,14 @@ rule gtm_seg:
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         seg_type = "fastsurfer",
         log_dir = os.path.join(root, "logs", "gtm_seg"),
+        fs_license = config.get("fs_license"),
     log:
         os.path.join(root, "logs", "gtm_seg", "sub-{subject}_ses-{session}.log")
     shell:
         """
         set +eu  # Disable strict mode completely
         export FREESURFER_HOME=/opt/freesurfer-7.4.1
+        export FS_LICENSE={params.fs_license}
         source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
         mkdir -p {params.log_dir}
         echo "=== Starting gtm_seg.py at $(date) ===" > {log} 2>&1

@@ -22,16 +22,19 @@ rule linear_coreg:
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         output_dir = root,
         log_dir = os.path.join(root, "logs", "linear_coreg"),
+        fs_license = config.get("fs_license"),
     log:
         os.path.join(root, "logs", "linear_coreg", "sub-{subject}_ses-{session}.log")
     shell:
         """
         set +eu  # Disable strict mode completely
         export FREESURFER_HOME=/opt/freesurfer-7.4.1
+        export FS_LICENSE={params.fs_license}
         source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
         mkdir -p {params.log_dir}
         echo "=== Starting linear_coreg.py at $(date) ===" > {log} 2>&1
         echo "FREESURFER_HOME=$FREESURFER_HOME" >> {log} 2>&1
+        echo "FS_LICENSE=$FS_LICENSE" >> {log} 2>&1
         echo "SUBJECTS_DIR=${{SUBJECTS_DIR:-not_set}}" >> {log} 2>&1
         which mri_coreg >> {log} 2>&1 || echo "mri_coreg not found in PATH" >> {log} 2>&1
         echo "Running python script..." >> {log} 2>&1
@@ -61,15 +64,17 @@ rule pvc:
         psf = config.get("psf", 4.5),
         output_dir = root,
         log_dir = os.path.join(root, "logs", "pvc"),
+        fs_license = config.get("fs_license"),
     log:
         os.path.join(root, "logs", "pvc", "sub-{subject}_ses-{session}.log")
     shell:
         """
-        set +u  # Disable unbound variable check for FreeSurfer setup
+        set +eu  # Disable strict mode completely
         export FREESURFER_HOME=/opt/freesurfer-7.4.1
-        source $FREESURFER_HOME/SetUpFreeSurfer.sh
-        set -u  # Re-enable strict mode
+        export FS_LICENSE={params.fs_license}
+        source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
         mkdir -p {params.log_dir}
+        echo "=== Starting pvc.py at $(date) ===" > {log} 2>&1
         python {workflow.basedir}/../functions/pvc.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
@@ -78,7 +83,7 @@ rule pvc:
             -output_dir {params.output_dir} \
             -psf {params.psf} \
             -force \
-            > {log} 2>&1
+            >> {log} 2>&1
         """
 
 rule suvr:
@@ -94,15 +99,17 @@ rule suvr:
         ref_region = get_ref_region(),
         output_dir = root,
         log_dir = os.path.join(root, "logs", "suvr"),
+        fs_license = config.get("fs_license"),
     log:
         os.path.join(root, "logs", "suvr", "sub-{subject}_ses-{session}.log")
     shell:
         """
-        set +u  # Disable unbound variable check for FreeSurfer setup
+        set +eu  # Disable strict mode completely
         export FREESURFER_HOME=/opt/freesurfer-7.4.1
-        source $FREESURFER_HOME/SetUpFreeSurfer.sh
-        set -u  # Re-enable strict mode
+        export FS_LICENSE={params.fs_license}
+        source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
         mkdir -p {params.log_dir}
+        echo "=== Starting suvr.py at $(date) ===" > {log} 2>&1
         python {workflow.basedir}/../functions/suvr.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
@@ -110,7 +117,7 @@ rule suvr:
             -subj_dir {params.subj_dir} \
             -output_dir {params.output_dir} \
             -ref_region {params.ref_region} \
-            > {log} 2>&1
+            >> {log} 2>&1
         """
 
 rule project_pet_data:
@@ -134,15 +141,17 @@ rule project_pet_data:
         ref_region = get_ref_region(),
         output_dir = root,
         log_dir = os.path.join(root, "logs", "project_pet_data"),
+        fs_license = config.get("fs_license"),
     log:
         os.path.join(root, "logs", "project_pet_data", "sub-{subject}_ses-{session}.log")
     shell:
         """
-        set +u  # Disable unbound variable check for FreeSurfer setup
+        set +eu  # Disable strict mode completely
         export FREESURFER_HOME=/opt/freesurfer-7.4.1
-        source $FREESURFER_HOME/SetUpFreeSurfer.sh
-        set -u  # Re-enable strict mode
+        export FS_LICENSE={params.fs_license}
+        source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
         mkdir -p {params.log_dir}
+        echo "=== Starting project_pet_data.py at $(date) ===" > {log} 2>&1
         python {workflow.basedir}/../functions/project_pet_data.py \
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
@@ -154,7 +163,7 @@ rule project_pet_data:
             -pvc \
             -cortical \
             -hippocampal \
-            > {log} 2>&1
+            >> {log} 2>&1
         """
 
 rule subcortical_map:
