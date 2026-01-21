@@ -38,6 +38,7 @@ parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '0
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
 parser.add_argument("-seg_type", dest="seg_type", type=str, help="'freesurfer' or 'fastsurfer'. Default: 'fastsurfer'.", choices=['freesurfer','fastsurfer'], default="fastsurfer")
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
+parser.add_argument("-threads", dest="threads", type=int, default=1, help="(Int) Number of threads to use. Default: 1")
 parser.add_argument("-force", action='store_true', help="Force gtmseg even if output exists.")
 
 args = parser.parse_args()
@@ -57,6 +58,8 @@ f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 force = args.force
 
 os.environ['SUBJECTS_DIR'] = os.path.realpath(args.subj_dir)
+# Set OpenMP threads for FreeSurfer tools
+os.environ['OMP_NUM_THREADS'] = str(args.threads)
 mica_pet_version = os.environ['MICA_PET_VERSION']
 mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
 
@@ -80,6 +83,11 @@ if seg_type == 'freesurfer':
         gtmseg = freesurfer.GTMSeg()
         gtmseg.inputs.subject_id = f"sub-{subject}_ses-{session}"
         gtmseg.inputs.ctx_annot = ("aparc.DKTatlas.annot",1000,2000)
+        # Try to set openmp if supported by nipype interface, or rely on OMP_NUM_THREADS
+        try:
+             gtmseg.inputs.openmp = args.threads
+        except:
+             pass
         gtmseg.run()
 
 elif seg_type == 'fastsurfer':
@@ -103,11 +111,19 @@ elif seg_type == 'fastsurfer':
             gtmseg = freesurfer.GTMSeg()
             gtmseg.inputs.subject_id = f"sub-{subject}_ses-{session}"
             gtmseg.inputs.ctx_annot = ("aparc.DKTatlas.annot",1000,2000)
+            try:
+                gtmseg.inputs.openmp = args.threads
+            except:
+                pass
             gtmseg.run()
         else:
             gtmseg = freesurfer.GTMSeg()
             gtmseg.inputs.subject_id = f"sub-{subject}_ses-{session}"
             gtmseg.inputs.ctx_annot = ("aparc.DKTatlas.annot",1000,2000)
+            try:
+                gtmseg.inputs.openmp = args.threads
+            except:
+                pass
             gtmseg.run()
 
 # mc = freesurfer.MRIConvert()

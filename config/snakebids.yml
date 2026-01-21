@@ -71,6 +71,9 @@ mica_pet_version: 'v.alpha.0.3'
 psf: 4.5                    # Scanner PSF FWHM in mm
 ref_region: 'pons'          # Options: pons, cerebellarGM, composite, none
 threads: 8                  # Threads for multithreaded steps
+fastsurfer_threads: 16      # Threads for FastSurfer
+hippunfold_threads: 16      # Threads for HippUnfold
+gtmseg_threads: 24          # Threads for GTMseg
 
 
 # --- Custom CLI Arguments ---
@@ -114,6 +117,24 @@ parse_args:
     dest: threads
     type: int
     default: 8
+  
+  --fastsurfer-threads:
+    help: "Number of threads for FastSurfer (default: 16)"
+    dest: fastsurfer_threads
+    type: int
+    default: 16
+
+  --hippunfold-threads:
+    help: "Number of threads for HippUnfold (default: 16)"
+    dest: hippunfold_threads
+    type: int
+    default: 16
+
+  --gtmseg-threads:
+    help: "Number of threads for GTMseg (default: 24)"
+    dest: gtmseg_threads
+    type: int
+    default: 24
   
   --hippunfold-cache-dir:
     help: "Path to hippunfold cache directory (optional)"
