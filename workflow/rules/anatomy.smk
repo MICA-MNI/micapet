@@ -121,6 +121,8 @@ rule gtm_seg:
         brainmask = rules.fastsurfer.output.brainmask,
     output:
         gtmseg = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg.mgz"),
+        gtmseg_fs = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg_space-T1wFS.nii.gz"),
+        gtmseg_native = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg_space-T1wNative.nii.gz"),
     params:
         bids_dir = config["bids_dir"],
         # gtm_seg.py uses -subj_dir
