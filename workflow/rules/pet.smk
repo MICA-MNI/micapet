@@ -111,7 +111,7 @@ rule suvr:
         export FS_LICENSE={params.fs_license}
         source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
         mkdir -p {params.log_dir}
-        mkdir -p {params.output_dir}/sub-{wildcards.subject}/ses-{wildcards.session}/anat
+        mkdir -p {params.output_dir}/{MICAPET_DIR_NAME}/sub-{wildcards.subject}/ses-{wildcards.session}/anat
         echo "=== Starting suvr.py at $(date) ===" > {log} 2>&1
         python {workflow.basedir}/../functions/suvr.py \
             -sub {wildcards.subject} \
