@@ -10,10 +10,9 @@ export DOCKER_CONTENT_TRUST=0
 # PATHS
 HOST_STORAGE="/export03/data/enning/micapet"
 BIDS_DIR="/host/fladgate/local_raid/jack/FDG/MICA-PET/BIDS_MICs_FDG"
-OUTPUT_DIR="$HOST_STORAGE/micapet_output_wet_time"
+OUTPUT_DIR="$HOST_STORAGE/micapet_output_wet_optmization"
 
 # --- 1. Prepare Output Directory ---
-# mkdir -p "$OUTPUT_DIR"
 
 # --- 2. Run Pipeline with Timing ---
 echo "=========================================="
@@ -22,9 +21,7 @@ echo "=========================================="
 
 start_time=$(date +%s)
 
-bash scripts/run_wet.sh \
-    "$OUTPUT_DIR" \
-    2>&1 | tee "$OUTPUT_DIR/pipeline_run.log"
+bash scripts/run_wet.sh "$OUTPUT_DIR" 
 
 end_time=$(date +%s)
 elapsed=$(( end_time - start_time ))
