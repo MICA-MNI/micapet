@@ -140,3 +140,13 @@ parse_args:
     help: "Path to hippunfold cache directory (optional)"
     dest: hippunfold_cache_dir
     default: ""
+  
+  --existing-freesurfer-dir:
+    help: "Path to existing FreeSurfer/FastSurfer outputs directory (optional, creates symlink to avoid rerunning)"
+    dest: existing_freesurfer_dir
+    default: null
+  
+  --existing-hippunfold-dir:
+    help: "Path to existing HippUnfold outputs directory (optional, creates symlink to avoid rerunning)"
+    dest: existing_hippunfold_dir
+    default: null

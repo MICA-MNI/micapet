@@ -80,6 +80,35 @@ print(f"  - HippUnfold: {config['hippunfold_threads']} threads")
 print(f"  - GTMseg:     {config['gtmseg_threads']} threads")
 
 
+# --- Handle Existing Outputs via Symbolic Links ---
+# If user provides paths to existing FreeSurfer/HippUnfold outputs,
+# create symbolic links to avoid rerunning those steps
+def setup_existing_outputs_symlinks():
+    """Create symbolic links to existing outputs if provided."""
+    existing_fs = config.get("existing_freesurfer_dir")
+    existing_hipp = config.get("existing_hippunfold_dir")
+    
+    if existing_fs and existing_fs != "null":
+        target = os.path.join(root, FASTSURFER_DIR_NAME)
+        if not os.path.exists(target):
+            print(f"Creating symlink: {target} -> {existing_fs}")
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            os.symlink(existing_fs, target, target_is_directory=True)
+        else:
+            print(f"FreeSurfer output directory already exists: {target}")
+    
+    if existing_hipp and existing_hipp != "null":
+        target = os.path.join(root, HIPPUNFOLD_DIR_NAME)
+        if not os.path.exists(target):
+            print(f"Creating symlink: {target} -> {existing_hipp}")
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            os.symlink(existing_hipp, target, target_is_directory=True)
+        else:
+            print(f"HippUnfold output directory already exists: {target}")
+
+# Call setup function before workflow starts
+setup_existing_outputs_symlinks()
+
 
 # --- Wildcard constraints ---
 wildcard_constraints:
