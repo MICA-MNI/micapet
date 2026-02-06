@@ -21,6 +21,7 @@ The script takes the following arguments:
         -hippunfold_img: Path to HippUnfold .sif image. Requires version 1.4.1+.
         
     Optional arguments:
+        -trc        : Select tracer for analysis ('FDG','MK6240'). (Default 'FDG').
         -hippunfold_dir : Specify path to HippUnfold output directory. (Default: hippunfold_v1.4.1 subdirectory in BIDS derivatives directory.)
         -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory. (Default: 'fastsurfer' subdirectory in BIDS derivatives directory.)
         -T1         : Path to T1w image. (Default: T1w image in BIDS rawdata directory).
@@ -336,6 +337,7 @@ def main():
 
     # Argument Parsing
     parser = argparse.ArgumentParser(add_help=True)
+    parser.add_argument("-trc", type=str, dest='trc', default='FDG',choices=['FDG','MK6240'],help="(Str) Select tracer for analysis ('FDG','MK6240'). (Default 'FDG').")
     parser.add_argument("-sub", type=str, required=True, help="(Str) Subject identifier (eg. '0001')")
     parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '01')")
     parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
@@ -384,6 +386,7 @@ def main():
         run_all = False
 
     # Normalize paths and variables
+    trc = args.trc
     session = f"{args.ses.replace('ses-', '')}"
     subject = f"{args.sub.replace('sub-', '')}"
     bids_dir = os.path.realpath(args.bids_dir)
@@ -521,19 +524,24 @@ def main():
             
     # if PET image not provided, check if it exists in BIDS rawdata
     if args.pet_path is None:
-        if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet.nii.gz"):
+        if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-{trc}_pet.nii.gz"):
             print(f"{bcolors.ERROR}Error: PET image for subject {subject}, session {session} does not exist. Please specify with -pet flag.{bcolors.RESET}")
             sys.exit(1)
     elif not os.path.exists(os.path.realpath(args.pet_path)):
         print(f"{bcolors.ERROR}Error: Specified PET image {args.pet_path} does not exist.{bcolors.RESET}")
         sys.exit(1)
-    elif not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet.nii.gz"): #copy PET to BIDS rawdata if not already there
+    elif not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-{trc}_pet.nii.gz"): #copy PET to BIDS rawdata if not already there
         # make rawdata directories if they don't exist
         os.makedirs(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet", exist_ok=True)
         
         #copy PET file
-        shutil.copyfile(os.path.realpath(args.pet_path), f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet.nii.gz")
+        shutil.copyfile(os.path.realpath(args.pet_path), f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-{trc}_pet.nii.gz")
         
+    if trc == 'MK6240':
+        if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-{trc}_desc-transmission_pet.nii.gz"):
+            print(f"{bcolors.ERROR}Error: Transmission scan for subject {subject}, session {session} does not exist. Please include sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-{trc}_desc-transmission_pet.nii.gz in the pet subdirectory.{bcolors.RESET}")
+            sys.exit(1)
+            
     # check if psf specified
     if run_all or args.pvc_run:
         if args.psf is None:
@@ -590,7 +598,7 @@ def main():
         # Linear coreg
         if run_all == True or args.coreg_run == True:
             display_subsection_splash_screen("Running Linear Coregistration...", log)
-            cmd = ['python', '-u', f'{script_dir}/linear_coreg.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}']
+            cmd = ['python', '-u', f'{script_dir}/linear_coreg.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-trc",f'{trc}']
             run_command(cmd)
 
         # GTM seg
