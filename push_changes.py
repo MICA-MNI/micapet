@@ -28,12 +28,13 @@ run_cmd('git add -A')
 status = run_cmd('git status --short')
 
 # Commit
-commit_msg = """Fix: Ensure cortical_surface.py runs with redirected FastSurfer outputs
+commit_msg = """Fix: Smart dependency handling for redirected outputs using ancient()
 
-- Add --existing-freesurfer-dir and --existing-hippunfold-dir CLI arguments
-- Implement symlink creation for existing outputs in Snakefile  
-- Change rule dependencies from rule.output to direct file paths
-- Allows cortical_surface to run even when using existing outputs"""
+- Use Snakemake's ancient() to mark redirected files as existing
+- Add input functions that detect EXISTING_FREESURFER_DIR/EXISTING_HIPPUNFOLD_DIR
+- cortical_surface always runs regardless of redirect (outputs are new)
+- FastSurfer/HippUnfold skip when using existing outputs
+- Works correctly both with and without redirected file paths"""
 
 result = run_cmd(f'git commit -m "{commit_msg}"', check=False)
 

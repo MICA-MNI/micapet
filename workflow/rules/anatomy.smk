@@ -73,14 +73,25 @@ rule hippunfold:
             > {log} 2>&1
         """
 
+def get_cortical_surface_inputs(wildcards):
+    """Get cortical surface inputs - mark as ancient if using existing outputs."""
+    base_paths = {
+        "pial_lh": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "surf", "lh.pial"),
+        "white_lh": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "surf", "lh.white"),
+        "sphere_lh": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "surf", "lh.sphere.reg"),
+        "pial_rh": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "surf", "rh.pial"),
+        "white_rh": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "surf", "rh.white"),
+        "sphere_rh": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "surf", "rh.sphere.reg"),
+    }
+    
+    # If using existing FreeSurfer dir, mark files as ancient (don't trigger fastsurfer rule)
+    if EXISTING_FREESURFER_DIR:
+        return {k: ancient(v) for k, v in base_paths.items()}
+    return base_paths
+
 rule cortical_surface:
     input:
-        pial_lh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "lh.pial"),
-        white_lh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "lh.white"),
-        sphere_lh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "lh.sphere.reg"),
-        pial_rh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "rh.pial"),
-        white_rh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "rh.white"),
-        sphere_rh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "rh.sphere.reg"),
+        unpack(get_cortical_surface_inputs)
     output:
         # Expected outputs from cortical_surface.py
         fsLR_32k_L = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-L_space-T1wFS_surf-fsLR-32k_label-midthickness.surf.gii"),
@@ -114,11 +125,20 @@ rule cortical_surface:
             >> {log} 2>&1
         """
 
+def get_gtm_seg_inputs(wildcards):
+    """Get GTM seg inputs - mark as ancient if using existing outputs."""
+    base_paths = {
+        "norm": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "norm.mgz"),
+        "talairach": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "transforms", "talairach.lta"),
+        "brainmask": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "brainmask.mgz"),
+    }
+    if EXISTING_FREESURFER_DIR:
+        return {k: ancient(v) for k, v in base_paths.items()}
+    return base_paths
+
 rule gtm_seg:
     input:
-        norm = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "norm.mgz"),
-        talairach = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "transforms", "talairach.lta"),
-        brainmask = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "brainmask.mgz"),
+        unpack(get_gtm_seg_inputs)
     output:
         gtmseg = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg.mgz"),
     params:
