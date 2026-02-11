@@ -90,8 +90,6 @@ rule suvr:
     input:
         pvc_pet_fs = rules.pvc.output.pvc_pet_fs,
         pvc_pet_native = rules.pvc.output.pvc_pet_native,
-        gtmseg_fs_suvr = rules.gtm_seg.output.gtmseg_fs,
-        gtmseg_native_suvr = rules.gtm_seg.output.gtmseg_native,
     output:
         suvr_pet_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wFS_pvc-rbv_ref-" + get_ref_region() + "_trc-FDG_pet.nii.gz"),
         suvr_pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNative_pvc-rbv_ref-" + get_ref_region() + "_trc-FDG_pet.nii.gz"),
@@ -111,7 +109,6 @@ rule suvr:
         export FS_LICENSE={params.fs_license}
         source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
         mkdir -p {params.log_dir}
-        mkdir -p {params.output_dir}/{MICAPET_DIR_NAME}/sub-{wildcards.subject}/ses-{wildcards.session}/anat
         echo "=== Starting suvr.py at $(date) ===" > {log} 2>&1
         python {workflow.basedir}/../functions/suvr.py \
             -sub {wildcards.subject} \

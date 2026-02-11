@@ -25,7 +25,7 @@ rule fastsurfer:
         log_dir = os.path.join(root, "logs", "fastsurfer"),
     log:
         os.path.join(root, "logs", "fastsurfer", "sub-{subject}_ses-{session}.log")
-    threads: config.get("fastsurfer_threads", 8)
+    threads: config.get("threads", 8)
     shell:
         """
         mkdir -p {params.log_dir}
@@ -57,7 +57,7 @@ rule hippunfold:
         log_dir = os.path.join(root, "logs", "hippunfold"),
     log:
         os.path.join(root, "logs", "hippunfold", "sub-{subject}_ses-{session}.log")
-    threads: config.get("hippunfold_threads", 8)
+    threads: config.get("threads", 8)
     shell:
         """
         mkdir -p {params.log_dir}
@@ -121,8 +121,6 @@ rule gtm_seg:
         brainmask = rules.fastsurfer.output.brainmask,
     output:
         gtmseg = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg.mgz"),
-        gtmseg_fs = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg_space-T1wFS.nii.gz"),
-        gtmseg_native = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg_space-T1wNative.nii.gz"),
     params:
         bids_dir = config["bids_dir"],
         # gtm_seg.py uses -subj_dir
@@ -132,7 +130,6 @@ rule gtm_seg:
         fs_license = config.get("fs_license"),
     log:
         os.path.join(root, "logs", "gtm_seg", "sub-{subject}_ses-{session}.log")
-    threads: config.get("gtmseg_threads", 8)
     shell:
         """
         set +eu  # Disable strict mode completely
@@ -147,7 +144,6 @@ rule gtm_seg:
             -bids {params.bids_dir} \
             -subj_dir {params.subj_dir} \
             -seg_type {params.seg_type} \
-            -threads {threads} \
             -force \
             >> {log} 2>&1
         """

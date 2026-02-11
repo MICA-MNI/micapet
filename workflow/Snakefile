@@ -30,56 +30,6 @@ root = config.get("output_dir", os.path.join(config["bids_dir"], "derivatives"))
 # Set PYTHONPATH to include functions directory so scripts can import utils
 os.environ["PYTHONPATH"] = os.path.join(workflow.basedir, "..", "functions") + os.pathsep + os.environ.get("PYTHONPATH", "")
 
-# --- Dynamic Resource Allocation ---
-import multiprocessing
-import sys
-
-def get_max_threads():
-    """Determine available cores from Snakemake arguments with fallback."""
-    # Check if --cores/-c/-j/--jobs were passed manually
-    args = sys.argv
-    for i, arg in enumerate(args):
-        if arg in ['--cores', '-c', '--jobs', '-j'] and i + 1 < len(args):
-            try:
-                # If specific number is given
-                val = int(args[i+1])
-                return val
-            except ValueError:
-                # If 'all' or similar is given, assume full count
-                return multiprocessing.cpu_count()
-        if arg.startswith(('--cores=', '-c=', '--jobs=', '-j=')):
-             try:
-                val = int(arg.split('=')[1])
-                return val
-             except ValueError:
-                return multiprocessing.cpu_count()
-    
-    # If using workflow.cores (set by snakemake automatically if not command line)
-    # But usually sys.argv is safer check for explicit user intent wrapper
-    # Fallback to system count
-    return multiprocessing.cpu_count()
-
-
-TOTAL_CORES = get_max_threads()
-
-# Set dynamic defaults if not provided by user
-# FastSurfer/HippUnfold: 50% of cores (min 1)
-if config.get("fastsurfer_threads") is None:
-    config["fastsurfer_threads"] = max(8, int(TOTAL_CORES * 0.5))
-
-if config.get("hippunfold_threads") is None:
-    config["hippunfold_threads"] = max(8, int(TOTAL_CORES * 0.5))
-
-# GTMseg: 50% of cores (min 1)
-if config.get("gtmseg_threads") is None:
-    config["gtmseg_threads"] = max(8, int(TOTAL_CORES * 0.5))
-
-print(f"Dynamic Resource Allocation (Total: {TOTAL_CORES}):")
-print(f"  - FastSurfer: {config['fastsurfer_threads']} threads")
-print(f"  - HippUnfold: {config['hippunfold_threads']} threads")
-print(f"  - GTMseg:     {config['gtmseg_threads']} threads")
-
-
 
 # --- Wildcard constraints ---
 wildcard_constraints:
