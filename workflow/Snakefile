@@ -27,6 +27,10 @@ HIPPUNFOLD_DIR_NAME = "hippunfold_v1.4.1"
 # Output root directory (from snakebids app or config)
 root = config.get("output_dir", os.path.join(config["bids_dir"], "derivatives"))
 
+# Check if existing output directories are provided
+EXISTING_FREESURFER_DIR = config.get("existing_freesurfer_dir", "")
+EXISTING_HIPPUNFOLD_DIR = config.get("existing_hippunfold_dir", "")
+
 # Set PYTHONPATH to include functions directory so scripts can import utils
 os.environ["PYTHONPATH"] = os.path.join(workflow.basedir, "..", "functions") + os.pathsep + os.environ.get("PYTHONPATH", "")
 
@@ -35,6 +39,38 @@ os.environ["PYTHONPATH"] = os.path.join(workflow.basedir, "..", "functions") + o
 wildcard_constraints:
     subject="[a-zA-Z0-9]+",
     session="[a-zA-Z0-9]+",
+
+
+# --- Helper function to create symlink for existing outputs ---
+def create_symlink_if_needed(existing_dir, target_dir, subdir_pattern):
+    """Create symbolic link from existing directory to target directory."""
+    if existing_dir and os.path.exists(existing_dir):
+        import glob
+        # Find all subject-session directories matching the pattern
+        existing_subdirs = glob.glob(os.path.join(existing_dir, subdir_pattern))
+        for existing_subdir in existing_subdirs:
+            subdir_name = os.path.basename(existing_subdir)
+            target_subdir = os.path.join(target_dir, subdir_name)
+            if not os.path.exists(target_subdir):
+                os.makedirs(os.path.dirname(target_subdir), exist_ok=True)
+                os.symlink(existing_subdir, target_subdir)
+                print(f"Created symlink: {target_subdir} -> {existing_subdir}")
+
+
+# Create symlinks for existing FastSurfer/HippUnfold outputs if provided
+if EXISTING_FREESURFER_DIR:
+    create_symlink_if_needed(
+        EXISTING_FREESURFER_DIR, 
+        os.path.join(root, FASTSURFER_DIR_NAME), 
+        "sub-*_ses-*"
+    )
+
+if EXISTING_HIPPUNFOLD_DIR:
+    create_symlink_if_needed(
+        EXISTING_HIPPUNFOLD_DIR, 
+        os.path.join(root, HIPPUNFOLD_DIR_NAME), 
+        "hippunfold"
+    )
 
 
 # --- Include rule files ---

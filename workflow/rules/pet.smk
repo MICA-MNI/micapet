@@ -9,7 +9,7 @@ rule linear_coreg:
         pet = inputs['pet'].path,
         t1 = inputs['T1w'].path,
         # Ensure fastsurfer completed
-        fs_check = rules.fastsurfer.output.norm,
+        fs_check = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "norm.mgz"),
     output:
         # Reg lta files - Note: Python outputs to /xfm/ subdirectory with _from-pet_to-{space}_xfm.reg.lta naming
         reg_lta_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "xfm", "sub-{subject}_ses-{session}_from-pet_to-T1wFS_xfm.reg.lta"),
@@ -123,10 +123,10 @@ rule suvr:
 rule project_pet_data:
     input:
         suvr_pet_fs = rules.suvr.output.suvr_pet_fs,
-        surf_L = rules.cortical_surface.output.fsnative_L,
-        surf_R = rules.cortical_surface.output.fsnative_R,
-        hipp_L = rules.hippunfold.output.hipp_lh,
-        hipp_R = rules.hippunfold.output.hipp_rh,
+        surf_L = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-L_surf-fsnative_label-midthickness.surf.gii"),
+        surf_R = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-R_surf-fsnative_label-midthickness.surf.gii"),
+        hipp_L = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-L_space-T1w_den-2mm_label-hipp_midthickness.surf.gii"),
+        hipp_R = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-R_space-T1w_den-2mm_label-hipp_midthickness.surf.gii"),
     output:
         # Cortical projection
         func_L = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-" + get_ref_region() + "_smooth-10mm_trc-FDG_pet.func.gii"),
@@ -169,7 +169,7 @@ rule project_pet_data:
 rule subcortical_map:
     input:
         suvr_pet_fs = rules.suvr.output.suvr_pet_fs,
-        aparc_aseg = rules.fastsurfer.output.aparc_aseg,
+        aparc_aseg = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "aparc+aseg.mgz"),
     output:
         csv = os.path.join(root, "qc", "sub-{subject}", "ses-{session}", "sub-{subject}_ses-{session}_subcortical_means_pvc-rbv_ref-" + get_ref_region() + "_trc-FDG_pet.csv"),
     params:

@@ -75,12 +75,12 @@ rule hippunfold:
 
 rule cortical_surface:
     input:
-        pial_lh = rules.fastsurfer.output.pial_lh,
-        white_lh = rules.fastsurfer.output.white_lh,
-        sphere_lh = rules.fastsurfer.output.sphere_lh,
-        pial_rh = rules.fastsurfer.output.pial_rh,
-        white_rh = rules.fastsurfer.output.white_rh,
-        sphere_rh = rules.fastsurfer.output.sphere_rh,
+        pial_lh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "lh.pial"),
+        white_lh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "lh.white"),
+        sphere_lh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "lh.sphere.reg"),
+        pial_rh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "rh.pial"),
+        white_rh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "rh.white"),
+        sphere_rh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "rh.sphere.reg"),
     output:
         # Expected outputs from cortical_surface.py
         fsLR_32k_L = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-L_space-T1wFS_surf-fsLR-32k_label-midthickness.surf.gii"),
@@ -116,9 +116,9 @@ rule cortical_surface:
 
 rule gtm_seg:
     input:
-        norm = rules.fastsurfer.output.norm,
-        talairach = rules.fastsurfer.output.talairach,
-        brainmask = rules.fastsurfer.output.brainmask,
+        norm = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "norm.mgz"),
+        talairach = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "transforms", "talairach.lta"),
+        brainmask = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "brainmask.mgz"),
     output:
         gtmseg = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg.mgz"),
     params:
