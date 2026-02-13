@@ -10,6 +10,8 @@ The script requires the following arguments:
     -bids       : Path to BIDS directory ( . or FULL PATH)
     -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory.
     -ref_region : Reference regions to use. eg. ['pons','cerebellarGM','composite']. Default: ['pons'].
+    -trc        : Tracer (eg. FDG, MK6240). Default: 'FDG'.
+    -pvc_method : PVC method used for PET image. Options: 'rbv', 'MG'. Default: 'rbv'.
 
 The script is intended for use by researchers and developers working with PET imaging data, particularly in the context of the MICA lab at McGill University.
 It is part of a larger pipeline for processing and analyzing neuroimaging data.
@@ -59,6 +61,8 @@ parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '0
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
 parser.add_argument("-ref_region",dest="ref_region", type=str, choices=['pons','cerebellarGM','composite'], default='pons',help="Specify reference region. Default: pons.")
+parser.add_argument("-trc", dest="trc", type=str, choices=['FDG','MK6240'], default='FDG', help="Tracer (eg. FDG, MK6240). Default: 'FDG'.")
+parser.add_argument("-pvc_method", dest="pvc_method", type=str, choices=['rbv','MG'], default='rbv', help="PVC method used for PET image. Options: 'rbv', 'MG'. Default: 'rbv'.")
 
 args = parser.parse_args()
 
@@ -74,6 +78,8 @@ subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
+trc = args.trc
+pvc_method = args.pvc_method
 space='T1wFS'
 
 mica_pet_version = os.environ['MICA_PET_VERSION'] if 'MICA_PET_VERSION' in os.environ else "v0.0.3"
@@ -97,7 +103,7 @@ if not os.path.exists(qc_dir):
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting QC for subject: {subject}, session: {session}.")
 
 # Create brainmasked PET
-if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-FDG_pet_desc-brainmask.nii.gz"):
+if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-{trc}_pet_desc-brainmask.nii.gz"):
     print("Creating brainmasked PET image...")
     # mc = MRIConvert()
     # mc.inputs.in_file = f'{f_surf_dir}/mri/apas+head.mgz'
@@ -108,7 +114,7 @@ if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/s
     applyreg = ApplyVolTransform()
     applyreg.inputs.source_file=f'{f_surf_dir}/mri/apas+head.mgz'
     applyreg.inputs.reg_header=True
-    applyreg.inputs.target_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-FDG_pet.nii.gz"
+    applyreg.inputs.target_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-{trc}_pet.nii.gz"
     applyreg.inputs.transformed_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/tmp.brainmask.nii.gz'
     applyreg.run()
 
@@ -119,11 +125,11 @@ if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/s
     out_file = nib.Nifti1Image(tmp_data, in_file.affine, in_file.header)
     nib.save(out_file, f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/tmp.brainmask_bin.nii.gz')
     
-    pet_in_file = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-FDG_pet.nii.gz")
+    pet_in_file = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-{trc}_pet.nii.gz")
     pet_in_data = pet_in_file.get_fdata()
     brainmasked_data = pet_in_data * tmp_data
     out_pet_file = nib.Nifti1Image(brainmasked_data, pet_in_file.affine, pet_in_file.header)
-    nib.save(out_pet_file, f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-FDG_pet_desc-brainmask.nii.gz")
+    nib.save(out_pet_file, f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-{trc}_pet_desc-brainmask.nii.gz")
 
     # remove temp files
     os.remove(f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/tmp.brainmask.nii.gz')
@@ -135,22 +141,22 @@ mask = fetch_mask("fslr32k")
 
 ## Cortical surface
 print("Generating cortical surface QC images...")
-tmp_surf_L = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-5mm_trc-FDG_pet.func.gii")
-tmp_surf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-rbv_ref-pons_smooth-5mm_trc-FDG_pet.func.gii")
+tmp_surf_L = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_smooth-5mm_trc-{trc}_pet.func.gii")
+tmp_surf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_smooth-5mm_trc-{trc}_pet.func.gii")
 
 to_plot = np.hstack((tmp_surf_L,tmp_surf_R))
 to_plot[~mask] = np.nan
 plot_hemispheres(pial_left,pial_right,to_plot,color_bar=True, cmap="jet",color_range=(0,np.max(to_plot[mask])*1.5), embed_nb=False,transparent_bg=True,size=(900,200),nan_color=(0.7, 0.7, 0.7, 1),screenshot=True,filename=f"{qc_dir}/sub-{subject}_ses-{session}_cortical_surf_screenshot.png")
 
 ## HC surface
-tmp_hcsurf_L = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
-tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-rbv_ref-pons_trc-FDG_pet.func.gii")
+tmp_hcsurf_L = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_pet.func.gii")
+tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_pet.func.gii")
 
 to_plot = np.hstack((np.expand_dims(tmp_hcsurf_L,axis=1),np.expand_dims(tmp_hcsurf_R,axis=1)))
 hm.plotting.surfplot_canonical_foldunfold(to_plot,hemis=['L','R'],den='2mm',labels=['hipp'],embed_nb=False,transparent_bg=True,tighten_cwindow=True,screenshot=True,filename=f"{qc_dir}/sub-{subject}_ses-{session}_hippunfold_screenshot.png")
 
 ## Plot PET-MRI overlay
-plotting.plot_roi(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-FDG_pet_desc-brainmask.nii.gz",
+plotting.plot_roi(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-{trc}_pet_desc-brainmask.nii.gz",
     bg_img=f"{f_surf_dir}/mri/orig.mgz",
     display_mode='mosaic',
     cut_coords=15,

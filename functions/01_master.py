@@ -21,6 +21,8 @@ The script takes the following arguments:
         -hippunfold_img: Path to HippUnfold .sif image. Requires version 1.4.1+.
         
     Optional arguments:
+    quired if running HippUnfold:
+        -pvc_method : PVC method used for PET image. Options: 'rbv', 'MG'. Default: 'rbv'.
         -trc        : Select tracer for analysis ('FDG','MK6240'). (Default 'FDG').
         -hippunfold_dir : Specify path to HippUnfold output directory. (Default: hippunfold_v1.4.1 subdirectory in BIDS derivatives directory.)
         -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory. (Default: 'fastsurfer' subdirectory in BIDS derivatives directory.)
@@ -338,6 +340,7 @@ def main():
     # Argument Parsing
     parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument("-trc", type=str, dest='trc', default='FDG',choices=['FDG','MK6240'],help="(Str) Select tracer for analysis ('FDG','MK6240'). (Default 'FDG').")
+    parser.add_argument("-pvc_method", dest="pvc_method", type=str, default='rbv', choices=['rbv', 'MG'], help="(Str) PVC method used for PET image. Options: 'rbv', 'MG'. Default: 'rbv'.")
     parser.add_argument("-sub", type=str, required=True, help="(Str) Subject identifier (eg. '0001')")
     parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '01')")
     parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
@@ -387,6 +390,7 @@ def main():
 
     # Normalize paths and variables
     trc = args.trc
+    pvc_method = args.pvc_method
     session = f"{args.ses.replace('ses-', '')}"
     subject = f"{args.sub.replace('sub-', '')}"
     bids_dir = os.path.realpath(args.bids_dir)
@@ -584,64 +588,213 @@ def main():
         # Run FastSurfer if specified
         if (run_all == True or fastsurfer_run) and skip_FS == False:
             display_subsection_splash_screen("Running FastSurfer...", log)
-            cmd = ['python', '-u', f'{script_dir}/fastsurfer.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-fastsurfer_img", f'{fastsurfer_img}', "-fs_license", f'{fs_license}'] + tmpdir_flag + force_flag
+            cmd = ['python', '-u', f'{script_dir}/fastsurfer.py', \
+                "-sub", \
+                f'{subject}', \
+                "-ses", \
+                f'{session}', \
+                "-bids", \
+                f'{bids_dir}', \
+                "-subj_dir", \
+                f'{subj_dir}', \
+                "-fastsurfer_img", \
+                f'{fastsurfer_img}', \
+                "-fs_license", \
+                f'{fs_license}'] + tmpdir_flag + force_flag
             run_command(cmd)
             # subprocess.call(cmd)
 
         # Run HippUnfold if specified
         if (run_all == True or hippunfold_run) and skip_hippunfold == False:
             display_subsection_splash_screen("Running HippUnfold...", log)
-            cmd = ['python', '-u', f'{script_dir}/hippunfold.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-hippunfold_img", f'{hippunfold_img}', "-hippunfold_dir", f'{hippunfold_dir}'] + bind_flag + cachedir_flag + tmpdir_flag + force_flag
+            cmd = ['python', '-u', f'{script_dir}/hippunfold.py', \
+                "-sub", \
+                f'{subject}', \
+                "-ses", \
+                f'{session}', \
+                "-bids", \
+                f'{bids_dir}', \
+                "-hippunfold_img", \
+                f'{hippunfold_img}', \
+                "-hippunfold_dir", \
+                f'{hippunfold_dir}'] + bind_flag + cachedir_flag + tmpdir_flag + force_flag
             run_command(cmd)
             # subprocess.call(cmd)
 
         # Linear coreg
         if run_all == True or args.coreg_run == True:
             display_subsection_splash_screen("Running Linear Coregistration...", log)
-            cmd = ['python', '-u', f'{script_dir}/linear_coreg.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-trc",f'{trc}']
+            cmd = ['python', '-u', f'{script_dir}/linear_coreg.py', \
+                "-sub", \
+                f'{subject}', \
+                "-ses", \
+                f'{session}', \
+                "-bids", \
+                f'{bids_dir}', \
+                "-subj_dir", \
+                f'{subj_dir}', \
+                "-trc",f'{trc}', \
+                "-pvc_method", \
+                f'{pvc_method}']
             run_command(cmd)
 
         # GTM seg
         if run_all == True or args.pvc_run == True:
-            display_subsection_splash_screen("Running GTM Segmentation + PVC...", log)
-            cmd = ['python', '-u', f'{script_dir}/gtm_seg.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-seg_type", f'{seg_type}'] + force_flag
-            run_command(cmd)
+            
+            if pvc_method == 'rbv':
+                display_subsection_splash_screen("Running GTM Segmentation + PVC...", log)
+                cmd = ['python', '-u', f'{script_dir}/gtm_seg.py', \
+                    "-sub", \
+                    f'{subject}', \
+                    "-ses", \
+                    f'{session}', \
+                    "-bids", \
+                    f'{bids_dir}', \
+                    "-subj_dir", \
+                    f'{subj_dir}', \
+                    "-seg_type", \
+                    f'{seg_type}'] + force_flag
+                run_command(cmd)
 
-            # PVC
-            cmd = ['python', '-u', f'{script_dir}/pvc.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-psf", f'{args.psf}'] + force_flag
-            run_command(cmd)
-
+                # PVC
+                cmd = ['python', '-u', f'{script_dir}/pvc.py', \
+                    "-trc", \
+                    f'{trc}', \
+                    "-sub", \
+                    f'{subject}', \
+                    "-ses", \
+                    f'{session}', \
+                    "-bids", \
+                    f'{bids_dir}', \
+                    "-subj_dir", \
+                    f'{subj_dir}', \
+                    "-psf", \
+                    f'{args.psf}'] + force_flag
+                run_command(cmd)
+            elif pvc_method == 'MG':
+                display_subsection_splash_screen("Running Muller-Gartner PVC...", log)
+                cmd = ['python', '-u', f'{script_dir}/petpvc.py', \
+                    "-trc", \
+                    f'{trc}', \
+                    "-sub", \
+                    f'{subject}', \
+                    "-ses", \
+                    f'{session}', \
+                    "-bids", \
+                    f'{bids_dir}', \
+                    "-subj_dir", \
+                    f'{subj_dir}', \
+                    "-psf", \
+                    f'{args.psf}'] + force_flag
+                run_command(cmd)
         # SUVR calculation
         if run_all == True or args.suvr_run == True:
             display_subsection_splash_screen("Calculating SUVR...", log)
-            cmd = ['python', '-u', f'{script_dir}/suvr.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-ref_region", f'{ref_region}']
+            cmd = ['python', '-u', f'{script_dir}/suvr.py', \
+                "-sub", \
+                f'{subject}', \
+                "-ses", \
+                f'{session}', \
+                "-bids", \
+                f'{bids_dir}', \
+                "-subj_dir", \
+                f'{subj_dir}', \
+                "-ref_region", \
+                f'{ref_region}', \
+                "-trc", \
+                f'{trc}'] + force_flag
             run_command(cmd)
 
         # Cortical surface generation
         if run_all == True or args.cortical_surface_run == True:
             display_subsection_splash_screen("Creating Cortical Surfaces...", log)
-            cmd = ['python', '-u', f'{script_dir}/cortical_surface.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}']
+            cmd = ['python', '-u', f'{script_dir}/cortical_surface.py', \
+                "-sub", \
+                f'{subject}', \
+                "-ses", \
+                f'{session}', \
+                "-bids", \
+                f'{bids_dir}', \
+                "-subj_dir", \
+                f'{subj_dir}']
             run_command(cmd)
 
         # Project PET data to surfaces
         if run_all == True or args.project_pet_run == True:
             display_subsection_splash_screen("Projecting PET data to Surfaces...", log)
-            cmd = ['python', '-u', f'{script_dir}/project_pet_data.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-hippunfold_dir", f'{hippunfold_dir}', "-pvc", "-ref_region", f'{ref_region}', "-cortical", "-hippocampal"]+tmpdir_flag
+            cmd = ['python', '-u', f'{script_dir}/project_pet_data.py', \
+                "-sub", \
+                f'{subject}', \
+                "-ses", \
+                f'{session}', \
+                "-bids", \
+                f'{bids_dir}', \
+                "-subj_dir", \
+                f'{subj_dir}', \
+                "-hippunfold_dir", \
+                f'{hippunfold_dir}', \
+                "-pvc_method", \
+                f'{pvc_method}', \
+                "-trc", \
+                f'{trc}', \
+                "-ref_region", \
+                f'{ref_region}', \
+                "-cortical", \
+                "-hippocampal"]+tmpdir_flag
             run_command(cmd)
 
             # Subcortical maps
-            cmd = ['python', '-u', f'{script_dir}/subcortical_map.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-ref_region", f'{ref_region}']
+            cmd = ['python', '-u', f'{script_dir}/subcortical_map.py', \
+                "-sub", \
+                f'{subject}', \
+                "-ses", \
+                f'{session}', \
+                "-bids", \
+                f'{bids_dir}', \
+                "-subj_dir", \
+                f'{subj_dir}', \
+                "-ref_region", \
+                f'{ref_region}', \
+                "-pvc_method", \
+                f'{pvc_method}', \
+                "-trc", \
+                f'{trc}']
             run_command(cmd)
 
         # QC
         if run_all == True or args.clinical_report_run == True:
             display_subsection_splash_screen("Generating Clinical Report...", log)
-            cmd = ['python', '-u', f'{script_dir}/qc.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-ref_region", f'{ref_region}']
+            cmd = ['python', '-u', f'{script_dir}/qc.py', \
+                "-sub", \
+                f'{subject}', \
+                "-ses", \
+                f'{session}', \
+                "-bids", \
+                f'{bids_dir}', \
+                "-subj_dir", \
+                f'{subj_dir}', \
+                "-ref_region", \
+                f'{ref_region}', \
+                "-trc", \
+                f'{trc}', \
+                "-pvc_method", \
+                f'{pvc_method}']
             run_command(cmd)
 
-            # Clinical report
-            cmd = ['python', '-u', f'{script_dir}/clinical_reports.py', "-sub", f'{subject}', "-ses", f'{session}', "-bids", f'{bids_dir}', "-subj_dir", f'{subj_dir}', "-ref_region", f'{ref_region}']
-            run_command(cmd)
+            if trc == 'FDG':
+                # Clinical report
+                cmd = ['python', '-u', f'{script_dir}/clinical_reports.py', \
+                    "-sub", \
+                    f'{subject}', \
+                    "-ses", \
+                    f'{session}', \
+                    "-bids", \
+                    f'{bids_dir}', \
+                    "-subj_dir", \
+                    f'{subj_dir}', \
+                    "-ref_region", \
+                    f'{ref_region}']
+                run_command(cmd)
     
     # Clean up temporary directory
     # if args.tmpdir is None:

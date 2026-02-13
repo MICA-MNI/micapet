@@ -8,6 +8,7 @@ The script requires the following arguments:
     -ses        : Session. (eg. 01)
     -bids       : Path to BIDS directory ( . or FULL PATH)
     -subj_dir : Specify path to FreeSurfer/FastSurfer subjects directory. (Default fastsurfer subdirectory in BIDS derivatives directory.)
+    -pvc_method : PVC method used for PET image. Options: 'rbv', 'MG'. Default: 'rbv'.
     -pet        : (Optional) Specify path to PET nifti file. Default: sub-<sub>_ses-<ses>_trc-<trc>_pet.nii.gz in pet BIDS directory.
     -mri        : (Optional) Specify path to MRI nifti file. Default: sub-<sub>_ses-<ses>_T1w.nii.gz in anat BIDS directory.
     -out        : (Optional) Output directory. Default: BIDS directory.
@@ -37,6 +38,7 @@ repo_dir = os.path.dirname(script_dir)
 # Argument Parsing
 parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument("-trc", type=str, dest='trc', default='FDG',choices=['FDG','MK6240'],help="(Str) Select tracer for analysis ('FDG','MK6240'). (Default 'FDG').")
+parser.add_argument("-pvc_method", dest="pvc_method", type=str, default='rbv', choices=['rbv', 'MG'], help="(Str) PVC method used for PET image. Options: 'rbv', 'MG'. Default: 'rbv'.")
 parser.add_argument("-sub", type=str, required=True, help="(Str) Subject identifier (eg. '0001')")
 parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '01')")
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
@@ -54,6 +56,7 @@ if not all([args.sub, args.ses, args.bids_dir]):
     
 # Normalize paths and variables
 trc = args.trc
+pvc_method = args.pvc_method
 session = f"{args.ses.replace('ses-', '')}"
 subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
@@ -135,7 +138,7 @@ def mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,trc):
 
 ## ANTS
 
-def ANTS_reg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,space,trc)
+def ANTS_reg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,space,trc):
     if space == 'T1wFS': # use FreeSurfer mgz as reference
         mri = f"{subj_dir}/sub-{subject}_ses-{session}/mri/T1.nii.gz"
         if not os.path.exists(mri):
@@ -191,7 +194,7 @@ def ANTS_reg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,spac
 
 
 for space in ['T1wFS','T1wNative']:
-    if trc == 'FDG':
+    if pvc_method == 'rbv':
         mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,trc)
     else: 
         ANTS_reg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,space,trc)

@@ -5,6 +5,7 @@ This script is part of MICA-PET pipeline for partial volume correction (PVC).
 For PETSurfer, FreeSurfer/FastSurfer and gtmseg must have been run first.
 
 The script requires the following arguments:
+    -trc        : Tracer (eg. FDG, MK6240)
     -sub        : Subject identification. (eg. PX001)
     -ses        : Session. (eg. 01)
     -bids       : Path to BIDS directory ( . or FULL PATH)
@@ -35,6 +36,7 @@ repo_dir = os.path.dirname(script_dir)
 
 # Argument Parsing
 parser = argparse.ArgumentParser(add_help=True)
+parser.add_argument("-trc", type=str, dest='trc', default='FDG',choices=['FDG','MK6240'],help="(Str) Select tracer for analysis ('FDG','MK6240'). (Default 'FDG').")
 parser.add_argument("-sub", type=str, required=True, help="(Str) Subject identifier (eg. '0001')")
 parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '01')")
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
@@ -52,6 +54,7 @@ if not all([args.sub, args.ses, args.bids_dir, args.subj_dir, args.psf]):
     sys.exit(1)
     
 # Normalize paths and variables
+trc = args.trc
 session = f"{args.ses.replace('ses-', '')}"
 subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
@@ -86,7 +89,7 @@ if not os.path.exists(f"{f_surf_dir}/mri/gtmseg.mgz"):
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting GTMPVC for subject: {subject}, session: {session}.")
 
 gtmpvc = freesurfer.GTMPVC()
-gtmpvc.inputs.in_file = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet.nii.gz"
+gtmpvc.inputs.in_file = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-{trc}_pet.nii.gz"
 gtmpvc.inputs.reg_file = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-T1wFS_xfm.reg.lta'
 gtmpvc.inputs.psf = psf
 gtmpvc.inputs.segmentation = f"{f_surf_dir}/mri/gtmseg.mgz"
@@ -108,7 +111,7 @@ def resample_RBV(rbv,mri,mica_pet_derivatives,subject,session,space):
     applyreg.inputs.source_file= rbv
     applyreg.inputs.reg_header=True
     applyreg.inputs.target_file= mri
-    applyreg.inputs.transformed_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-rbv_ref-none_trc-FDG_pet.nii.gz"
+    applyreg.inputs.transformed_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-rbv_ref-none_trc-{trc}_pet.nii.gz"
     applyreg.run()
 
 rbv = f"{pvc_dir}/rbv.nii.gz"
