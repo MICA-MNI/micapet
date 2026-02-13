@@ -27,50 +27,123 @@ HIPPUNFOLD_DIR_NAME = "hippunfold_v1.4.1"
 # Output root directory (from snakebids app or config)
 root = config.get("output_dir", os.path.join(config["bids_dir"], "derivatives"))
 
-# Check if existing output directories are provided
-EXISTING_FREESURFER_DIR = config.get("existing_freesurfer_dir", "")
-EXISTING_HIPPUNFOLD_DIR = config.get("existing_hippunfold_dir", "")
-
 # Set PYTHONPATH to include functions directory so scripts can import utils
 os.environ["PYTHONPATH"] = os.path.join(workflow.basedir, "..", "functions") + os.pathsep + os.environ.get("PYTHONPATH", "")
+
+# --- Dynamic Resource Allocation ---
+import multiprocessing
+import sys
+
+def get_max_threads():
+    """Determine available cores from Snakemake arguments with fallback."""
+    # Check if --cores/-c/-j/--jobs were passed manually
+    args = sys.argv
+    for i, arg in enumerate(args):
+        if arg in ['--cores', '-c', '--jobs', '-j'] and i + 1 < len(args):
+            try:
+                # If specific number is given
+                val = int(args[i+1])
+                return val
+            except ValueError:
+                # If 'all' or similar is given, assume full count
+                return multiprocessing.cpu_count()
+        if arg.startswith(('--cores=', '-c=', '--jobs=', '-j=')):
+             try:
+                val = int(arg.split('=')[1])
+                return val
+             except ValueError:
+                return multiprocessing.cpu_count()
+    
+    # If using workflow.cores (set by snakemake automatically if not command line)
+    # But usually sys.argv is safer check for explicit user intent wrapper
+    # Fallback to system count
+    return multiprocessing.cpu_count()
+
+
+TOTAL_CORES = get_max_threads()
+
+# Set dynamic defaults if not provided by user
+# FastSurfer/HippUnfold: 50% of cores (min 1)
+if config.get("fastsurfer_threads") is None:
+    config["fastsurfer_threads"] = max(8, int(TOTAL_CORES * 0.5))
+
+if config.get("hippunfold_threads") is None:
+    config["hippunfold_threads"] = max(8, int(TOTAL_CORES * 0.5))
+
+# GTMseg: 50% of cores (min 1)
+if config.get("gtmseg_threads") is None:
+    config["gtmseg_threads"] = max(8, int(TOTAL_CORES * 0.5))
+
+print(f"Dynamic Resource Allocation (Total: {TOTAL_CORES}):")
+print(f"  - FastSurfer: {config['fastsurfer_threads']} threads")
+print(f"  - HippUnfold: {config['hippunfold_threads']} threads")
+print(f"  - GTMseg:     {config['gtmseg_threads']} threads")
+
+
+# --- Handle Existing Outputs via Symbolic Links ---
+# If user provides paths to existing FreeSurfer/HippUnfold outputs,
+# create symbolic links to avoid rerunning those steps
+def setup_existing_outputs_symlinks():
+    """Create subject-level symbolic links to existing outputs if provided."""
+    import glob
+    
+    existing_fs = config.get("existing_freesurfer_dir")
+    existing_hipp = config.get("existing_hippunfold_dir")
+    
+    # Handle FastSurfer/FreeSurfer outputs at subject level
+    if existing_fs and existing_fs != "null":
+        target_base = os.path.join(root, FASTSURFER_DIR_NAME)
+        os.makedirs(target_base, exist_ok=True)
+        
+        # Find all subject directories in existing FreeSurfer output
+        # Pattern: sub-{subject}_ses-{session}
+        existing_subjects = glob.glob(os.path.join(existing_fs, "sub-*_ses-*"))
+        
+        if existing_subjects:
+            print(f"Found {len(existing_subjects)} FastSurfer subject(s) in {existing_fs}")
+            for subj_dir in existing_subjects:
+                subj_name = os.path.basename(subj_dir)  # e.g., sub-01_ses-01
+                target = os.path.join(target_base, subj_name)
+                
+                if not os.path.exists(target):
+                    print(f"  Creating symlink: {subj_name} -> {subj_dir}")
+                    os.symlink(subj_dir, target, target_is_directory=True)
+                else:
+                    print(f"  Subject already exists: {subj_name}")
+        else:
+            print(f"Warning: No subjects found in {existing_fs}")
+    
+    # Handle HippUnfold outputs at subject level
+    if existing_hipp and existing_hipp != "null":
+        target_base = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold")
+        os.makedirs(target_base, exist_ok=True)
+        
+        # HippUnfold has structure: hippunfold/sub-{subject}/ses-{session}
+        # Find all subject directories
+        existing_subjects = glob.glob(os.path.join(existing_hipp, "hippunfold", "sub-*"))
+        
+        if existing_subjects:
+            print(f"Found {len(existing_subjects)} HippUnfold subject(s) in {existing_hipp}")
+            for subj_dir in existing_subjects:
+                subj_name = os.path.basename(subj_dir)  # e.g., sub-01
+                target = os.path.join(target_base, subj_name)
+                
+                if not os.path.exists(target):
+                    print(f"  Creating symlink: {subj_name} -> {subj_dir}")
+                    os.symlink(subj_dir, target, target_is_directory=True)
+                else:
+                    print(f"  Subject already exists: {subj_name}")
+        else:
+            print(f"Warning: No subjects found in {existing_hipp}/hippunfold")
+
+# Call setup function before workflow starts
+setup_existing_outputs_symlinks()
 
 
 # --- Wildcard constraints ---
 wildcard_constraints:
     subject="[a-zA-Z0-9]+",
     session="[a-zA-Z0-9]+",
-
-
-# --- Helper function to create symlink for existing outputs ---
-def create_symlink_if_needed(existing_dir, target_dir, subdir_pattern):
-    """Create symbolic link from existing directory to target directory."""
-    if existing_dir and os.path.exists(existing_dir):
-        import glob
-        # Find all subject-session directories matching the pattern
-        existing_subdirs = glob.glob(os.path.join(existing_dir, subdir_pattern))
-        for existing_subdir in existing_subdirs:
-            subdir_name = os.path.basename(existing_subdir)
-            target_subdir = os.path.join(target_dir, subdir_name)
-            if not os.path.exists(target_subdir):
-                os.makedirs(os.path.dirname(target_subdir), exist_ok=True)
-                os.symlink(existing_subdir, target_subdir)
-                print(f"Created symlink: {target_subdir} -> {existing_subdir}")
-
-
-# Create symlinks for existing FastSurfer/HippUnfold outputs if provided
-if EXISTING_FREESURFER_DIR:
-    create_symlink_if_needed(
-        EXISTING_FREESURFER_DIR, 
-        os.path.join(root, FASTSURFER_DIR_NAME), 
-        "sub-*_ses-*"
-    )
-
-if EXISTING_HIPPUNFOLD_DIR:
-    create_symlink_if_needed(
-        EXISTING_HIPPUNFOLD_DIR, 
-        os.path.join(root, HIPPUNFOLD_DIR_NAME), 
-        "hippunfold"
-    )
 
 
 # --- Include rule files ---
