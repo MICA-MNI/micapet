@@ -85,14 +85,14 @@ aseg = nib.load(f"{f_surf_dir}/mri/aseg.mgz")
 aseg_data = aseg.get_fdata()
 # gm_mask = ((aseg_data == 3)) | ((aseg_data == 42))
 
-gm_mask = ((aseg_data != 2)) & ((aseg_data != 41)) & ((aseg_data != 4)) & ((aseg_data != 43)) & ((aseg_data != 14)) & ((aseg_data != 5)) & ((aseg_data != 44)) & ((aseg_data != 251)) & ((aseg_data != 252)) & ((aseg_data != 253)) & ((aseg_data != 254)) & ((aseg_data != 255)) & ((aseg_data != 15)) & ((aseg_data != 0)) & ((aseg_data != 31)) & ((aseg_data != 63)) & ((aseg_data != 77))
+gm_mask = ((aseg_data != 2)) & ((aseg_data != 41)) & ((aseg_data != 4)) & ((aseg_data != 43)) & ((aseg_data != 14)) & ((aseg_data != 5)) & ((aseg_data != 44)) & ((aseg_data != 251)) & ((aseg_data != 252)) & ((aseg_data != 253)) & ((aseg_data != 254)) & ((aseg_data != 255)) & ((aseg_data != 15)) & ((aseg_data != 0)) & ((aseg_data != 31)) & ((aseg_data != 63)) & ((aseg_data != 77)) & ((aseg_data != 16)) & ((aseg_data != 7)) & ((aseg_data != 46))
 
-wm_mask = ((aseg_data == 2)) | ((aseg_data == 41)) |((aseg_data == 251)) | ((aseg_data == 252)) | ((aseg_data == 253)) | ((aseg_data == 254)) | ((aseg_data == 255))
+wm_mask = ((aseg_data == 2)) | ((aseg_data == 41)) |((aseg_data == 251)) | ((aseg_data == 252)) | ((aseg_data == 253)) | ((aseg_data == 254)) | ((aseg_data == 255)) | ((aseg_data == 16)) | ((aseg_data == 7)) | ((aseg_data == 46))
 gm_wm_mask = np.stack([gm_mask,wm_mask],axis=-1)
 nib.save(nib.Nifti1Image(gm_wm_mask,aseg.affine,aseg.header),f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-T1wFS_desc-GMWMmask.nii.gz")
 
-# Run GTMPVC
-print("Running GTMPVC...")
+# Run PVC
+print("Running PVC...")
 pvc = PETPVC.PETPVC()
 pvc.inputs.in_file = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wFS_pvc-none_ref-none_trc-{trc}_pet.nii.gz'
 pvc.inputs.mask_file = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-T1wFS_desc-GMWMmask.nii.gz"
@@ -120,5 +120,29 @@ for space in ['T1wNative']:
     mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
     
     resample_PET(pet,mri,mica_pet_derivatives,subject,session,space)
+
+# Resample aseg to T1w/nativepro space
+def resample_aseg(aseg,mri,space):
+    print(f"Resampling aseg to {space} space...")
+    applyreg = ApplyVolTransform()
+    applyreg.inputs.source_file= aseg
+    applyreg.inputs.reg_header=True
+    applyreg.inputs.interp = 'nearest'
+    applyreg.inputs.target_file= mri
+    applyreg.inputs.transformed_file=f'{f_surf_dir}/mri/aseg_space-{space}.nii.gz'
+    applyreg.run()
     
+aseg = f'{f_surf_dir}/mri/aseg.mgz'
+
+for space in ['T1wFS','T1wNative']:
+    if space == 'T1wFS':
+        mri = f"{f_surf_dir}/mri/orig.mgz"
+    else: 
+        mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+    resample_aseg(aseg,mri,space)
+
+
+resample_aseg(aseg,mri,'T1w')
+# need to run T1w even if space is nativepro, for hippunfold compatibility
+
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Partial volume correction completed.")

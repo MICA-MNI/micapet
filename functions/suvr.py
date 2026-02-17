@@ -84,10 +84,13 @@ if pvc_method == 'rbv' and not os.path.exists(f"{f_surf_dir}/mri/gtmseg.mgz"):
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting reference region creation and SUVR calculation for subject: {subject}, session: {session}.")
 
-def ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, erode=False):
+def ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, pvc_method, erode=False):
     print(f"Creating ROI mask for ROI {roi}...")
 
-    in_file = nib.load(f"{f_surf_dir}/mri/gtmseg_space-{space}.nii.gz")
+    if pvc_method == 'rbv':
+        in_file = nib.load(f"{f_surf_dir}/mri/gtmseg_space-{space}.nii.gz")
+    else:
+        in_file = nib.load(f"{f_surf_dir}/mri/aseg_space-{space}.nii.gz")
     in_data = in_file.get_fdata()
     roi_data = np.zeros(in_data.shape)
     # Set values in roi_data to 1 where in_data equals roi
@@ -134,15 +137,15 @@ for space in ['T1wFS','T1wNative']:
         print(f"Processing reference region: {ref}...")
         if ref == 'pons':
             for roi in [174]:
-                ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, erode=True)
+                ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, pvc_method, erode=True)
         elif ref == 'cerebellarGM':
             for roi in [8,47]:
-                ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, erode=False)
+                ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, pvc_method, erode=False)
         elif ref == 'composite':
             for roi in [7,8,16,46,47,174]: # L cerebellar WM, L cerebellar GM, brainstem, R cerebellar WM, R cerebellar GM, pons
-                ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, erode=False)
+                ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, pvc_method, erode=False)
             for roi in [2,41]: # L & R WM. To be eroded
-                ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, erode=True)
+                ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, pvc_method, erode=True)
         combineROIs(ref,mica_pet_derivatives,subject,session,space)      
             
         for pvc in [pvc_method, 'none']:

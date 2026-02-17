@@ -61,7 +61,9 @@ import shutil
 import subprocess
 from nipype.interfaces.freesurfer import MRIConvert
 
-os.environ['FREESURFER_HOME'] = '/opt/freesurfer-7.4.1'
+# os.environ['FREESURFER_HOME'] = '/opt/freesurfer-7.4.1'
+os.environ['FREESURFER_HOME'] = '/data/mica1/01_programs/freesurfer-7.4.1'
+
 
 # Load utilities functions from utils.py
 import utils
@@ -702,7 +704,9 @@ def main():
                 "-ref_region", \
                 f'{ref_region}', \
                 "-trc", \
-                f'{trc}'] + force_flag
+                f'{trc}', \
+                "-pvc_method", \
+                f'{pvc_method}'] + force_flag
             run_command(cmd)
 
         # Cortical surface generation

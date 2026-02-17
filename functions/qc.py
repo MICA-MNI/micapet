@@ -112,7 +112,11 @@ if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/s
     # mc.run()
     
     applyreg = ApplyVolTransform()
-    applyreg.inputs.source_file=f'{f_surf_dir}/mri/apas+head.mgz'
+    
+    if os.path.exists(f'{f_surf_dir}/mri/apas+head.mgz'):
+        applyreg.inputs.source_file=f'{f_surf_dir}/mri/apas+head.mgz'
+    else:
+        applyreg.inputs.source_file=f'{f_surf_dir}/mri/aparc+aseg.mgz'
     applyreg.inputs.reg_header=True
     applyreg.inputs.target_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-{trc}_pet.nii.gz"
     applyreg.inputs.transformed_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/tmp.brainmask.nii.gz'

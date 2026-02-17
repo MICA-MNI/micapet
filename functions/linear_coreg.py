@@ -140,10 +140,10 @@ def mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,trc):
 
 def ANTS_reg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,space,trc):
     if space == 'T1wFS': # use FreeSurfer mgz as reference
-        mri = f"{subj_dir}/sub-{subject}_ses-{session}/mri/T1.nii.gz"
+        mri = f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.nii.gz"
         if not os.path.exists(mri):
             mc = MRIConvert()
-            mc.inputs.in_file = f"{subj_dir}/sub-{subject}_ses-{session}/mri/T1.mgz"
+            mc.inputs.in_file = f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.mgz"
             mc.inputs.out_file = mri
             mc.inputs.out_type = 'niigz'
             mc.run()
