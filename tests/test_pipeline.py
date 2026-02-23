@@ -237,5 +237,86 @@ class TestRunScript:
         assert "bidsapp" in content
 
 
+class TestSmkConfigAccess:
+    """Regression tests: smk input functions must not reference Snakefile globals directly.
+
+    Root cause of bug (2026-02): pet.smk and anatomy.smk input helper functions
+    referenced EXISTING_FREESURFER_DIR / EXISTING_HIPPUNFOLD_DIR as bare global names.
+    These globals are defined in the Snakefile, but if the container image contains
+    smk files from one commit and a Snakefile from another the names are undefined at
+    call time, producing:
+        NameError: name 'EXISTING_FREESURFER_DIR' is not defined
+
+    Fix: input functions must use config.get("existing_freesurfer_dir", "") directly.
+    These tests enforce that pattern.
+    """
+
+    SMK_FILES = [
+        REPO_ROOT / "workflow" / "rules" / "pet.smk",
+        REPO_ROOT / "workflow" / "rules" / "anatomy.smk",
+        REPO_ROOT / "workflow" / "rules" / "report.smk",
+    ]
+
+    @pytest.mark.parametrize(
+        "smk_file",
+        SMK_FILES,
+        ids=["pet.smk", "anatomy.smk", "report.smk"],
+    )
+    def test_no_bare_existing_freesurfer_global(self, smk_file):
+        """smk files must not reference EXISTING_FREESURFER_DIR as a bare identifier."""
+        import re
+        content = smk_file.read_text()
+        matches = re.findall(r'\bEXISTING_FREESURFER_DIR\b', content)
+        assert not matches, (
+            f"{smk_file.name} references bare global EXISTING_FREESURFER_DIR "
+            f"({len(matches)} occurrence(s)). Use config.get('existing_freesurfer_dir', '') instead."
+        )
+
+    @pytest.mark.parametrize(
+        "smk_file",
+        SMK_FILES,
+        ids=["pet.smk", "anatomy.smk", "report.smk"],
+    )
+    def test_no_bare_existing_hippunfold_global(self, smk_file):
+        """smk files must not reference EXISTING_HIPPUNFOLD_DIR as a bare identifier."""
+        import re
+        content = smk_file.read_text()
+        matches = re.findall(r'\bEXISTING_HIPPUNFOLD_DIR\b', content)
+        assert not matches, (
+            f"{smk_file.name} references bare global EXISTING_HIPPUNFOLD_DIR "
+            f"({len(matches)} occurrence(s)). Use config.get('existing_hippunfold_dir', '') instead."
+        )
+
+    def test_pet_smk_uses_config_get_for_existing_dirs(self):
+        """pet.smk must access existing-dir flags via config.get()."""
+        content = (REPO_ROOT / "workflow" / "rules" / "pet.smk").read_text()
+        assert 'config.get("existing_freesurfer_dir"' in content, \
+            "pet.smk must use config.get('existing_freesurfer_dir') in input functions"
+        assert 'config.get("existing_hippunfold_dir"' in content, \
+            "pet.smk must use config.get('existing_hippunfold_dir') in input functions"
+
+    def test_anatomy_smk_uses_config_get_for_existing_dirs(self):
+        """anatomy.smk must access existing-freesurfer-dir flag via config.get()."""
+        content = (REPO_ROOT / "workflow" / "rules" / "anatomy.smk").read_text()
+        assert 'config.get("existing_freesurfer_dir"' in content, \
+            "anatomy.smk must use config.get('existing_freesurfer_dir') in input functions"
+
+    def test_snakefile_derives_existing_dirs_from_config(self):
+        """Snakefile must derive EXISTING_*_DIR from config (not hardcoded)."""
+        content = (REPO_ROOT / "workflow" / "Snakefile").read_text()
+        assert 'config.get("existing_freesurfer_dir"' in content
+        assert 'config.get("existing_hippunfold_dir"' in content
+
+    def test_existing_dir_cli_args_in_snakebids_yml(self):
+        """snakebids.yml must declare --existing-freesurfer-dir and --existing-hippunfold-dir."""
+        config_path = REPO_ROOT / "config" / "snakebids.yml"
+        config = yaml.safe_load(config_path.read_text())
+        parse_args = config.get("parse_args", {})
+        assert "--existing-freesurfer-dir" in parse_args, \
+            "snakebids.yml is missing --existing-freesurfer-dir CLI arg"
+        assert "--existing-hippunfold-dir" in parse_args, \
+            "snakebids.yml is missing --existing-hippunfold-dir CLI arg"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
