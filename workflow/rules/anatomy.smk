@@ -85,7 +85,7 @@ def get_cortical_surface_inputs(wildcards):
     }
     
     # If using existing FreeSurfer dir, mark files as ancient (don't trigger fastsurfer rule)
-    if EXISTING_FREESURFER_DIR:
+    if config.get("existing_freesurfer_dir", ""):
         return {k: ancient(v) for k, v in base_paths.items()}
     return base_paths
 
@@ -132,7 +132,7 @@ def get_gtm_seg_inputs(wildcards):
         "talairach": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "transforms", "talairach.lta"),
         "brainmask": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "brainmask.mgz"),
     }
-    if EXISTING_FREESURFER_DIR:
+    if config.get("existing_freesurfer_dir", ""):
         return {k: ancient(v) for k, v in base_paths.items()}
     return base_paths
 

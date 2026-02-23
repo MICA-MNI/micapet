@@ -7,7 +7,7 @@ def get_ref_region():
 def get_linear_coreg_fs_check(wildcards):
     """Get fs_check input - mark as ancient if using existing outputs."""
     fs_check = os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "norm.mgz")
-    if EXISTING_FREESURFER_DIR:
+    if config.get("existing_freesurfer_dir", ""):
         return ancient(fs_check)
     return fs_check
 
@@ -141,7 +141,7 @@ def get_project_pet_data_inputs(wildcards):
     hipp_L = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", f"sub-{wildcards.subject}", f"ses-{wildcards.session}", "surf", f"sub-{wildcards.subject}_ses-{wildcards.session}_hemi-L_space-T1w_den-2mm_label-hipp_midthickness.surf.gii")
     hipp_R = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", f"sub-{wildcards.subject}", f"ses-{wildcards.session}", "surf", f"sub-{wildcards.subject}_ses-{wildcards.session}_hemi-R_space-T1w_den-2mm_label-hipp_midthickness.surf.gii")
     
-    if EXISTING_HIPPUNFOLD_DIR:
+    if config.get("existing_hippunfold_dir", ""):
         inputs_dict["hipp_L"] = ancient(hipp_L)
         inputs_dict["hipp_R"] = ancient(hipp_R)
     else:
@@ -197,7 +197,7 @@ def get_subcortical_map_inputs(wildcards):
     aparc_aseg = os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "aparc+aseg.mgz")
     inputs_dict = {"suvr_pet_fs": rules.suvr.output.suvr_pet_fs}
     
-    if EXISTING_FREESURFER_DIR:
+    if config.get("existing_freesurfer_dir", ""):
         inputs_dict["aparc_aseg"] = ancient(aparc_aseg)
     else:
         inputs_dict["aparc_aseg"] = aparc_aseg
