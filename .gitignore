@@ -19,6 +19,20 @@ talairach.label_intensities.txt
 list_of_tests.txt
 .dockerignore
 .vscode/*
-functions/__pycache__/*
+
+# Python cache (all directories)
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Pytest
+.pytest_cache/
+**/.pytest_cache/
+
+# macOS
+.DS_Store
+
 functions/test.py
 qsub_micapet_singularity.sh
