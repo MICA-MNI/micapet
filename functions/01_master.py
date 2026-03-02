@@ -642,22 +642,22 @@ def main():
 
         # GTM seg
         if run_all == True or args.pvc_run == True:
-            
+            display_subsection_splash_screen("Running GTM Segmentation...", log)
+            cmd = ['python', '-u', f'{script_dir}/gtm_seg.py', \
+                "-sub", \
+                f'{subject}', \
+                "-ses", \
+                f'{session}', \
+                "-bids", \
+                f'{bids_dir}', \
+                "-subj_dir", \
+                f'{subj_dir}', \
+                "-seg_type", \
+                f'{seg_type}'] + force_flag
+            run_command(cmd)
+                
             if pvc_method == 'rbv':
-                display_subsection_splash_screen("Running GTM Segmentation + PVC...", log)
-                cmd = ['python', '-u', f'{script_dir}/gtm_seg.py', \
-                    "-sub", \
-                    f'{subject}', \
-                    "-ses", \
-                    f'{session}', \
-                    "-bids", \
-                    f'{bids_dir}', \
-                    "-subj_dir", \
-                    f'{subj_dir}', \
-                    "-seg_type", \
-                    f'{seg_type}'] + force_flag
-                run_command(cmd)
-
+                display_subsection_splash_screen("Running RBV PVC...", log)
                 # PVC
                 cmd = ['python', '-u', f'{script_dir}/pvc.py', \
                     "-trc", \
