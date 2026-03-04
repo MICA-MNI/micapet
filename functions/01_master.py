@@ -22,7 +22,7 @@ The script takes the following arguments:
         
     Optional arguments:
     quired if running HippUnfold:
-        -pvc_method : PVC method used for PET image. Options: 'rbv', 'MG'. Default: 'rbv'.
+        -pvc_method : PVC method used for PET image. Options: 'rbv', 'MG', 'IY'. Default: 'rbv'.
         -trc        : Select tracer for analysis ('FDG','MK6240'). (Default 'FDG').
         -hippunfold_dir : Specify path to HippUnfold output directory. (Default: hippunfold_v1.4.1 subdirectory in BIDS derivatives directory.)
         -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory. (Default: 'fastsurfer' subdirectory in BIDS derivatives directory.)
@@ -342,7 +342,7 @@ def main():
     # Argument Parsing
     parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument("-trc", type=str, dest='trc', default='FDG',choices=['FDG','MK6240'],help="(Str) Select tracer for analysis ('FDG','MK6240'). (Default 'FDG').")
-    parser.add_argument("-pvc_method", dest="pvc_method", type=str, default='rbv', choices=['rbv', 'MG'], help="(Str) PVC method used for PET image. Options: 'rbv', 'MG'. Default: 'rbv'.")
+    parser.add_argument("-pvc_method", dest="pvc_method", type=str, default='rbv', choices=['rbv', 'MG','IY'], help="(Str) PVC method used for PET image. Options: 'rbv', 'MG','IY'. Default: 'rbv'.")
     parser.add_argument("-sub", type=str, required=True, help="(Str) Subject identifier (eg. '0001')")
     parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '01')")
     parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
@@ -673,7 +673,7 @@ def main():
                     "-psf", \
                     f'{args.psf}'] + force_flag
                 run_command(cmd)
-            elif pvc_method == 'MG':
+            else:
                 display_subsection_splash_screen("Running Muller-Gartner PVC...", log)
                 cmd = ['python', '-u', f'{script_dir}/petpvc.py', \
                     "-trc", \
@@ -684,6 +684,8 @@ def main():
                     f'{session}', \
                     "-bids", \
                     f'{bids_dir}', \
+                    "-pvc_method", \
+                    f'{pvc_method}', \
                     "-subj_dir", \
                     f'{subj_dir}', \
                     "-psf", \
