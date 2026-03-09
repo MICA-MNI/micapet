@@ -3,11 +3,13 @@
 """
 This script is part of MICA-PET pipeline for linear co-registration of PET to MRI.
 The script requires the following arguments:
+    -trc        : Tracer (eg. FDG, MK6240)
     -sub        : Subject identification. (eg. PX001)
     -ses        : Session. (eg. 01)
     -bids       : Path to BIDS directory ( . or FULL PATH)
     -subj_dir : Specify path to FreeSurfer/FastSurfer subjects directory. (Default fastsurfer subdirectory in BIDS derivatives directory.)
-    -pet        : (Optional) Specify path to PET nifti file. Default: sub-<sub>_ses-<ses>_trc-FDG_pet.nii.gz in pet BIDS directory.
+    -pvc_method : PVC method used for PET image. Options: 'rbv', 'MG'. Default: 'rbv'.
+    -pet        : (Optional) Specify path to PET nifti file. Default: sub-<sub>_ses-<ses>_trc-<trc>_pet.nii.gz in pet BIDS directory.
     -mri        : (Optional) Specify path to MRI nifti file. Default: sub-<sub>_ses-<ses>_T1w.nii.gz in anat BIDS directory.
     -out        : (Optional) Output directory. Default: BIDS directory.
 
@@ -24,7 +26,7 @@ from datetime import datetime
 import ants
 import subprocess
 # from nipype.interfaces.freesurfer import FSCommand
-from nipype.interfaces.freesurfer import MRICoreg, ApplyVolTransform, FSCommand
+from nipype.interfaces.freesurfer import MRICoreg, ApplyVolTransform, FSCommand, MRIConvert
 
 # Load utilities functions from utils.py
 import utils
@@ -35,13 +37,15 @@ repo_dir = os.path.dirname(script_dir)
 
 # Argument Parsing
 parser = argparse.ArgumentParser(add_help=True)
+parser.add_argument("-trc", type=str, dest='trc', default='FDG',choices=['FDG','MK6240'],help="(Str) Select tracer for analysis ('FDG','MK6240'). (Default 'FDG').")
+parser.add_argument("-pvc_method", dest="pvc_method", type=str, default='rbv', choices=['rbv', 'MG'], help="(Str) PVC method used for PET image. Options: 'rbv', 'MG'. Default: 'rbv'.")
 parser.add_argument("-sub", type=str, required=True, help="(Str) Subject identifier (eg. '0001')")
 parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '01')")
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
-parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}")
-parser.add_argument("-pet", dest="pet", type=str, help="(Str) Path to PET nifti file. Default: sub-<sub>_ses-<ses>_trc-FDG_pet.nii.gz in pet BIDS directory.")
+parser.add_argument("-pet", dest="pet", type=str, help="(Str) Path to PET nifti file. Default: sub-<sub>_ses-<ses>_trc-<trc>_pet.nii.gz in pet BIDS directory.")
 parser.add_argument("-mri", dest="mri", type=str, help="(Str) Path to MRI nifti file. Default: sub-<sub>_ses-<ses>_T1w.nii.gz in mri BIDS directory.")
+parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}")
 
 args = parser.parse_args()
 
@@ -52,6 +56,8 @@ if not all([args.sub, args.ses, args.bids_dir]):
     sys.exit(1)
     
 # Normalize paths and variables
+trc = args.trc
+pvc_method = args.pvc_method
 session = f"{args.ses.replace('ses-', '')}"
 subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
@@ -73,8 +79,9 @@ if args.output_dir is not None:
     mica_pet_derivatives = os.path.join(os.path.realpath(args.output_dir), f"MICA-PET_{mica_pet_version}")
 else:
     mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
-
-pet = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet.nii.gz"
+    
+pet = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-{trc}_pet.nii.gz"
+transmission = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-{trc}_desc-transmission_pet.nii.gz"
 mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
 
 # Create BIDS directory structure if it doesn't exist
@@ -95,7 +102,7 @@ if args.pet == None:
         print("Error: PET file not found in the default location. Please provide the path using -pet argument.")
         sys.exit(1)
 else:
-    if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet.nii.gz"):
+    if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-{trc}_pet.nii.gz"):
         shutil.copyfile(os.path.realpath(args.pet), pet)
 
 if args.mri == None:
@@ -108,82 +115,21 @@ else:
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting PET to MRI co-registration for subject: {subject}, session: {session}.")
 
-## ANTS
-# fixed = ants.image_read(mri)
-# moving = ants.image_read(pet)
-
-# mytx = ants.registration(
-#     fixed=fixed,
-#     moving=moving,
-#     type_of_transform='Rigid',
-#     outprefix=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-T1w_'
-# )
-
-# pet_in_mri = ants.apply_transforms(
-#     fixed=fixed, 
-#     moving=moving,
-#     transformlist=mytx['fwdtransforms'],
-#     interpolator='linear')
-
-# ants.image_write(pet_in_mri, f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-none_trc-FDG_pet.nii.gz')
-
-# os.environ["PATH"] += os.pathsep + '/opt/ants/bin'
-# FSCommand.set_default_subjects_dir(args.subj_dir)
-
-# # # convert ANTS mat to ITK txt
-# ants_mat = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-T1w_0GenericAffine.mat'
-# itk_txt = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from_pet_to-T1w_xfm.txt'
-# out_lta = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-FDG_pet_to-T1w_xfm.reg.lta'
-# subprocess.call(['ConvertTransformFile', '3', 
-#     ants_mat,
-#     itk_txt])
-
-# convert ITK txt to FreeSurfer LTA
-# subprocess.call(['lta_convert',
-#     '--initk',itk_txt,
-#     '--outlta',out_lta,
-#     '--src',pet,
-#     '--trg',mri,
-#     '--subject',f"sub-{subject}_ses-{session}",
-#     '--ltavox2vox']) 
 
 ## MRICoreg
-
-# Set SUBJECTS_DIR both for nipype FSCommand and as environment variable
 FSCommand.set_default_subjects_dir(subj_dir)
-os.environ['SUBJECTS_DIR'] = subj_dir
-print(f"SUBJECTS_DIR set to: {subj_dir}")
-
-def mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space):
+def mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,trc):
     print(f"Co-registering PET to {space}...")
     coreg = MRICoreg()
     coreg.inputs.source_file=pet
     if space == 'T1wFS': # use FreeSurfer mgz as reference
         coreg.inputs.subjects_dir=subj_dir
         coreg.inputs.subject_id=f"sub-{subject}_ses-{session}"
-        # Verify the subject directory exists
-        subj_path = os.path.join(subj_dir, f"sub-{subject}_ses-{session}")
-        print(f"Using subject directory: {subj_path}")
-        if not os.path.exists(subj_path):
-            raise FileNotFoundError(f"Subject directory not found: {subj_path}")
-        mri_dir = os.path.join(subj_path, "mri")
-        if os.path.exists(mri_dir):
-            print(f"Contents of {mri_dir}: {os.listdir(mri_dir)}")
     else: # use rawdata mri
         coreg.inputs.reference_file=f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
-    
-    out_lta = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-{space}_xfm.reg.lta'
-    coreg.inputs.out_lta_file=out_lta
-    print(f"Output LTA file: {out_lta}")
-    print(f"Output directory exists: {os.path.exists(os.path.dirname(out_lta))}")
+    coreg.inputs.out_lta_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-{space}_xfm.reg.lta'
     print(coreg.cmdline)
-    
-    try:
-        result = coreg.run()
-        print(f"MRICoreg result: {result}")
-    except Exception as e:
-        print(f"ERROR running MRICoreg: {e}")
-        raise
+    coreg.run()
     
     applyreg = ApplyVolTransform()
     applyreg.inputs.source_file=pet
@@ -192,35 +138,72 @@ def mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space):
         applyreg.inputs.fs_target=True
     else:
         applyreg.inputs.target_file=f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
-    applyreg.inputs.transformed_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-none_trc-FDG_pet.nii.gz'
+    applyreg.inputs.transformed_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-none_trc-{trc}_pet.nii.gz'
     applyreg.run()
+
+## ANTS
+
+def ANTS_reg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,space,trc):
+    if space == 'T1wFS': # use FreeSurfer mgz as reference
+        mri = f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.nii.gz"
+        if not os.path.exists(mri):
+            mc = MRIConvert()
+            mc.inputs.in_file = f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.mgz"
+            mc.inputs.out_file = mri
+            mc.inputs.out_type = 'niigz'
+            mc.run()
+    else: # use rawdata mri
+        mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+        
+    fixed = ants.image_read(mri)
+    moving = ants.image_read(pet)
+    if trc == 'MK6240':
+        moving_transmission = ants.image_read(transmission)
+    else:
+        moving_transmission = moving
+    
+    mytx = ants.registration(
+        fixed=fixed,
+        moving=moving_transmission,
+        type_of_transform='Rigid',
+        outprefix=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-T1w_'
+    )
+
+    pet_in_mri = ants.apply_transforms(
+        fixed=fixed, 
+        moving=moving,
+        transformlist=mytx['fwdtransforms'],
+        interpolator='linear')
+
+    ants.image_write(pet_in_mri, f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-none_trc-{trc}_pet.nii.gz')
+
+    # os.environ["PATH"] += os.pathsep + '/opt/ants/bin'
+    # FSCommand.set_default_subjects_dir(args.subj_dir)
+
+    # # convert ANTS mat to ITK txt
+    # ants_mat = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-T1w_0GenericAffine.mat'
+    # itk_txt = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from_pet_to-T1w_xfm.txt'
+    # out_lta = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-FDG_pet_to-T1w_xfm.reg.lta'
+    # subprocess.call(['ConvertTransformFile', '3', 
+    #     ants_mat,
+    #     itk_txt])
+
+    # convert ITK txt to FreeSurfer LTA
+    # subprocess.call(['lta_convert',
+    #     '--initk',itk_txt,
+    #     '--outlta',out_lta,
+    #     '--src',pet,
+    #     '--trg',mri,
+    #     '--subject',f"sub-{subject}_ses-{session}",
+    #     '--ltavox2vox']) 
 
 
 for space in ['T1wFS','T1wNative']:
-    mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space)
+    if pvc_method == 'rbv':
+        mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,trc)
+    else: 
+        ANTS_reg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,space,trc)
+
+
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] PET to MRI co-registration completed.")
-
-## Nipype implementation (commented out)
-# reg = RegistrationSynQuick()
-# reg.inputs.fixed_image = mri
-# reg.inputs.moving_image = pet
-# reg.inputs.dimension = 3
-# reg.inputs.transform_type = 'r'  # rigid
-# reg.inputs.output_prefix = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet_to-T1w_'
-# reg.inputs.num_threads = 6
-# print(reg.cmdline)
-
-# reg.run()
-
-# at = ApplyTransforms()
-# at.inputs.input_image = pet
-# at.inputs.reference_image = mri
-# at.inputs.transforms = [f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-FDG_pet_to-T1w_0GenericAffine.mat']
-# at.inputs.dimension = 3
-# at.inputs.interpolation = 'NearestNeighbor'
-# at.inputs.num_threads = 6
-# at.inputs.output_image = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_trc-FDG_pet.nii.gz'
-# print(at.cmdline)
-
-# at.run()

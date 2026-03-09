@@ -79,7 +79,6 @@ print(f"  - FastSurfer: {config['fastsurfer_threads']} threads")
 print(f"  - HippUnfold: {config['hippunfold_threads']} threads")
 print(f"  - GTMseg:     {config['gtmseg_threads']} threads")
 
-
 # --- Handle Existing Outputs via Symbolic Links ---
 # If user provides paths to existing FreeSurfer/HippUnfold outputs,
 # create symbolic links to avoid rerunning those steps
@@ -144,6 +143,7 @@ setup_existing_outputs_symlinks()
 wildcard_constraints:
     subject="[a-zA-Z0-9]+",
     session="[a-zA-Z0-9]+",
+    tracer="[a-zA-Z0-9]+",
 
 
 # --- Include rule files ---
@@ -156,6 +156,6 @@ include: "rules/report.smk"
 rule all:
     input:
         inputs['pet'].expand(
-            os.path.join(root, "qc", "sub-{subject}", "ses-{session}", "sub-{subject}_ses-{session}_report.html"),
+            os.path.join(root, "qc", "sub-{subject}", "ses-{session}", "sub-{subject}_ses-{session}_trc-{trc}_report.html"),
             allow_missing=True,
         )

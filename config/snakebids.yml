@@ -39,11 +39,11 @@ pybids_inputs:
       suffix: 'pet'
       extension: '.nii.gz'
       datatype: 'pet'
-      tracer: 'FDG'
       scope: 'raw'
     wildcards:
       - subject
       - session
+      - tracer
 
 
 # --- Analysis Levels ---
@@ -70,6 +70,7 @@ mica_pet_version: 'v.alpha.0.3'
 # Processing options with defaults
 psf: 4.5                    # Scanner PSF FWHM in mm
 ref_region: 'pons'          # Options: pons, cerebellarGM, composite, none
+pvc_method: 'rbv'           # Options: rbv, MG, IY
 threads: 8                  # Threads for multithreaded steps
 
 
@@ -81,12 +82,10 @@ parse_args:
   --fastsurfer-img:
     help: "Path to FastSurfer Singularity image (.sif)"
     dest: fastsurfer_img
-    required: true
   
   --hippunfold-img:
     help: "Path to HippUnfold Singularity image (.sif)"
     dest: hippunfold_img
-    required: true
   
   --fs-license:
     help: "Path to FreeSurfer license.txt"
@@ -108,6 +107,15 @@ parse_args:
       - cerebellarGM
       - composite
       - none
+# added pvc-method arg
+  --pvc-method:
+    help: "Partial volume correction method (rbv, MG, IY)"
+    dest: pvc_method
+    default: "rbv"
+    choices:
+      - rbv
+      - MG
+      - IY
   
   --threads:
     help: "Number of threads for multithreaded steps (default: 8)"
