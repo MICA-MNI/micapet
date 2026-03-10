@@ -86,15 +86,15 @@ if seg_type == 'freesurfer':
         gtmseg.inputs.ctx_annot = ("aparc.DKTatlas.annot",1000,2000)
         # Try to set openmp if supported by nipype interface, or rely on OMP_NUM_THREADS
         try:
-             gtmseg.inputs.openmp = args.threads
+            gtmseg.inputs.openmp = args.threads
         except:
-             pass
+            pass
         gtmseg.run()
 
 elif seg_type == 'fastsurfer':
     if os.path.exists(f"{f_surf_dir}/mri/gtmseg.mgz") and force==False:
         print(f"GTMseg was run already for subject {subject}. Exiting.")
-        sys.exit(1)
+        sys.exit(0)
     else:
         # Create talairach.m3z if it doesn't exist
         if not os.path.exists(f"{f_surf_dir}/mri/transforms/talairach.m3z"):

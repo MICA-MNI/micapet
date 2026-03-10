@@ -122,15 +122,24 @@ RUN curl -fsSL -o /tmp/ants.zip \
     unzip /tmp/ants.zip -d /opt && mv /opt/ants-2.4.3 $ANTSPATH && \
     rm /tmp/ants.zip
 
-#####################################################################
-# Install C3D
-#####################################################################
-ENV C3DPATH=/opt/c3d
-ENV PATH=$C3DPATH/bin:$PATH
+# #####################################################################
+# # Install C3D
+# #####################################################################
+# ENV C3DPATH=/opt/c3d
+# ENV PATH=$C3DPATH/bin:$PATH
 
-RUN mkdir -p $C3DPATH && \
-    curl -fsSL https://sourceforge.net/projects/c3d/files/c3d/1.0.0/c3d-1.0.0-Linux-x86_64.tar.gz/download \
-        | tar -xz --strip-components=1 -C $C3DPATH
+# RUN mkdir -p $C3DPATH && \
+#     curl -fsSL https://sourceforge.net/projects/c3d/files/c3d/1.0.0/c3d-1.0.0-Linux-x86_64.tar.gz/download \
+#         | tar -xz --strip-components=1 -C $C3DPATH
+
+#####################################################################
+# Install AFNI 3dresample
+#####################################################################
+ENV AFNIPATH=/opt/AFNI
+ENV PATH=$AFNIPATH/bin:$PATH
+
+RUN mkdir -p $AFNIPATH && \
+    mv -r /tmp/resources/AFNI /opt/AFNI 
 
 #####################################################################
 # Install Miniconda & copy env
@@ -146,7 +155,7 @@ COPY --from=conda_stage /opt/conda/envs/mica-pet /opt/conda/envs/mica-pet
 
 # RUN pip install --upgrade --force-reinstall git+https://github.com/MICA-MNI/BrainSpace.git
 
-RUN conda run -n mica-pet pip install --extra-index-url https://wheels.vtk.org vtk-osmesa
+# RUN conda run -n mica-pet pip install --extra-index-url https://wheels.vtk.org vtk-osmesa
 
 #####################################################################
 # Copy Application
