@@ -1,5 +1,6 @@
 *.sif
 *tar.gz
+resources/*tar.gz
 functions/stderr.nipype
 functions/stdout.nipype
 functions/talairach.label*

@@ -139,7 +139,7 @@ ENV AFNIPATH=/opt/AFNI
 ENV PATH=$AFNIPATH/bin:$PATH
 
 RUN mkdir -p $AFNIPATH && \
-    mv -r /tmp/resources/AFNI /opt/AFNI 
+    mv /tmp/resources/AFNI/* /opt/AFNI 
 
 #####################################################################
 # Install Miniconda & copy env
