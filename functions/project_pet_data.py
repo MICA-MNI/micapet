@@ -46,7 +46,7 @@ parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(St
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
 parser.add_argument("-hippunfold_dir", dest="hippunfold_dir", type=str, help="(Str) Specify path to HippUnfold output directory.")
 parser.add_argument("-ref_region",dest="ref_region", type=str, action='store',nargs='*', default=['pons'],help="Specify reference region(s). eg: '-ref_region pons cerebellarGM composite'. Default: pons.")
-parser.add_argument("-pvc_method", dest="pvc_method", type=str, default='rbv', choices=['rbv', 'MG'], help="(Str) PVC method used for PET image. Options: 'rbv', 'MG'. Default: 'rbv'. Presence of flag will project partial volume corrected data + non-PVC data.")
+parser.add_argument("-pvc_method", dest="pvc_method", type=str, default='rbv', choices=['rbv', 'MG','IY'], help="(Str) PVC method used for PET image. Options: 'rbv', 'MG', 'IY'. Default: 'rbv'. Presence of flag will project partial volume corrected data + non-PVC data.")
 parser.add_argument("-trc", dest="trc", type=str, default='FDG', choices=['FDG', 'MK6240'], help="(Str) Tracer (eg. 'FDG', 'MK6240'). Default: 'FDG'")
 parser.add_argument("-cortical", action='store_true', dest="cortical", help="(Flag) If present, perform cortical surface projection.")
 parser.add_argument("-hippocampal", action='store_true', dest="hippocampal", help="(Flag) If present, perform hippocampal surface projection.")

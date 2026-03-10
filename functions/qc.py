@@ -62,7 +62,7 @@ parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(St
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
 parser.add_argument("-ref_region",dest="ref_region", type=str, choices=['pons','cerebellarGM','composite'], default='pons',help="Specify reference region. Default: pons.")
 parser.add_argument("-trc", dest="trc", type=str, choices=['FDG','MK6240'], default='FDG', help="Tracer (eg. FDG, MK6240). Default: 'FDG'.")
-parser.add_argument("-pvc_method", dest="pvc_method", type=str, choices=['rbv','MG'], default='rbv', help="PVC method used for PET image. Options: 'rbv', 'MG'. Default: 'rbv'.")
+parser.add_argument("-pvc_method", dest="pvc_method", type=str, choices=['rbv','MG','IY'], default='rbv', help="PVC method used for PET image. Options: 'rbv', 'MG', 'IY'. Default: 'rbv'.")
 
 args = parser.parse_args()
 

@@ -42,7 +42,7 @@ parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(St
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
 parser.add_argument("-ref_region",dest="ref_region", type=str, choices=['pons','cerebellarGM','composite','none'], default='pons',help="Specify reference region. Default: pons.")
 parser.add_argument("-trc", dest="trc", type=str, choices=['FDG','MK6240'], default='FDG', help="Specify tracer. Default: FDG.")
-parser.add_argument("-pvc_method", dest="pvc_method", type=str, choices=['rbv','MG'], default='rbv', help="Specify PVC method. Default: rbv.")
+parser.add_argument("-pvc_method", dest="pvc_method", type=str, choices=['rbv','MG','IY'], default='rbv', help="Specify PVC method. Default: rbv.")
 parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}")
 
 args = parser.parse_args()
