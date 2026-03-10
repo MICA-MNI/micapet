@@ -128,9 +128,9 @@ def resample_PET(pet,mri,mica_pet_derivatives,subject,session,space,pvc_method,t
     applyreg.inputs.transformed_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc_method}_ref-none_trc-{trc}_pet.nii.gz"
     applyreg.run()
 
-for space in ['T1wNative']:
+for space in ['T1wNativepro']:
     pet = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wFS_pvc-{pvc_method}_ref-none_trc-{trc}_pet.nii.gz"
-    mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+    mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
     
     resample_PET(pet,mri,mica_pet_derivatives,subject,session,space,pvc_method,trc)
 
@@ -147,11 +147,11 @@ for space in ['T1wNative']:
     
 # aseg = f'{f_surf_dir}/mri/aseg.mgz'
 
-# for space in ['T1wFS','T1wNative']:
+# for space in ['T1wFS','T1wNativepro']:
 #     if space == 'T1wFS':
 #         mri = f"{f_surf_dir}/mri/orig.mgz"
 #     else: 
-#         mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+#         mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
 #     resample_aseg(aseg,mri,space)
 
 

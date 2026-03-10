@@ -27,6 +27,8 @@ import ants
 import subprocess
 # from nipype.interfaces.freesurfer import FSCommand
 from nipype.interfaces.freesurfer import MRICoreg, ApplyVolTransform, FSCommand, MRIConvert
+from nipype.interfaces import afni
+
 
 # Load utilities functions from utils.py
 import utils
@@ -115,6 +117,13 @@ else:
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting PET to MRI co-registration for subject: {subject}, session: {session}.")
 
+# 3d resample MRI to nativepro space
+resample = afni.Resample()
+resample.inputs.in_file = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+resample.inputs.orientation= 'LPI'
+resample.inputs.outputtype = 'NIFTI_GZ'
+resample.out_file = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
+res = resample.run()
 
 ## MRICoreg
 FSCommand.set_default_subjects_dir(subj_dir)
@@ -126,7 +135,7 @@ def mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,trc):
         coreg.inputs.subjects_dir=subj_dir
         coreg.inputs.subject_id=f"sub-{subject}_ses-{session}"
     else: # use rawdata mri
-        coreg.inputs.reference_file=f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+        coreg.inputs.reference_file=f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}__space-nativepro_T1w.nii.gz"
     coreg.inputs.out_lta_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-{space}_xfm.reg.lta'
     print(coreg.cmdline)
     coreg.run()
@@ -137,7 +146,7 @@ def mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,trc):
     if space == 'T1wFS':
         applyreg.inputs.fs_target=True
     else:
-        applyreg.inputs.target_file=f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+        applyreg.inputs.target_file=f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
     applyreg.inputs.transformed_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-none_trc-{trc}_pet.nii.gz'
     applyreg.run()
 
@@ -153,7 +162,7 @@ def ANTS_reg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,spac
             mc.inputs.out_type = 'niigz'
             mc.run()
     else: # use rawdata mri
-        mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+        mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
         
     fixed = ants.image_read(mri)
     moving = ants.image_read(pet)
@@ -166,7 +175,7 @@ def ANTS_reg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,spac
         fixed=fixed,
         moving=moving_transmission,
         type_of_transform='Rigid',
-        outprefix=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-T1w_'
+        outprefix=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-{space}_'
     )
 
     pet_in_mri = ants.apply_transforms(
@@ -198,7 +207,7 @@ def ANTS_reg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,spac
     #     '--ltavox2vox']) 
 
 
-for space in ['T1wFS','T1wNative']:
+for space in ['T1wFS','T1wNativepro']:
     if pvc_method == 'rbv':
         mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,trc)
     else: 

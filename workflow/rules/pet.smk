@@ -23,10 +23,10 @@ rule linear_coreg:
     output:
         # Reg lta files - Note: Python outputs to /xfm/ subdirectory with _from-pet_to-{space}_xfm.reg.lta naming
         reg_lta_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "xfm", "sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wFS_xfm.reg.lta"),
-        reg_lta_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "xfm", "sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wNative_xfm.reg.lta"),
+        reg_lta_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "xfm", "sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wNativepro_xfm.reg.lta"),
         # Coregistered PET
         pet_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wFS_pvc-none_ref-none_trc-{trc}_pet.nii.gz"),
-        pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNative_pvc-none_ref-none_trc-{trc}_pet.nii.gz"),
+        pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNativepro_pvc-none_ref-none_trc-{trc}_pet.nii.gz"),
     params:
         bids_dir = config["bids_dir"],
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
@@ -70,7 +70,7 @@ rule pvc:
         gtmseg = rules.gtm_seg.output.gtmseg,
     output:
         pvc_pet_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wFS_pvc-"+get_pvc_method()+"_ref-none_trc-{trc}_pet.nii.gz"),
-        pvc_pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNative_pvc-"+get_pvc_method()+"_ref-none_trc-{trc}_pet.nii.gz"),
+        pvc_pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNativepro_pvc-"+get_pvc_method()+"_ref-none_trc-{trc}_pet.nii.gz"),
     params:
         bids_dir = config["bids_dir"],
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
@@ -130,7 +130,7 @@ rule suvr:
         pvc_pet_native = rules.pvc.output.pvc_pet_native,
     output:
         suvr_pet_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wFS_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_trc-{trc}_pet.nii.gz"),
-        suvr_pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNative_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_trc-{trc}_pet.nii.gz"),
+        suvr_pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNativepro_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_trc-{trc}_pet.nii.gz"),
     params:
         bids_dir = config["bids_dir"],
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),

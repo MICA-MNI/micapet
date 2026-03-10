@@ -148,11 +148,11 @@ def resample_gtmseg(gtm,mri,space):
     
 gtm = f'{f_surf_dir}/mri/gtmseg.mgz'
 
-for space in ['T1wFS','T1wNative']:
+for space in ['T1wFS','T1wNativepro']:
     if space == 'T1wFS':
         mri = f"{f_surf_dir}/mri/orig.mgz"
     else: 
-        mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+        mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
     resample_gtmseg(gtm,mri,space)
 
 

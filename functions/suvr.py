@@ -139,7 +139,7 @@ def combineROIs(ref,mica_pet_derivatives,subject,session,space):
         os.remove(mask)
         
 ## Create ROIs and calculate SUVR       
-for space in ['T1wFS','T1wNative']:
+for space in ['T1wFS','T1wNativepro']:
     for ref in ref_region:
         print(f"Processing reference region: {ref}...")
         if ref == 'pons':
