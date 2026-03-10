@@ -79,7 +79,7 @@ parser.add_argument("-ref_region",dest="ref_region", type=str, choices=['pons','
 parser.add_argument("-trc", dest="trc", type=str, choices=['FDG','MK6240'], default='FDG', help="Tracer (eg. FDG, MK6240). Default: 'FDG'.")
 parser.add_argument("-pvc_method", dest="pvc_method", type=str, choices=['rbv','MG','IY'], default='rbv', help="PVC method used for PET image. Options: 'rbv', 'MG', 'IY'. Default: 'rbv'.")
 parser.add_argument("-max_value", dest="max_value", type=float, help="(Float) Maximum SUVR value for color scale. Default: 1.5 times the maximum SUVR value in the data.")
-
+parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}", default=None)
 
 args = parser.parse_args()
 
@@ -95,7 +95,6 @@ subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
-parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}")
 trc = args.trc
 pvc_method = args.pvc_method
 mica_pet_version = os.environ['MICA_PET_VERSION']
@@ -127,9 +126,9 @@ if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):
     
 # Check if QC directory made    
 if not os.path.exists(qc_dir):
-    print(f"Error: QC directory does not exist at {qc_dir}. Please create it first.")
-    sys.exit(1)
-    
+    print(f"Error: QC directory does not exist at {qc_dir}. Creating it.")
+    os.makedirs(qc_dir)
+
 print(f"Starting clinical report generation for subject: {subject}, session: {session} [{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]")
 
 pial_left, pial_right = fetch_template_surface("fslr32k",join=False)
@@ -421,7 +420,7 @@ def max_hist(data, bins=50):
     max_value = bin_centers[max_index]
     return max_value
 
-def plot_Zscore(subject,session,bids_dir,qc_dir,mica_pet_derivatives):
+def plot_Zscore(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc):
     pet_derivatives=f'{mica_pet_derivatives}'
     mri_derivatives=f'{bids_dir}/derivatives/fastsurfer'
     pvc = 'none'
@@ -579,106 +578,182 @@ def parcel_stats(subject,session,bids_dir,subj_dir,qc_dir,space,mica_pet_derivat
 
 cortical_SUVR, max_value = plot_SUVR(subject,session,bids_dir,qc_dir, pial_left, pial_right, mask,max_value,mica_pet_derivatives,ref_region,trc,pvc_method)
 
-with rc.ReportCreator(
-   title="MICA-PET Report",
-   description=f"**Subject**: {subject} | **Session**: {session} | **Modality**: FDG PET",
-   footer="Multimodal Imaging and Computational Anatomy (MICA) Lab - McGill University. For research use only.",
-   logo=f"https://box.bic.mni.mcgill.ca/s/GbLcj26GmYWBfLL/download"
-) as report:
+if trc == "FDG":
+    with rc.ReportCreator(
+        title="MICA-PET Report",
+        description=f"**Subject**: {subject} | **Session**: {session} | **Modality**: {trc} PET",
+        footer="Multimodal Imaging and Computational Anatomy (MICA) Lab - McGill University. For research use only.",
+        logo=f"https://box.bic.mni.mcgill.ca/s/GbLcj26GmYWBfLL/download"
+    ) as report:
 
-   view = rc.Block(
-    rc.Heading(label="Standard Uptake Value Ratio (SUVR)"),
-    
-    rc.Select(
-        blocks=[
-            rc.Image(
-                cortical_SUVR,
-                label="Cortical FDG SUVR",
-                extra_css="width: 900px; height: auto;",
-            )
-        ]
-    ),
-    rc.Select(
-        blocks=[
-            rc.Image(
-                plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
-                label="Subcortical FDG SUVR",
-                extra_css="width: 900px; height: auto;",
+        view = rc.Block(
+            rc.Heading(label="Standard Uptake Value Ratio (SUVR)"),
+            
+            rc.Select(
+                blocks=[
+                    rc.Image(
+                        cortical_SUVR,
+                        label=f"Cortical {trc} SUVR",
+                        extra_css="width: 900px; height: auto;",
+                    ),
+                    rc.Image(
+                        plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
+                        label=f"Subcortical {trc} SUVR",
+                        extra_css="width: 900px; height: auto;",
+                    ),
+                    rc.Image(
+                        plot_hippunfold(subject,session,bids_dir,qc_dir,max_value,mica_pet_derivatives,ref_region,trc,pvc_method),
+                        label=f"Hippocampal {trc} SUVR",
+                        extra_css="width: 450px; height: auto;",
+                    ) 
+                ]
             ),
-        ]
-    ),
-    rc.Select(
-        blocks=[
-            rc.Image(
-                plot_hippunfold(subject,session,bids_dir,qc_dir,max_value,mica_pet_derivatives,ref_region,trc,pvc_method),
-                label="Hippocampal FDG SUVR",
-                extra_css="width: 450px; height: auto;",
-            ),
-        ]
-    ),
 
-    rc.Heading(label="Asymmetry Index (AI)"), 
-            # rc.Heading(label="(BLUE = Left < Right; RED = Right < Left)",level=3),
-    
-    rc.Select(
-        blocks=[
-            # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
-            # Each `rc.Image()` block specifies the path to an image file and provides a label for
-            # that image.
-            rc.Image(
-                plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method),
-                label="Cortical FDG SUVR AI"
+            rc.Heading(label="Asymmetry Index (AI)"), 
+                    # rc.Heading(label="(BLUE = Left < Right; RED = Right < Left)",level=3),
+            
+            rc.Select(
+                blocks=[
+                    # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
+                    # Each `rc.Image()` block specifies the path to an image file and provides a label for
+                    # that image.
+                    rc.Image(
+                        plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method),
+                        label=f"Cortical {trc} SUVR AI"
+                    ),
+                    rc.Image(
+                        plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc),
+                        label=f"Subcortical {trc} SUVR AI"
+                    ),
+                    rc.Image(
+                        plot_hippunfold_AI(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc,pvc_method),
+                        label=f"Hippocampal {trc} SUVR AI",
+                    ),
+                    
+                ],
+                # label="(BLUE = Left < Right; RED = Right < Left)",
             ),
-            rc.Image(
-                plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc),
-                label="Subcortical FDG SUVR AI"
-            ),
-            rc.Image(
-                plot_hippunfold_AI(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc,pvc_method),
-                label="Hippocampal FDG SUVR AI",
+            rc.Group(
+                rc.Metric(
+                    heading="Asymmetry Index interpretation",
+                    value="BLUE = Left < Right; RED = Right < Left",
+                    label="AI = (L - R) / (0.5 * (L + R))"
+                ),
             ),
             
-        ],
-        # label="(BLUE = Left < Right; RED = Right < Left)",
-    ),
-    rc.Group(
-        rc.Metric(
-            heading="Asymmetry Index interpretation",
-            value="BLUE = Left < Right; RED = Right < Left",
-            label="AI = (L - R) / (0.5 * (L + R))"
-        ),
-    ),
-    
-    rc.Heading(label="FDG PET Z score thresholded at |Z| > 1.96"), 
-    
-    rc.Select(
-        blocks=[
-            rc.Image(
-                plot_Zscore(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region),
-                label="FDG PET Z score",
-                extra_css="width: 900px; height: auto;"
+            rc.Heading(label=f"{trc} PET Z score thresholded at |Z| > 1.96"), 
+            
+            rc.Select(
+                blocks=[
+                    rc.Image(
+                        plot_Zscore(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc),
+                        label=f"{trc} PET Z score",
+                        extra_css="width: 900px; height: auto;"
+                    ),
+                ]
             ),
-        ]
-    ),
-    rc.Select(
-        blocks=[
-            rc.DataTable(
-                parcel_stats(subject,session,bids_dir,args.subj_dir,qc_dir,space,mica_pet_derivatives,ref_region,trc,pvc_method),
-                label="Regional SUVR and Asymmetry Index Statistics",
-                index=False
+            rc.Select(
+                blocks=[
+                    rc.DataTable(
+                        parcel_stats(subject,session,bids_dir,args.subj_dir,qc_dir,space,mica_pet_derivatives,ref_region,trc,pvc_method),
+                        label="Regional SUVR and Asymmetry Index Statistics",
+                        index=False
+                    )
+                ]
+            ), 
+            rc.Select(
+                blocks=[
+                    rc.Image(
+                        f"{qc_dir}/sub-{subject}_ses-{session}_SUVR_mosaic_screenshot.png",
+                        label="PET-MRI Overlay",
+                        extra_css="width: 1300px; height: auto;"
+                    ),
+                ]
             )
-        ]
-    ), 
-    rc.Select(
-        blocks=[
-            rc.Image(
-                f"{qc_dir}/sub-{subject}_ses-{session}_SUVR_mosaic_screenshot.png",
-                label="PET-MRI Overlay",
-                extra_css="width: 1300px; height: auto;"
+        )
+
+else: 
+    with rc.ReportCreator(
+        title="MICA-PET Report",
+        description=f"**Subject**: {subject} | **Session**: {session} | **Modality**: {trc} PET",
+        footer="Multimodal Imaging and Computational Anatomy (MICA) Lab - McGill University. For research use only.",
+        logo=f"https://box.bic.mni.mcgill.ca/s/GbLcj26GmYWBfLL/download"
+    ) as report:
+
+        view = rc.Block(
+            rc.Heading(label="Standard Uptake Value Ratio (SUVR)"),
+            
+            rc.Select(
+                blocks=[
+                    rc.Image(
+                        cortical_SUVR,
+                        label=f"Cortical {trc} SUVR",
+                        extra_css="width: 900px; height: auto;",
+                    ),
+                    rc.Image(
+                        plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
+                        label=f"Subcortical {trc} SUVR",
+                        extra_css="width: 900px; height: auto;",
+                    ),
+                    rc.Image(
+                        plot_hippunfold(subject,session,bids_dir,qc_dir,max_value,mica_pet_derivatives,ref_region,trc,pvc_method),
+                        label=f"Hippocampal {trc} SUVR",
+                        extra_css="width: 450px; height: auto;",
+                    ) 
+                ]
             ),
-        ]
-    )
-)
+
+            rc.Heading(label="Asymmetry Index (AI)"), 
+                    # rc.Heading(label="(BLUE = Left < Right; RED = Right < Left)",level=3),
+            
+            rc.Select(
+                blocks=[
+                    # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
+                    # Each `rc.Image()` block specifies the path to an image file and provides a label for
+                    # that image.
+                    rc.Image(
+                        plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method),
+                        label=f"Cortical {trc} SUVR AI"
+                    ),
+                    rc.Image(
+                        plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc),
+                        label=f"Subcortical {trc} SUVR AI"
+                    ),
+                    rc.Image(
+                        plot_hippunfold_AI(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc,pvc_method),
+                        label=f"Hippocampal {trc} SUVR AI",
+                    ),
+                    
+                ],
+                # label="(BLUE = Left < Right; RED = Right < Left)",
+            ),
+            rc.Group(
+                rc.Metric(
+                    heading="Asymmetry Index interpretation",
+                    value="BLUE = Left < Right; RED = Right < Left",
+                    label="AI = (L - R) / (0.5 * (L + R))"
+                ),
+            ),
+            
+            rc.Select(
+                blocks=[
+                    rc.DataTable(
+                        parcel_stats(subject,session,bids_dir,args.subj_dir,qc_dir,space,mica_pet_derivatives,ref_region,trc,pvc_method),
+                        label="Regional SUVR and Asymmetry Index Statistics",
+                        index=False
+                    )
+                ]
+            ), 
+            rc.Select(
+                blocks=[
+                    rc.Image(
+                        f"{qc_dir}/sub-{subject}_ses-{session}_SUVR_mosaic_screenshot.png",
+                        label="PET-MRI Overlay",
+                        extra_css="width: 1300px; height: auto;"
+                    ),
+                ]
+            )
+        )
 
 report.save(view, f"{qc_dir}/sub-{subject}_ses-{session}_trc-{trc}_report.html")
 
