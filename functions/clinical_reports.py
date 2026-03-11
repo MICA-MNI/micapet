@@ -11,7 +11,7 @@ The script requires the following arguments:
     -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory.
     -ref_region : Reference regions to use. eg. ['pons','cerebellarGM','composite']. Default: ['pons'].
     -trc        : Tracer (eg. FDG, MK6240). Default: 'FDG'.
-    -pvc_method : PVC method used for PET image. Options: 'rbv', 'MG'. Default: 'rbv'.
+    -pvc_method : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'. Default: 'RBV-FS'.
     -max_value  : (Optional) Maximum SUVR value for color scale. Default: 1.5 times the 85th percentile SUVR in the data.
 
 The script is intended for use by researchers and developers working with PET imaging data, particularly in the context of the MICA lab at McGill University.
@@ -77,7 +77,7 @@ parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(St
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
 parser.add_argument("-ref_region",dest="ref_region", type=str, choices=['pons','cerebellarGM','composite'], default='pons',help="Specify reference region. Default: pons.")
 parser.add_argument("-trc", dest="trc", type=str, choices=['FDG','MK6240'], default='FDG', help="Tracer (eg. FDG, MK6240). Default: 'FDG'.")
-parser.add_argument("-pvc_method", dest="pvc_method", type=str, choices=['rbv','MG','IY'], default='rbv', help="PVC method used for PET image. Options: 'rbv', 'MG', 'IY'. Default: 'rbv'.")
+parser.add_argument("-pvc_method", dest="pvc_method", type=str, default='RBV-FS', choices=['RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'], help="(Str) PVC method used for PET image. Options: 'RBV-FS', 'MG','IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL' etc. Default: 'RBV-FS'.")
 parser.add_argument("-max_value", dest="max_value", type=float, help="(Float) Maximum SUVR value for color scale. Default: 1.5 times the maximum SUVR value in the data.")
 parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}", default=None)
 
@@ -581,8 +581,8 @@ cortical_SUVR, max_value = plot_SUVR(subject,session,bids_dir,qc_dir, pial_left,
 if trc == "FDG":
     with rc.ReportCreator(
         title="MICA-PET Report",
-        description=f"**Subject**: {subject} | **Session**: {session} | **Modality**: {trc} PET",
-        footer="Multimodal Imaging and Computational Anatomy (MICA) Lab - McGill University. For research use only.",
+        description=f"**Subject**: {subject} | **Session**: {session} | **Modality**: {trc} PET | **Ref region**: {ref_region} | **PVC method**: {pvc_method}",
+        footer="Multimodal Imaging and Connectome Analysis (MICA) Lab - McGill University. For research use only.",
         logo=f"https://box.bic.mni.mcgill.ca/s/GbLcj26GmYWBfLL/download"
     ) as report:
 
@@ -675,8 +675,8 @@ if trc == "FDG":
 else: 
     with rc.ReportCreator(
         title="MICA-PET Report",
-        description=f"**Subject**: {subject} | **Session**: {session} | **Modality**: {trc} PET",
-        footer="Multimodal Imaging and Computational Anatomy (MICA) Lab - McGill University. For research use only.",
+        description=f"**Subject**: {subject} | **Session**: {session} | **Modality**: {trc} PET | **Ref region**: {ref_region} | **PVC method**: {pvc_method}",
+        footer="Multimodal Imaging and Connectome Analysis (MICA) Lab - McGill University. For research use only.",
         logo=f"https://box.bic.mni.mcgill.ca/s/GbLcj26GmYWBfLL/download"
     ) as report:
 

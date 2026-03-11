@@ -70,9 +70,8 @@ mica_pet_version: 'v.alpha.0.3'
 # Processing options with defaults
 psf: 4.5                    # Scanner PSF FWHM in mm
 ref_region: 'pons'          # Options: pons, cerebellarGM, composite, none
-pvc_method: 'rbv'           # Options: rbv, MG, IY
+pvc_method: 'RBV-FS'        # Options: Freesurfer: RBV-FS; PETPVC: MG, IY, LABBE, RL, VC, RBV, LABBE+RBV, RBV+VC, RBV+RL, LABBE+RBV+VC, LABBE+RBV+RL, MTC, LABBE+MTC, MTC+VC, MTC+RL, LABBE+MTC+VC, LABBE+MTC+RL, IY+VC, IY+RL, MG+VC, MG+RL 
 threads: 8                  # Threads for multithreaded steps
-
 
 # --- Custom CLI Arguments ---
 # These arguments are added to the command-line interface
@@ -107,15 +106,60 @@ parse_args:
       - cerebellarGM
       - composite
       - none
-# added pvc-method arg
+# added pvc-method arg + pvc-mask, n_iter, n_deconv, smoothing
   --pvc-method:
-    help: "Partial volume correction method (rbv, MG, IY)"
+    help: "Partial volume correction method (Options: 1) Freesurfer: RBV-FS; 2) PETPVC: MG, IY, LABBE, RL, VC, RBV, LABBE+RBV, RBV+VC, RBV+RL, LABBE+RBV+VC, LABBE+RBV+RL, MTC, LABBE+MTC, MTC+VC, MTC+RL, LABBE+MTC+VC, LABBE+MTC+RL, IY+VC, IY+RL, MG+VC, MG+RL. Default: RBV-FS)"
     dest: pvc_method
-    default: "rbv"
+    default: "RBV-FS"
     choices:
-      - rbv
+      - RBV-FS
       - MG
       - IY
+      - MG
+      - IY
+      - LABBE
+      - RL
+      - VC
+      - RBV
+      - LABBE+RBV
+      - RBV+VC
+      - RBV+RL
+      - LABBE+RBV+VC
+      - LABBE+RBV+RL
+      - MTC
+      - LABBE+MTC
+      - MTC+VC
+      - MTC+RL
+      - LABBE+MTC+VC
+      - LABBE+MTC+RL
+      - IY+VC
+      - IY+RL
+      - MG+VC
+      - MG+RL
+
+  --pvc-mask:
+    help: "Optional custom mask to use for PETPVC. Must be a 4D NIfTI with one ROI per frame. Sum across timeframes must be 1 at each voxel. Must be in FreeSurfer/FastSurfer space (eg. orig.mgz). If not provided, a two tissue mask will be generated for MG PVC and a GM+WM+CSF+background mask will be generated for all others."
+    dest: pvc_mask
+    default: ""
+
+  --pvc_n_iter:
+    help: "Number of iterations for iterative PVC methods (IY) (default: 10)"
+    dest: pvc_n_iter
+    type: int
+    default: 10
+  
+  --pvc_n_deconv:
+    help: "Number of iterations for deconvolution PVC methods (RL, VC) (default: 10)"
+    dest: pvc_n_deconv
+    type: int
+    default: 10
+
+  --smoothing: 
+    help: "List of smoothing FWHM in mm for surface projection. eg. --smoothing 5 10 (default: None, no smoothing)"
+    dest: smoothing
+    type: float
+    nargs: '*'
+    default: None
   
   --threads:
     help: "Number of threads for multithreaded steps (default: 8)"

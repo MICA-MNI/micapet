@@ -5,7 +5,22 @@ def get_ref_region():
     return config.get("ref_region", "pons")
 
 def get_pvc_method():
-    return config.get("pvc_method","rbv")
+    return config.get("pvc_method","RBV-FS")
+
+def get_pvc_mask():
+    return config.get("pvc_mask", None)
+
+def get_pvc_n_iter():
+    return config.get("pvc_n_iter", 10)
+
+def get_pvc_n_deconv():
+    return config.get("pvc_n_deconv", 10)
+
+def get_smoothing():
+    if config.get("smoothing", None) is not None:
+        return " ".join(str(s) for s in config.get("smoothing"))
+    else:
+        return None
 
 def get_linear_coreg_fs_check(wildcards):
     """Get fs_check input - mark as ancient if using existing outputs."""
@@ -79,10 +94,13 @@ rule pvc:
         log_dir = os.path.join(root, "logs", "pvc"),
         fs_license = config.get("fs_license"),
         pvc_method = get_pvc_method(),
+        pvc_mask = get_pvc_mask(),
+        pvc_n_iter = get_pvc_n_iter(),
+        pvc_n_deconv = get_pvc_n_deconv(),
     log:
         os.path.join(root, "logs", "pvc", "sub-{subject}_ses-{session}_trc-{trc}.log")
     run:
-        if params.pvc_method == "rbv":
+        if params.pvc_method == "RBV-FS":
             shell("""
                 set +eu  # Disable strict mode completely
                 export FREESURFER_HOME=/opt/freesurfer-7.4.1
@@ -119,7 +137,9 @@ rule pvc:
                     -psf {params.psf} \
                     -trc {wildcards.trc} \
                     -pvc_method {params.pvc_method} \
-                    -force \
+                    -pvc_mask {params.pvc_mask} \
+                    -pvc_n_iter {params.pvc_n_iter} \
+                    -pvc_n_deconv {params.pvc_n_deconv} \
                     >> {log} 2>&1
                 """)
         
@@ -203,6 +223,7 @@ rule project_pet_data:
         log_dir = os.path.join(root, "logs", "project_pet_data"),
         fs_license = config.get("fs_license"),
         pvc_method = get_pvc_method(),
+        smoothing = get_smoothing(),
     log:
         os.path.join(root, "logs", "project_pet_data", "sub-{subject}_ses-{session}_trc-{trc}.log")
     shell:
@@ -226,6 +247,7 @@ rule project_pet_data:
             -pvc \
             -cortical \
             -hippocampal \
+            -smoothing {params.smoothing} \
             >> {log} 2>&1
         """
 

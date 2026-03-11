@@ -10,7 +10,7 @@ The script requires the following arguments:
     -ses        : Session. (eg. 01)
     -bids       : Path to BIDS directory ( . or FULL PATH)
     -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory.
-    -pvc_method : PVC method used for PET image. Options: 'rbv', 'MG'. Default: 'rbv'.
+    -pvc_method : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'. Default: 'RBV-FS'.
     -ref_region : Options: 'pons', 'cerebellarGM', 'composite' (supratentorial white matter, cerebellum, brainstem)
 
 The script is intended for use by researchers and developers working with PET imaging data, particularly in the context of the MICA lab at McGill University.
@@ -44,7 +44,7 @@ parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(St
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
 parser.add_argument("-ref_region",dest="ref_region", type=str, action='store',nargs='*', default=['pons'],help="Specify reference region(s). eg: '-ref_region pons cerebellarGM composite'. Default: pons.")
 parser.add_argument("-trc", type=str, dest='trc', default='FDG',choices=['FDG','MK6240'],help="(Str) Select tracer for analysis ('FDG','MK6240'). (Default 'FDG').")
-parser.add_argument("-pvc_method", dest="pvc_method", type=str, default='rbv', choices=['rbv', 'MG','IY'], help="(Str) PVC method used for PET image. Options: 'rbv', 'MG', 'IY'. Default: 'rbv'.")
+parser.add_argument("-pvc_method", dest="pvc_method", type=str, default='RBV-FS', choices=['RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'], help="(Str) PVC method used for PET image. Options: 'RBV-FS', 'MG','IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL' etc. Default: 'RBV-FS'.")
 parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}")
 
 args = parser.parse_args()
@@ -85,7 +85,7 @@ if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):
     sys.exit(1)
 
 # Check if gtmseg.mgz exists
-if pvc_method == 'rbv' and not os.path.exists(f"{f_surf_dir}/mri/gtmseg.mgz"):
+if not os.path.exists(f"{f_surf_dir}/mri/gtmseg.mgz"):
     print(f"Error: gtmseg.mgz for subject {subject}, session {session} does not exist. Please run gtm_seg.py first.")
     sys.exit(1)
 
@@ -94,10 +94,7 @@ print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting reference regi
 def ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, pvc_method, erode=False):
     print(f"Creating ROI mask for ROI {roi}...")
 
-    if pvc_method == 'rbv':
-        in_file = nib.load(f"{f_surf_dir}/mri/gtmseg_space-{space}.nii.gz")
-    else:
-        in_file = nib.load(f"{f_surf_dir}/mri/aseg_space-{space}.nii.gz")
+    in_file = nib.load(f"{f_surf_dir}/mri/gtmseg_space-{space}.nii.gz")
     in_data = in_file.get_fdata()
     roi_data = np.zeros(in_data.shape)
     # Set values in roi_data to 1 where in_data equals roi
