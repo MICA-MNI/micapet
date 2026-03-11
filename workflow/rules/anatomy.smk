@@ -38,6 +38,7 @@ rule fastsurfer:
             -subj_dir {params.subj_dir} \
             -tmpdir {params.tmpdir} \
             -fs_license {params.fs_license} \
+            -T1 {input.t1} \
             -force \
             > {log} 2>&1
         """
@@ -69,6 +70,7 @@ rule hippunfold:
             -hippunfold_dir {params.hippunfold_dir} \
             -threads {threads} \
             {params.cachedir_arg} \
+            -T1 {input.t1} \
             -force \
             > {log} 2>&1
         """

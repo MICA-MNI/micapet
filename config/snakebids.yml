@@ -65,7 +65,7 @@ targets_by_analysis_level:
 # Default values for pipeline parameters
 
 # MICA-PET version used for derivatives folder naming
-mica_pet_version: 'v.alpha.0.3'
+mica_pet_version: 'v.alpha.0.5'
 
 # Processing options with defaults
 psf: 4.5                    # Scanner PSF FWHM in mm
@@ -142,13 +142,13 @@ parse_args:
     dest: pvc_mask
     default: ""
 
-  --pvc_n_iter:
+  --pvc-n_iter:
     help: "Number of iterations for iterative PVC methods (IY) (default: 10)"
     dest: pvc_n_iter
     type: int
     default: 10
   
-  --pvc_n_deconv:
+  --pvc-n_deconv:
     help: "Number of iterations for deconvolution PVC methods (RL, VC) (default: 10)"
     dest: pvc_n_deconv
     type: int
