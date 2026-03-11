@@ -8,7 +8,6 @@ The script requires the following arguments:
     -ses        : Session. (eg. 01)
     -bids       : Path to BIDS directory ( . or FULL PATH)
     -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory.
-    -seg_type   : 'freesurfer' or 'fastsurfer'. Default: 'fastsurfer'   
     -force      : (Optional) Force gtmseg even if output exists.
 
 The script is intended for use by researchers and developers working with PET imaging data, particularly in the context of the MICA lab at McGill University.
@@ -36,7 +35,6 @@ parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument("-sub", type=str, required=True, help="(Str) Subject identifier (eg. '0001')")
 parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '01')")
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
-parser.add_argument("-seg_type", dest="seg_type", type=str, help="'freesurfer' or 'fastsurfer'. Default: 'fastsurfer'.", choices=['freesurfer','fastsurfer'], default="fastsurfer")
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
 parser.add_argument("-force", action='store_true', help="Force gtmseg even if output exists.")
 parser.add_argument("-threads", dest="threads", type=int, default=1, help="(Int) Number of threads to use. Default: 1")
@@ -53,9 +51,15 @@ if not all([args.sub, args.ses, args.bids_dir, args.subj_dir]):
 session = f"{args.ses.replace('ses-', '')}"
 subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
-seg_type = args.seg_type.lower()
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 force = args.force
+
+# Determine segmentation type   
+if os.path.exists(f'{f_surf_dir}/scripts/deep-seg.log'): #deep-seg only exists in fastsurfer
+    seg_type = 'fastsurfer'
+else:
+    seg_type = 'freesurfer'
+
 
 os.environ['SUBJECTS_DIR'] = os.path.realpath(args.subj_dir)
 # Set OpenMP threads for FreeSurfer tools
@@ -129,11 +133,6 @@ elif seg_type == 'fastsurfer':
                 pass
             gtmseg.run()
 
-# mc = freesurfer.MRIConvert()
-# mc.inputs.in_file = f'{f_surf_dir}/mri/gtmseg.mgz'
-# mc.inputs.out_file = f'{f_surf_dir}/mri/gtmseg.nii.gz'
-# mc.inputs.out_type = 'niigz'
-# mc.run()
 
 # Resample GTMseg to T1w/nativepro space
 def resample_gtmseg(gtm,mri,space):
@@ -152,11 +151,11 @@ for space in ['T1wFS','T1wNativepro']:
     if space == 'T1wFS':
         mri = f"{f_surf_dir}/mri/orig.mgz"
     else: 
-        mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
+        mri = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
     resample_gtmseg(gtm,mri,space)
 
 
-resample_gtmseg(gtm,mri,'T1w')
+# resample_gtmseg(gtm,mri,'T1w')
 # need to run T1w even if space is nativepro, for hippunfold compatibility
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] GTM segmentation completed.")

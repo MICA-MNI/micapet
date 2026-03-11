@@ -8,7 +8,7 @@ The script requires the following arguments:
     -ses        : Session. (eg. 01)
     -bids       : Path to BIDS directory ( . or FULL PATH)
     -subj_dir : Specify path to FreeSurfer/FastSurfer subjects directory. (Default fastsurfer subdirectory in BIDS derivatives directory.)
-    -pvc_method : PVC method used for PET image. Options: 'rbv', 'MG'. Default: 'rbv'.
+    -pvc_method : PVC method used for PET image. Options: 'rbv', 'MG', 'IY'. Default: 'rbv'.
     -pet        : (Optional) Specify path to PET nifti file. Default: sub-<sub>_ses-<ses>_trc-<trc>_pet.nii.gz in pet BIDS directory.
     -mri        : (Optional) Specify path to MRI nifti file. Default: sub-<sub>_ses-<ses>_T1w.nii.gz in anat BIDS directory.
     -out        : (Optional) Output directory. Default: BIDS directory.
@@ -19,6 +19,7 @@ This script is licensed under the MIT License. See the LICENSE file for details.
 Copyright (c) 2025 MICA-MNI
 """
 import argparse
+import glob
 import os
 import shutil
 import sys
@@ -28,7 +29,6 @@ import subprocess
 # from nipype.interfaces.freesurfer import FSCommand
 from nipype.interfaces.freesurfer import MRICoreg, ApplyVolTransform, FSCommand, MRIConvert
 from nipype.interfaces import afni
-
 
 # Load utilities functions from utils.py
 import utils
@@ -83,7 +83,11 @@ else:
     mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
     
 pet = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-{trc}_pet.nii.gz"
-transmission = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-{trc}_desc-transmission_pet.nii.gz"
+transmission_list = sorted(glob.glob(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_*transmission*.nii.gz"))
+if len(transmission_list) > 1:
+    print(f"Warning: Multiple transmission scans found for subject {subject}, session {session}. Using the first one found: {transmission_list[0]}")
+transmission = transmission_list[0] if len(transmission_list) > 0 else None
+f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-{trc}_desc-transmission_pet.nii.gz"
 mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
 
 # Create BIDS directory structure if it doesn't exist
@@ -97,6 +101,7 @@ if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):
     os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet")
     os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf")
     os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm")
+    os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/qc")
 
 # Check and copy PET and MRI files if provided
 if args.pet == None:
@@ -122,8 +127,9 @@ resample = afni.Resample()
 resample.inputs.in_file = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
 resample.inputs.orientation= 'LPI'
 resample.inputs.outputtype = 'NIFTI_GZ'
-resample.out_file = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
-res = resample.run()
+resample.inputs.out_file = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
+print(f"Resampling T1w MRI to nativepro space: {resample.cmdline}")
+resample.run()
 
 ## MRICoreg
 FSCommand.set_default_subjects_dir(subj_dir)
@@ -135,7 +141,7 @@ def mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,trc):
         coreg.inputs.subjects_dir=subj_dir
         coreg.inputs.subject_id=f"sub-{subject}_ses-{session}"
     else: # use rawdata mri
-        coreg.inputs.reference_file=f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}__space-nativepro_T1w.nii.gz"
+        coreg.inputs.reference_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
     coreg.inputs.out_lta_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-{space}_xfm.reg.lta'
     print(coreg.cmdline)
     coreg.run()
@@ -146,7 +152,7 @@ def mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,trc):
     if space == 'T1wFS':
         applyreg.inputs.fs_target=True
     else:
-        applyreg.inputs.target_file=f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
+        applyreg.inputs.target_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
     applyreg.inputs.transformed_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-none_trc-{trc}_pet.nii.gz'
     applyreg.run()
 
@@ -161,12 +167,13 @@ def ANTS_reg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,spac
             mc.inputs.out_file = mri
             mc.inputs.out_type = 'niigz'
             mc.run()
-    else: # use rawdata mri
-        mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
+    else: # use nativepro mri
+        mri = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
         
     fixed = ants.image_read(mri)
     moving = ants.image_read(pet)
-    if trc == 'MK6240':
+    if transmission is not None:
+        print(f"Using transmission scan for registration to space {space}...")
         moving_transmission = ants.image_read(transmission)
     else:
         moving_transmission = moving
@@ -212,7 +219,5 @@ for space in ['T1wFS','T1wNativepro']:
         mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,trc)
     else: 
         ANTS_reg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,space,trc)
-
-
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] PET to MRI co-registration completed.")

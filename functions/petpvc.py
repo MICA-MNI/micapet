@@ -39,15 +39,16 @@ repo_dir = os.path.dirname(script_dir)
 
 # Argument Parsing
 parser = argparse.ArgumentParser(add_help=True)
-parser.add_argument("-trc", type=str, dest='trc', default='FDG',choices=['FDG','MK6240'],help="(Str) Select tracer for analysis ('FDG','MK6240'). (Default 'FDG').")
+parser.add_argument("-trc", type=str, dest='trc', default='FDG',help="(Str) Select tracer for analysis (eg. 'FDG','MK6240'). (Default 'FDG').")
 parser.add_argument("-sub", type=str, required=True, help="(Str) Subject identifier (eg. '0001')")
 parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '01')")
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
 parser.add_argument("-psf", dest="psf", type=float, required=True, help="Scanner PSF in mm. Ask your PET physicist if unknown.", default=4.5)
+parser.add_argument("-pvc_method", dest="pvc_method", type=str, default='rbv', choices=['rbv', 'MG', 'IY'], help="(Str) PVC method used for PET image. Options: 'rbv', 'MG','IY'. Default: 'rbv'.")
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
 parser.add_argument("-pvc_dir", dest="pvc_dir", type=str, help="(Str) Specify PVC output directory. (Default {subj_dir}/sub-{subject}_ses-{session}/gtmpvc.output)")
 parser.add_argument("-force", action='store_true', help="Force PVC even if output exists.")
-parser.add_argument("-pvc_method", dest="pvc_method", type=str, default='rbv', choices=['rbv', 'MG', 'IY'], help="(Str) PVC method used for PET image. Options: 'rbv', 'MG','IY'. Default: 'rbv'.")
+
 args = parser.parse_args()
 
 # Validate mandatory arguments
@@ -80,7 +81,7 @@ if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):
     print(f"Error: BIDS derivatives directory for subject {subject}, session {session} does not exist.")
     sys.exit(1)
 
-print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting GTMPVC for subject: {subject}, session: {session}.")
+print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting GTMPVC for subject: {subject}, session: {session}, PVC method: {pvc_method}.")
 
 # make GM/WM mask
 print("Creating mask for PETPVC...")
@@ -102,7 +103,7 @@ if pvc_method == 'MG':
 elif pvc_method == 'IY':
     gm_wm_mask = np.stack([GM_mask,WM_mask,CSF_mask,background_mask],axis=-1)
     
-nib.save(nib.Nifti1Image(gm_wm_mask,aseg.affine,aseg.header),f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-T1wFS_desc-PETPVCmask.nii.gz")
+nib.save(nib.Nifti1Image(gm_wm_mask,gtmseg.affine,gtmseg.header),f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-T1wFS_desc-PETPVCmask.nii.gz")
 
 # Run PVC
 print("Running PVC...")
@@ -114,6 +115,8 @@ pvc.inputs.pvc = pvc_method
 pvc.inputs.fwhm_x = psf
 pvc.inputs.fwhm_y = psf
 pvc.inputs.fwhm_z = psf
+if pvc_method == 'IY':
+    pvc.inputs.n_iter = 10
 outs = pvc.run()
 
 
@@ -130,32 +133,8 @@ def resample_PET(pet,mri,mica_pet_derivatives,subject,session,space,pvc_method,t
 
 for space in ['T1wNativepro']:
     pet = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wFS_pvc-{pvc_method}_ref-none_trc-{trc}_pet.nii.gz"
-    mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
+    mri = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
     
     resample_PET(pet,mri,mica_pet_derivatives,subject,session,space,pvc_method,trc)
-
-# # Resample aseg to T1w/nativepro space
-# def resample_aseg(aseg,mri,space):
-#     print(f"Resampling aseg to {space} space...")
-#     applyreg = ApplyVolTransform()
-#     applyreg.inputs.source_file= aseg
-#     applyreg.inputs.reg_header=True
-#     applyreg.inputs.interp = 'nearest'
-#     applyreg.inputs.target_file= mri
-#     applyreg.inputs.transformed_file=f'{f_surf_dir}/mri/aseg_space-{space}.nii.gz'
-#     applyreg.run()
-    
-# aseg = f'{f_surf_dir}/mri/aseg.mgz'
-
-# for space in ['T1wFS','T1wNativepro']:
-#     if space == 'T1wFS':
-#         mri = f"{f_surf_dir}/mri/orig.mgz"
-#     else: 
-#         mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
-#     resample_aseg(aseg,mri,space)
-
-
-# resample_aseg(aseg,mri,'T1w')
-# # need to run T1w even if space is nativepro, for hippunfold compatibility
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Partial volume correction completed.")
