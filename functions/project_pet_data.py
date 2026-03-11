@@ -29,6 +29,7 @@ import sys
 from datetime import datetime
 from nipype.interfaces.freesurfer import FSCommand, MRICoreg, ApplyVolTransform
 from nipype.interfaces.workbench.base import WBCommand
+import numpy as np
 import shutil
 
 # Load utilities functions from utils.py
@@ -50,7 +51,7 @@ parser.add_argument("-pvc_method", dest="pvc_method", type=str, default='RBV-FS'
 parser.add_argument("-trc", dest="trc", type=str, default='FDG', choices=['FDG', 'MK6240'], help="(Str) Tracer (eg. 'FDG', 'MK6240'). Default: 'FDG'")
 parser.add_argument("-cortical", action='store_true', dest="cortical", help="(Flag) If present, perform cortical surface projection.")
 parser.add_argument("-hippocampal", action='store_true', dest="hippocampal", help="(Flag) If present, perform hippocampal surface projection.")
-parser.add_argument("-smoothing", dest="smoothing", type=float, nargs='*', default=None, help="(List of float) List of smoothing FWHM in mm for surface projection. eg. '-smoothing 5 10'. Default: None (no smoothing).")
+parser.add_argument("-smoothing", dest="smoothing", type=float, nargs='*', default=0, help="(List of float) List of smoothing FWHM in mm for surface projection. eg. '-smoothing 5 10'. Default: 0 (no smoothing).")
 parser.add_argument("-tmpdir", dest="tmpdir", type=str, help="(Str) Specify path to temporary directory.")
 parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}")
 
@@ -153,7 +154,7 @@ if cortical:
                     
                     WBCommand(f'wb_command -metric-resample {SUVR_on_surf} {sphere_surf} {reg_surf_gii} BARYCENTRIC {SUVR_resampled_out}').run()
                     
-                    if smoothing is not None:
+                    if np.max(smoothing) > 0: # only do smoothing if user specified smoothing values > 0
                         for smooth in smoothing:
                             print(f"Smoothing with {smooth}mm kernel...")
                             midthick_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-{space}_surf-{surf}_label-midthickness.surf.gii'

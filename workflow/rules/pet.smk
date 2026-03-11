@@ -17,10 +17,10 @@ def get_pvc_n_deconv():
     return config.get("pvc_n_deconv", 10)
 
 def get_smoothing():
-    if config.get("smoothing", None) is not None:
+    if config.get("smoothing", 0) != 0:
         return " ".join(str(s) for s in config.get("smoothing"))
     else:
-        return None
+        return 0
 
 def get_linear_coreg_fs_check(wildcards):
     """Get fs_check input - mark as ancient if using existing outputs."""

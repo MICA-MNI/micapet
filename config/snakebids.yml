@@ -155,11 +155,11 @@ parse_args:
     default: 10
 
   --smoothing: 
-    help: "List of smoothing FWHM in mm for surface projection. eg. --smoothing 5 10 (default: None, no smoothing)"
+    help: "List of smoothing FWHM in mm for surface projection. eg. --smoothing 5 10 (default: 0, no smoothing)"
     dest: smoothing
     type: float
     nargs: '*'
-    default: None
+    default: 0
   
   --threads:
     help: "Number of threads for multithreaded steps (default: 8)"

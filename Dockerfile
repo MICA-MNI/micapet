@@ -109,7 +109,8 @@ RUN if [ -f /tmp/resources/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz ]; then 
     && rm /tmp/fs.tar.gz \
     && mv /opt/freesurfer-7.4.1/freesurfer /opt/freesurfer_tmp \
     && rm -r /opt/freesurfer-7.4.1 \
-    && mv /opt/freesurfer_tmp /opt/freesurfer-7.4.1
+    && mv /opt/freesurfer_tmp /opt/freesurfer-7.4.1 \
+    && rm /app/resources/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz
 
 #####################################################################
 # Install ANTs
@@ -136,11 +137,12 @@ RUN curl -fsSL -o /tmp/ants.zip \
 # Install AFNI 3dresample
 #####################################################################
 ENV AFNIPATH=/opt/AFNI
-ENV PATH=$AFNIPATH/bin:$PATH
+ENV PATH=$AFNIPATH:$PATH
 
 RUN mkdir -p $AFNIPATH && \
     mv /tmp/resources/AFNI/* /opt/AFNI 
 
+RUN chmod +x /opt/AFNI/3dresample
 #####################################################################
 # Install Miniconda & copy env
 #####################################################################
