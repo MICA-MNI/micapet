@@ -87,21 +87,21 @@ transmission_list = sorted(glob.glob(f"{bids_dir}/rawdata/sub-{subject}/ses-{ses
 if len(transmission_list) > 1:
     print(f"Warning: Multiple transmission scans found for subject {subject}, session {session}. Using the first one found: {transmission_list[0]}")
 transmission = transmission_list[0] if len(transmission_list) > 0 else None
-f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-{trc}_desc-transmission_pet.nii.gz"
 mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
 
-# Create BIDS directory structure if it doesn't exist
-if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
-    os.makedirs(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}")
-    os.makedirs(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat")
-    os.makedirs(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet")
-if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):
-    os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}")
-    os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat")
-    os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet")
-    os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf")
-    os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm")
-    os.makedirs(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/qc")
+# Create BIDS directory structure
+for directory in [
+    f"{bids_dir}/rawdata/sub-{subject}/ses-{session}",
+    f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat",
+    f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet",
+    f"{mica_pet_derivatives}/sub-{subject}/ses-{session}",
+    f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat",
+    f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet",
+    f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf",
+    f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm",
+    f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/qc",
+]:
+    os.makedirs(directory, exist_ok=True)
 
 # Check and copy PET and MRI files if provided
 if args.pet == None:

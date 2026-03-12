@@ -16,7 +16,7 @@ ref_region="cerebellarGM"
 pvc_method="IY"
 
 # remove old outputs
-rm -rf ${OUTPUT_DIR}/MICA-PET_${MICA_PET_VERSION}/sub-${test_subject}
+# rm -rf ${OUTPUT_DIR}/MICA-PET_${MICA_PET_VERSION}/sub-${test_subject}
 
 # Run the MICA-PET pipeline on the test data
 

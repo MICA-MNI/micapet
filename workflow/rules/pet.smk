@@ -29,6 +29,20 @@ def get_linear_coreg_fs_check(wildcards):
         return ancient(fs_check)
     return fs_check
 
+def get_reg_lta_fs(wildcards):
+    pvc_method = get_pvc_method()
+    if pvc_method == "RBV-FS":
+        return os.path.join(root, MICAPET_DIR_NAME, f"sub-{wildcards.subject}", f"ses-{wildcards.session}", "xfm", f"sub-{wildcards.subject}_ses-{wildcards.session}_trc-{wildcards.trc}_from-pet_to-T1wFS_xfm.reg.lta")
+    else:
+        return os.path.join(root, MICAPET_DIR_NAME, f"sub-{wildcards.subject}", f"ses-{wildcards.session}", "xfm", f"sub-{wildcards.subject}_ses-{wildcards.session}_trc-{wildcards.trc}_from-pet_to-T1wFS_0GenericAffine.mat")
+    
+def get_reg_lta_nativepro(wildcards):
+    pvc_method = get_pvc_method()
+    if pvc_method == "RBV-FS":
+        return os.path.join(root, MICAPET_DIR_NAME, f"sub-{wildcards.subject}", f"ses-{wildcards.session}", "xfm", f"sub-{wildcards.subject}_ses-{wildcards.session}_trc-{wildcards.trc}_from-pet_to-T1wNativepro_xfm.reg.lta")
+    else:
+        return os.path.join(root, MICAPET_DIR_NAME, f"sub-{wildcards.subject}", f"ses-{wildcards.session}", "xfm", f"sub-{wildcards.subject}_ses-{wildcards.session}_trc-{wildcards.trc}_from-pet_to-T1wNativepro_0GenericAffine.mat")
+    
 rule linear_coreg:
     input:
         pet = inputs['pet'].path,
@@ -37,11 +51,12 @@ rule linear_coreg:
         fs_check = get_linear_coreg_fs_check,
     output:
         # Reg lta files - Note: Python outputs to /xfm/ subdirectory with _from-pet_to-{space}_xfm.reg.lta naming
-        reg_lta_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "xfm", "sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wFS_xfm.reg.lta"),
-        reg_lta_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "xfm", "sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wNativepro_xfm.reg.lta"),
+        reg_lta_fs = get_reg_lta_fs,
+        reg_lta_native = get_reg_lta_nativepro,
         # Coregistered PET
         pet_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wFS_pvc-none_ref-none_trc-{trc}_pet.nii.gz"),
         pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNativepro_pvc-none_ref-none_trc-{trc}_pet.nii.gz"),
+        t1_nativepro = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "anat", "sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"),
     params:
         bids_dir = config["bids_dir"],
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
@@ -73,7 +88,7 @@ rule linear_coreg:
             -pet {input.pet} \
             -mri {input.t1} \
             -trc {wildcards.trc} \
-            -pvc_method {params.pvc_method}
+            -pvc_method {params.pvc_method} \
             >> {log} 2>&1
         """
 
