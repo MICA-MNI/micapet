@@ -109,8 +109,7 @@ RUN if [ -f /tmp/resources/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz ]; then 
     && rm /tmp/fs.tar.gz \
     && mv /opt/freesurfer-7.4.1/freesurfer /opt/freesurfer_tmp \
     && rm -r /opt/freesurfer-7.4.1 \
-    && mv /opt/freesurfer_tmp /opt/freesurfer-7.4.1 \
-    && rm /app/resources/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz
+    && mv /opt/freesurfer_tmp /opt/freesurfer-7.4.1 
 
 #####################################################################
 # Install ANTs
@@ -167,12 +166,14 @@ WORKDIR /app
 # Copy the entire application structure
 COPY . /app
 
-# Ensure correct permissions
-RUN chmod +x /app/run.py
+# Ensure correct permissions and rm the FS tar.gz to save space (since it's already extracted in the image)
+RUN chmod +x /app/run.py \
+    && rm /app/resources/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz
 
 ENV PATH=$FREESURFER_HOME/bin:$PATH \
     VTK_DEFAULT_OPENGL_WINDOW='vtkOSOpenGLRenderWindow' \
-    MESA_GL_VERSION_OVERRIDE=3.3
+    MESA_GL_VERSION_OVERRIDE=3.3 \
+    MICA_PET_VERSION="v.alpha.0.5"
 
 # Set the entrypoint to the Snakebids app (run.py)
 ENTRYPOINT ["conda", "run", "-n", "mica-pet", "python", "/app/run.py"]

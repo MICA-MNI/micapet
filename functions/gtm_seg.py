@@ -88,6 +88,7 @@ if seg_type == 'freesurfer':
         gtmseg = freesurfer.GTMSeg()
         gtmseg.inputs.subject_id = f"sub-{subject}_ses-{session}"
         gtmseg.inputs.ctx_annot = ("aparc.DKTatlas.annot",1000,2000)
+        gtmseg.inputs.xcerseg = True
         # Try to set openmp if supported by nipype interface, or rely on OMP_NUM_THREADS
         try:
             gtmseg.inputs.openmp = args.threads
@@ -116,6 +117,7 @@ elif seg_type == 'fastsurfer':
             gtmseg = freesurfer.GTMSeg()
             gtmseg.inputs.subject_id = f"sub-{subject}_ses-{session}"
             gtmseg.inputs.ctx_annot = ("aparc.DKTatlas.annot",1000,2000)
+            gtmseg.inputs.xcerseg = True
             # Try to set openmp if supported by nipype interface, or rely on OMP_NUM_THREADS
             try:
                 gtmseg.inputs.openmp = args.threads
@@ -126,6 +128,7 @@ elif seg_type == 'fastsurfer':
             gtmseg = freesurfer.GTMSeg()
             gtmseg.inputs.subject_id = f"sub-{subject}_ses-{session}"
             gtmseg.inputs.ctx_annot = ("aparc.DKTatlas.annot",1000,2000)
+            gtmseg.inputs.xcerseg = True
             # Try to set openmp if supported by nipype interface, or rely on OMP_NUM_THREADS
             try:
                 gtmseg.inputs.openmp = args.threads

@@ -39,6 +39,7 @@ def mock_bids_dir(tmp_path):
     bids_dir = tmp_path / "bids"
     subject = "PX003"
     session = "01"
+    tracer = "FDG"
     
     # Create rawdata structure
     rawdata = bids_dir / "rawdata" / f"sub-{subject}" / f"ses-{session}"
@@ -47,20 +48,20 @@ def mock_bids_dir(tmp_path):
     
     # Create mock input files
     (rawdata / "anat" / f"sub-{subject}_ses-{session}_T1w.nii.gz").touch()
-    (rawdata / "pet" / f"sub-{subject}_ses-{session}_trc-FDG_pet.nii.gz").touch()
+    (rawdata / "pet" / f"sub-{subject}_ses-{session}_trc-{tracer}_pet.nii.gz").touch()
     
     # Create derivatives structure
     derivatives = bids_dir / "derivatives"
     (derivatives / "fastsurfer" / f"sub-{subject}_ses-{session}" / "surf").mkdir(parents=True)
     (derivatives / "fastsurfer" / f"sub-{subject}_ses-{session}" / "mri" / "transforms").mkdir(parents=True)
     (derivatives / "hippunfold_v1.4.1" / "hippunfold" / f"sub-{subject}" / f"ses-{session}" / "surf").mkdir(parents=True)
-    (derivatives / "MICA-PET_v.alpha.0.3" / f"sub-{subject}" / f"ses-{session}" / "pet").mkdir(parents=True)
-    (derivatives / "MICA-PET_v.alpha.0.3" / f"sub-{subject}" / f"ses-{session}" / "surf").mkdir(parents=True)
-    (derivatives / "MICA-PET_v.alpha.0.3" / f"sub-{subject}" / f"ses-{session}" / "xfm").mkdir(parents=True)
-    (derivatives / "MICA-PET_v.alpha.0.3" / f"sub-{subject}" / f"ses-{session}" / "anat").mkdir(parents=True)
-    
+    (derivatives / "MICA-PET_v.alpha.0.5" / f"sub-{subject}" / f"ses-{session}" / "pet").mkdir(parents=True)
+    (derivatives / "MICA-PET_v.alpha.0.5" / f"sub-{subject}" / f"ses-{session}" / "surf").mkdir(parents=True)
+    (derivatives / "MICA-PET_v.alpha.0.5" / f"sub-{subject}" / f"ses-{session}" / "xfm").mkdir(parents=True)
+    (derivatives / "MICA-PET_v.alpha.0.5" / f"sub-{subject}" / f"ses-{session}" / "anat").mkdir(parents=True)
+    (derivatives / "MICA-PET_v.alpha.0.5" / f"sub-{subject}" / f"ses-{session}" / "qc").mkdir(parents=True)
     # Create qc directory
-    (bids_dir / "qc" / f"sub-{subject}" / f"ses-{session}").mkdir(parents=True)
+    (bids_dir / f"sub-{subject}" / f"ses-{session}" / "qc").mkdir(parents=True)
     
     return bids_dir
 
@@ -69,7 +70,7 @@ def mock_bids_dir(tmp_path):
 def mock_env():
     """Set up mock environment variables."""
     env_vars = {
-        'MICA_PET_VERSION': 'v.alpha.0.3',
+        'MICA_PET_VERSION': 'v.alpha.0.5',
         'FREESURFER_HOME': '/opt/freesurfer',
     }
     with patch.dict(os.environ, env_vars):
@@ -85,6 +86,10 @@ def test_subject():
 def test_session():
     return "01"
 
+@pytest.fixture
+def test_tracer():
+    return "FDG"
+
 
 # =============================================================================
 # Path Generation Tests
@@ -93,7 +98,7 @@ def test_session():
 class TestPathGeneration:
     """Test that path generation matches expected BIDS structure."""
     
-    def test_fastsurfer_output_paths(self, mock_bids_dir, test_subject, test_session):
+    def test_fastsurfer_output_paths(self, mock_bids_dir, test_subject, test_tracer, test_session):
         """Validate FastSurfer output path structure."""
         subj_dir = mock_bids_dir / "derivatives" / "fastsurfer"
         fs_subj = subj_dir / f"sub-{test_subject}_ses-{test_session}"
@@ -115,7 +120,7 @@ class TestPathGeneration:
             # Verify parent directories exist in our mock
             assert path.parent.exists() or path.parent.parent.exists()
     
-    def test_hippunfold_output_paths(self, mock_bids_dir, test_subject, test_session):
+    def test_hippunfold_output_paths(self, mock_bids_dir, test_subject, test_tracer, test_session):
         """Validate HippUnfold output path structure."""
         hipp_dir = mock_bids_dir / "derivatives" / "hippunfold_v1.4.1" / "hippunfold"
         
@@ -126,7 +131,7 @@ class TestPathGeneration:
             )
             assert expected.parent.exists()
     
-    def test_linear_coreg_output_paths(self, mock_bids_dir, test_subject, test_session, mock_env):
+    def test_linear_coreg_output_paths(self, mock_bids_dir, test_subject, test_tracer, test_session, mock_env):
         """Validate linear_coreg output path structure."""
         version = mock_env['MICA_PET_VERSION']
         mica_pet = mock_bids_dir / "derivatives" / f"MICA-PET_{version}" / f"sub-{test_subject}" / f"ses-{test_session}"
@@ -134,43 +139,43 @@ class TestPathGeneration:
         expected_outputs = [
             mica_pet / "xfm" / f"sub-{test_subject}_ses-{test_session}_from-pet_to-T1wFS_xfm.reg.lta",
             mica_pet / "xfm" / f"sub-{test_subject}_ses-{test_session}_from-pet_to-T1wNative_xfm.reg.lta",
-            mica_pet / "pet" / f"sub-{test_subject}_ses-{test_session}_space-T1wFS_pvc-none_ref-none_trc-FDG_pet.nii.gz",
-            mica_pet / "pet" / f"sub-{test_subject}_ses-{test_session}_space-T1wNative_pvc-none_ref-none_trc-FDG_pet.nii.gz",
+            mica_pet / "pet" / f"sub-{test_subject}_ses-{test_session}_space-T1wFS_pvc-none_ref-none_trc-{test_tracer}_pet.nii.gz",
+            mica_pet / "pet" / f"sub-{test_subject}_ses-{test_session}_space-T1wNative_pvc-none_ref-none_trc-{test_tracer}_pet.nii.gz",
         ]
         
         for path in expected_outputs:
             assert path.parent.exists(), f"Parent dir should exist: {path.parent}"
     
-    def test_pvc_output_paths(self, mock_bids_dir, test_subject, test_session, mock_env):
+    def test_pvc_output_paths(self, mock_bids_dir, test_subject, test_tracer, test_session, mock_env):
         """Validate PVC output path structure."""
         version = mock_env['MICA_PET_VERSION']
         mica_pet = mock_bids_dir / "derivatives" / f"MICA-PET_{version}" / f"sub-{test_subject}" / f"ses-{test_session}"
         
         expected_outputs = [
-            mica_pet / "pet" / f"sub-{test_subject}_ses-{test_session}_space-T1wFS_pvc-rbv_ref-none_trc-FDG_pet.nii.gz",
-            mica_pet / "pet" / f"sub-{test_subject}_ses-{test_session}_space-T1wNative_pvc-rbv_ref-none_trc-FDG_pet.nii.gz",
+            mica_pet / "pet" / f"sub-{test_subject}_ses-{test_session}_space-T1wFS_pvc-rbv_ref-none_trc-{test_tracer}_pet.nii.gz",
+            mica_pet / "pet" / f"sub-{test_subject}_ses-{test_session}_space-T1wNative_pvc-rbv_ref-none_trc-{test_tracer}_pet.nii.gz",
         ]
         
         for path in expected_outputs:
             assert path.parent.exists()
     
-    def test_suvr_output_paths(self, mock_bids_dir, test_subject, test_session, mock_env):
+    def test_suvr_output_paths(self, mock_bids_dir, test_subject, test_tracer, test_session, mock_env):
         """Validate SUVR output path structure."""
         version = mock_env['MICA_PET_VERSION']
         mica_pet = mock_bids_dir / "derivatives" / f"MICA-PET_{version}" / f"sub-{test_subject}" / f"ses-{test_session}"
         
         for ref in ["pons", "cerebellarGM", "composite"]:
-            expected = mica_pet / "pet" / f"sub-{test_subject}_ses-{test_session}_space-T1wFS_pvc-rbv_ref-{ref}_trc-FDG_pet.nii.gz"
+            expected = mica_pet / "pet" / f"sub-{test_subject}_ses-{test_session}_space-T1wFS_pvc-rbv_ref-{ref}_trc-{test_tracer}_pet.nii.gz"
             assert expected.parent.exists()
     
-    def test_subcortical_map_output_paths(self, mock_bids_dir, test_subject, test_session):
+    def test_subcortical_map_output_paths(self, mock_bids_dir, test_subject, test_tracer, test_session):
         """Validate subcortical map output path structure."""
         qc_dir = mock_bids_dir / "qc" / f"sub-{test_subject}" / f"ses-{test_session}"
         
-        expected = qc_dir / f"sub-{test_subject}_ses-{test_session}_subcortical_means_pvc-rbv_ref-pons_trc-FDG_pet.csv"
+        expected = qc_dir / f"sub-{test_subject}_ses-{test_session}_subcortical_means_pvc-rbv_ref-pons_trc-{test_tracer}_pet.csv"
         assert expected.parent.exists()
     
-    def test_clinical_report_output_path(self, mock_bids_dir, test_subject, test_session):
+    def test_clinical_report_output_path(self, mock_bids_dir, test_subject, test_tracer, test_session):
         """Validate clinical report output path."""
         qc_dir = mock_bids_dir / "qc"
         expected = qc_dir / f"sub-{test_subject}_ses-{test_session}_report.html"
@@ -414,7 +419,7 @@ class TestDependencyImports:
 class TestBIDSNamingConventions:
     """Test BIDS naming conventions in output files."""
     
-    def test_pet_file_naming(self, test_subject, test_session):
+    def test_pet_file_naming(self, test_subject, test_tracer, test_session):
         """Test PET file naming follows BIDS."""
         # Pattern: sub-{subject}_ses-{session}_space-{space}_pvc-{pvc}_ref-{ref}_trc-{tracer}_pet.nii.gz
         # Uses Snakemake wildcards {subject} and {session}
@@ -424,7 +429,7 @@ class TestBIDSNamingConventions:
             "space-",
             "pvc-",
             "ref-",
-            "trc-FDG",
+            "trc-{tracer}",
             "_pet.nii.gz"
         ]
         
@@ -433,7 +438,7 @@ class TestBIDSNamingConventions:
         for part in pattern_parts:
             assert part in pet_rules, f"BIDS pattern '{part}' not found in pet rules"
     
-    def test_surface_file_naming(self, test_subject, test_session):
+    def test_surface_file_naming(self, test_subject, test_tracer, test_session):
         """Test surface file naming follows conventions."""
         # Uses Snakemake wildcards {subject} and {session}
         pattern_parts = [
@@ -463,7 +468,7 @@ class TestBIDSNamingConventions:
 class TestMockIntegration:
     """Integration tests using mocks."""
     
-    def test_full_pipeline_path_chain(self, mock_bids_dir, test_subject, test_session, mock_env):
+    def test_full_pipeline_path_chain(self, mock_bids_dir, test_subject, test_tracer, test_session, mock_env):
         """Test that output paths from one step match input paths for the next."""
         version = mock_env['MICA_PET_VERSION']
         
@@ -483,7 +488,7 @@ class TestMockIntegration:
         
         # PVC outputs -> SUVR inputs
         pvc_to_suvr = [
-            mica_pet / "pet" / f"sub-{test_subject}_ses-{test_session}_space-T1wFS_pvc-rbv_ref-none_trc-FDG_pet.nii.gz",
+            mica_pet / "pet" / f"sub-{test_subject}_ses-{test_session}_space-T1wFS_pvc-rbv_ref-none_trc-{test_tracer}_pet.nii.gz",
         ]
         
         # Verify all parent directories exist in mock

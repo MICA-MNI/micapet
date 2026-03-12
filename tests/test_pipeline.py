@@ -219,7 +219,7 @@ class TestOutputPaths:
         """linear_coreg LTA files use _from-pet_to-{space}_xfm.reg.lta format."""
         pet_rules = (REPO_ROOT / "workflow" / "rules" / "pet.smk").read_text()
         assert "_from-pet_to-T1wFS_xfm.reg.lta" in pet_rules
-        assert "_from-pet_to-T1wNative_xfm.reg.lta" in pet_rules
+        assert "_from-pet_to-T1wNativepro_xfm.reg.lta" in pet_rules
 
 
 class TestRunScript:

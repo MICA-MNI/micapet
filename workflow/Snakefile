@@ -19,7 +19,7 @@ inputs = generate_inputs(
 
 
 # --- Global variables derived from config ---
-MICA_PET_VERSION = config.get("mica_pet_version", "v.alpha.0.5")
+MICA_PET_VERSION = os.environ.get("MICA_PET_VERSION") #config.get("mica_pet_version", "v.alpha.0.5")
 MICAPET_DIR_NAME = f"MICA-PET_{MICA_PET_VERSION}"
 FASTSURFER_DIR_NAME = "fastsurfer"
 HIPPUNFOLD_DIR_NAME = "hippunfold_v1.4.1"

@@ -38,7 +38,6 @@ rule fastsurfer:
             -subj_dir {params.subj_dir} \
             -tmpdir {params.tmpdir} \
             -fs_license {params.fs_license} \
-            -T1 {input.t1} \
             -force \
             > {log} 2>&1
         """
@@ -70,7 +69,6 @@ rule hippunfold:
             -hippunfold_dir {params.hippunfold_dir} \
             -threads {threads} \
             {params.cachedir_arg} \
-            -T1 {input.t1} \
             -force \
             > {log} 2>&1
         """
@@ -143,6 +141,7 @@ rule gtm_seg:
         unpack(get_gtm_seg_inputs)
     output:
         gtmseg = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg.mgz"),
+        apas_head = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "apas+head.mgz"),
     params:
         bids_dir = config["bids_dir"],
         # gtm_seg.py uses -subj_dir
