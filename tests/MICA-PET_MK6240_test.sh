@@ -5,7 +5,7 @@
 # It performs a basic test of the MICA-PET pipeline using a small subset of data.
 
 # Set variables for test subject, session, and tracer
-MICA_PET_VERSION="v.alpha.0.5"
+MICA_PET_VERSION="v.alpha.0.5.1"
 test_subject="PX002"
 test_session="01"
 BIDS_DIR="/host/verges/tank/data/jack/MK6240/BIDS_test_MK6240"
@@ -16,7 +16,7 @@ ref_region="cerebellarGM"
 pvc_method="IY"
 
 # remove old outputs
-# rm -rf ${OUTPUT_DIR}/MICA-PET_${MICA_PET_VERSION}/sub-${test_subject}
+rm -rf ${OUTPUT_DIR}/MICA-PET_${MICA_PET_VERSION}/sub-${test_subject}
 
 # Run the MICA-PET pipeline on the test data
 

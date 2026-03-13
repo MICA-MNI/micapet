@@ -307,11 +307,11 @@ def plot_SUVR(subject,session,bids_dir,qc_dir,pial_left,pial_right,mask,max_valu
 # Plotting functions ------------------------------------------------------------
 
 def plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc):
-    # subcort_SUVR = pd.read_csv(f'{bids_dir}/qc/sub-{subject}/ses-{session}/sub-{subject}_ses-{session}_subcortical_means_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_pet.csv',header=None).to_numpy()
+    # subcort_SUVR = pd.read_csv(f'{qc_dir}/sub-{subject}_ses-{session}_subcortical_means_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_pet.csv',header=None).to_numpy()
     # to_plot = subcort_SUVR[1,:]
     
     data_lh, data_rh = _load_data_sctx(
-    sctx_file=Path(f'{bids_dir}/qc/sub-{subject}/ses-{session}/sub-{subject}_ses-{session}_subcortical_means_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_pet.csv'),
+    sctx_file=Path(f'{qc_dir}/sub-{subject}_ses-{session}_subcortical_means_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_pet.csv'),
     analysis="regional"
 )
     to_plot = np.hstack((data_lh, data_rh))
@@ -382,7 +382,7 @@ def plot_AI(subject,session,bids_dir,qc_dir,pial_left,pial_right,mica_pet_deriva
 def plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc):
     
     data_lh, data_rh = _load_data_sctx(
-    sctx_file=Path(f'{bids_dir}/qc/sub-{subject}/ses-{session}/sub-{subject}_ses-{session}_subcortical_means_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_pet.csv'),
+    sctx_file=Path(f'{qc_dir}/sub-{subject}_ses-{session}_subcortical_means_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_pet.csv'),
     analysis="asymmetry")   
     
     to_plot = np.hstack((data_lh, data_rh))

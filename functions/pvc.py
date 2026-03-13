@@ -95,7 +95,7 @@ print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting GTMPVC for sub
 
 gtmpvc = freesurfer.GTMPVC()
 gtmpvc.inputs.in_file = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-{trc}_pet.nii.gz"
-gtmpvc.inputs.reg_file = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-T1wFS_xfm.reg.lta'
+gtmpvc.inputs.reg_file = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wFS_xfm.reg.lta'
 gtmpvc.inputs.psf = psf
 gtmpvc.inputs.segmentation = f"{f_surf_dir}/mri/gtmseg.mgz"
 gtmpvc.inputs.auto_mask = (1, 0.01)
@@ -116,7 +116,7 @@ def resample_RBV(rbv,mri,mica_pet_derivatives,subject,session,space):
     applyreg.inputs.source_file= rbv
     applyreg.inputs.reg_header=True
     applyreg.inputs.target_file= mri
-    applyreg.inputs.transformed_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-rbv_ref-none_trc-{trc}_pet.nii.gz"
+    applyreg.inputs.transformed_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-RBV-FS_ref-none_trc-{trc}_pet.nii.gz"
     applyreg.run()
 
 rbv = f"{pvc_dir}/rbv.nii.gz"

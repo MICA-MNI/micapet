@@ -51,8 +51,8 @@ rule linear_coreg:
         fs_check = get_linear_coreg_fs_check,
     output:
         # Reg lta files - Note: Python outputs to /xfm/ subdirectory with _from-pet_to-{space}_xfm.reg.lta naming
-        reg_lta_fs = get_reg_lta_fs,
-        reg_lta_native = get_reg_lta_nativepro,
+        reg_lta_fs = lambda wildcards: get_reg_lta_fs(wildcards),
+        reg_lta_native = lambda wildcards: get_reg_lta_nativepro(wildcards),
         # Coregistered PET
         pet_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wFS_pvc-none_ref-none_trc-{trc}_pet.nii.gz"),
         pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNativepro_pvc-none_ref-none_trc-{trc}_pet.nii.gz"),
@@ -63,7 +63,7 @@ rule linear_coreg:
         output_dir = root,
         log_dir = os.path.join(root, "logs", "linear_coreg"),
         fs_license = config.get("fs_license"),
-        pvc_method = get_pvc_method(),
+        pvc_method = lambda wildcards: get_pvc_method(),
     log:
         os.path.join(root, "logs", "linear_coreg", "sub-{subject}_ses-{session}_trc-{trc}.log")
     shell:
@@ -108,10 +108,10 @@ rule pvc:
         output_dir = root,
         log_dir = os.path.join(root, "logs", "pvc"),
         fs_license = config.get("fs_license"),
-        pvc_method = get_pvc_method(),
-        pvc_mask = get_pvc_mask(),
-        pvc_n_iter = get_pvc_n_iter(),
-        pvc_n_deconv = get_pvc_n_deconv(),
+        pvc_method = lambda wildcards: get_pvc_method(),
+        pvc_mask = lambda wildcards: get_pvc_mask(),
+        pvc_n_iter = lambda wildcards: get_pvc_n_iter(),
+        pvc_n_deconv = lambda wildcards: get_pvc_n_deconv(),
     log:
         os.path.join(root, "logs", "pvc", "sub-{subject}_ses-{session}_trc-{trc}.log")
     run:
@@ -169,11 +169,11 @@ rule suvr:
     params:
         bids_dir = config["bids_dir"],
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
-        ref_region = get_ref_region(),
+        ref_region = lambda wildcards: get_ref_region(),
         output_dir = root,
         log_dir = os.path.join(root, "logs", "suvr"),
         fs_license = config.get("fs_license"),
-        pvc_method = get_pvc_method(),
+        pvc_method = lambda wildcards: get_pvc_method(),
     log:
         os.path.join(root, "logs", "suvr", "sub-{subject}_ses-{session}_trc-{trc}.log")
     shell:
@@ -233,12 +233,12 @@ rule project_pet_data:
         bids_dir = config["bids_dir"],
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         hippunfold_dir = os.path.join(root, HIPPUNFOLD_DIR_NAME),
-        ref_region = get_ref_region(),
+        ref_region = lambda wildcards: get_ref_region(),
         output_dir = root,
         log_dir = os.path.join(root, "logs", "project_pet_data"),
         fs_license = config.get("fs_license"),
-        pvc_method = get_pvc_method(),
-        smoothing = get_smoothing(),
+        pvc_method = lambda wildcards: get_pvc_method(),
+        smoothing = lambda wildcards: get_smoothing(),
     log:
         os.path.join(root, "logs", "project_pet_data", "sub-{subject}_ses-{session}_trc-{trc}.log")
     shell:
@@ -259,7 +259,6 @@ rule project_pet_data:
             -ref_region {params.ref_region} \
             -trc {wildcards.trc} \
             -pvc_method {params.pvc_method} \
-            -pvc \
             -cortical \
             -hippocampal \
             -smoothing {params.smoothing} \
@@ -286,10 +285,10 @@ rule subcortical_map:
     params:
         bids_dir = config["bids_dir"],
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
-        ref_region = get_ref_region(),
+        ref_region = lambda wildcards: get_ref_region(),
         output_dir = root,
         log_dir = os.path.join(root, "logs", "subcortical_map"),
-        pvc_method = get_pvc_method(),
+        pvc_method = lambda wildcards: get_pvc_method(),
     log:
         os.path.join(root, "logs", "subcortical_map", "sub-{subject}_ses-{session}_trc-{trc}.log")
     shell:

@@ -13,7 +13,7 @@ OUTPUT_DIR="/host/verges/tank/data/jack/FDG/BIDS_Beijing_FCD_test/derivatives"
 CORES=32
 psf=3.3
 ref_region="pons"
-pvc_method="MG"
+pvc_method="RBV-FS"
 
 # remove old outputs
 # rm -rf ${OUTPUT_DIR}/MICA-PET_${MICA_PET_VERSION}/sub-${test_subject}
