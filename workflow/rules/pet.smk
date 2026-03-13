@@ -278,7 +278,7 @@ rule subcortical_map:
     input:
         unpack(get_subcortical_map_inputs)
     output:
-        csv = os.path.join(root, "qc", "sub-{subject}", "ses-{session}", "sub-{subject}_ses-{session}_subcortical_means_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_trc-{trc}_pet.csv"),
+        csv = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "qc", "sub-{subject}_ses-{session}_subcortical_means_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_trc-{trc}_pet.csv"),
     params:
         bids_dir = config["bids_dir"],
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),

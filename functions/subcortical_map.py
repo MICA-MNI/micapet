@@ -67,10 +67,9 @@ space='T1wFS'
 mica_pet_version = os.environ['MICA_PET_VERSION']
 if args.output_dir is not None:
     mica_pet_derivatives = os.path.join(os.path.realpath(args.output_dir), f"MICA-PET_{mica_pet_version}")
-    qc_dir = os.path.join(os.path.realpath(args.output_dir), "qc", f"sub-{subject}", f"ses-{session}")
 else:
     mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
-    qc_dir = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/qc"
+qc_dir = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/qc"
     
 # Check BIDS directory structure if it doesn't exist
 if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):
