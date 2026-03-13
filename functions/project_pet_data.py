@@ -83,6 +83,7 @@ pvc_options = ['none', pvc_method]
 cortical = args.cortical
 hippocampal = args.hippocampal
 smoothing = args.smoothing
+smoothing_int = [int(x) for x in args.smoothing]
 trc = args.trc
 
 mica_pet_version = os.environ['MICA_PET_VERSION']
@@ -155,7 +156,7 @@ if cortical:
                     WBCommand(f'wb_command -metric-resample {SUVR_on_surf} {sphere_surf} {reg_surf_gii} BARYCENTRIC {SUVR_resampled_out}').run()
                     
                     if np.max(smoothing) > 0: # only do smoothing if user specified smoothing values > 0
-                        for smooth in smoothing:
+                        for smooth in smoothing_int:
                             print(f"Smoothing with {smooth}mm kernel...")
                             midthick_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-{space}_surf-{surf}_label-midthickness.surf.gii'
                             

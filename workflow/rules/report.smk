@@ -16,10 +16,15 @@ rule clinical_report:
         ref_region = config.get("ref_region", "pons"),
         output_dir = root,
         log_dir = os.path.join(root, "logs", "clinical_report"),
+        fs_license = config.get("fs_license"),
     log:
         os.path.join(root, "logs", "clinical_report", "sub-{subject}_ses-{session}_trc-{trc}.log")
     shell:
         """
+        set +eu  # Disable strict mode completely
+        export FREESURFER_HOME=/opt/freesurfer-7.4.1
+        export FS_LICENSE={params.fs_license}
+        source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
         mkdir -p {params.log_dir}
         python {workflow.basedir}/../functions/clinical_reports.py \
             -sub {wildcards.subject} \

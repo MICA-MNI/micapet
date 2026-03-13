@@ -59,8 +59,7 @@ if (
             display.start()
             display_flag = True
         except ImportError:
-            if verbose:
-                print("Warning: pyvirtualdisplay not available, plotting may fail in headless environment")
+            print("Warning: pyvirtualdisplay not available, plotting may fail in headless environment")
 
 # Load utilities functions from utils.py
 import utils
@@ -137,11 +136,12 @@ mask = fetch_mask("fslr32k")
 # Create brainmasked PET
 if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-{trc}_pet_desc-brainmask.nii.gz"):
     print("Creating brainmasked PET image...")
-    # mc = MRIConvert()
-    # mc.inputs.in_file = f'{f_surf_dir}/mri/apas+head.mgz'
-    # mc.inputs.out_file = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/tmp.brainmask.nii.gz'
-    # mc.inputs.out_type = 'niigz'
-    # mc.run()
+    mc = MRIConvert()
+    mc.inputs.in_file = f'{f_surf_dir}/mri/apas+head.mgz'
+    mc.inputs.out_file = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/tmp.brainmask.nii.gz'
+    mc.inputs.out_type = 'niigz'
+    print(mc.cmdline)
+    mc.run()
     
     applyreg = ApplyVolTransform()
     
@@ -758,8 +758,10 @@ else:
 report.save(view, f"{qc_dir}/sub-{subject}_ses-{session}_trc-{trc}_report.html")
 
 # Clean up display
+# NOTE: Explicitly stopping the virtual display can trigger a fatal XIO error
+# with some plotting backends (e.g., VTK clients still disconnecting).
+# Let process teardown clean it up naturally.
 if display_flag:
-    display.stop()
     del display
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] QC screenshots completed.")

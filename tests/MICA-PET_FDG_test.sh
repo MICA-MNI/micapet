@@ -5,7 +5,7 @@
 # It performs a basic test of the MICA-PET pipeline using a small subset of data.
 
 # Set variables for test subject, session, and tracer
-MICA_PET_VERSION="v.alpha.0.5"
+MICA_PET_VERSION="v.alpha.0.5.1"
 test_subject="PX070"
 test_session="pre"
 BIDS_DIR="/host/verges/tank/data/jack/FDG/BIDS_Beijing_FCD_test"
