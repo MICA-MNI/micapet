@@ -6,15 +6,16 @@
 
 # Set variables for test subject, session, and tracer
 # MICA_PET_VERSION="v.alpha.0.5.1"
-test_subject="PX002"
+test_subject="HC010"
 test_session="01"
 BIDS_DIR="/host/verges/tank/data/jack/MK6240/BIDS_test_MK6240"
 OUTPUT_DIR="/host/verges/tank/data/jack/MK6240/BIDS_test_MK6240/derivatives"
 CORES=32
 psf=2.4
-ref_region="cerebellarGM"
-pvc_method="MG"
+ref_region="composite"
+pvc_method="IY+RL"
 pvc_n_iter=20
+pvc_n_deconv=20
 
 # remove old outputs
 # rm -rf ${OUTPUT_DIR}/MICA-PET_${MICA_PET_VERSION}/sub-${test_subject}
@@ -45,6 +46,7 @@ conda run -n mica-pet python /host/fladgate/local_raid/jack/FDG/MICA-PET/scripts
 --smoothing 5 10 \
 --pvc-method ${pvc_method} \
 --pvc-n_iter ${pvc_n_iter} \
+--pvc-n_deconv ${pvc_n_deconv} \
 ${BIDS_DIR} ${OUTPUT_DIR} participant \
---cores ${CORES} \
---participant-label ${test_subject} 
+--cores ${CORES} #\
+# --participant-label ${test_subject} 
