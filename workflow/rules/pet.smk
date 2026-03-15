@@ -54,6 +54,7 @@ rule linear_coreg:
         # Coregistered PET
         pet_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wFS_pvc-none_ref-none_trc-{trc}_pet.nii.gz"),
         pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNativepro_pvc-none_ref-none_trc-{trc}_pet.nii.gz"),
+        # nativepro_mri = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "anat", "sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"), -> throws error - not same wildcards as other outputs
     params:
         bids_dir = config["bids_dir"],
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
@@ -94,7 +95,7 @@ rule pvc:
         pet_fs = rules.linear_coreg.output.pet_fs,
         pet_raw = inputs['pet'].path,
         lta = rules.linear_coreg.output.reg_lta_fs,
-        gtmseg = rules.gtm_seg.output.gtmseg,
+        gtmseg = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg.mgz"),
     output:
         pvc_pet_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wFS_pvc-"+get_pvc_method()+"_ref-none_trc-{trc}_pet.nii.gz"),
         pvc_pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNativepro_pvc-"+get_pvc_method()+"_ref-none_trc-{trc}_pet.nii.gz"),
@@ -106,9 +107,9 @@ rule pvc:
         log_dir = os.path.join(root, "logs", "pvc"),
         fs_license = config.get("fs_license"),
         pvc_method = lambda wildcards: get_pvc_method(),
-        pvc_mask = lambda wildcards: get_pvc_mask(),
-        pvc_n_iter = lambda wildcards: get_pvc_n_iter(),
-        pvc_n_deconv = lambda wildcards: get_pvc_n_deconv(),
+        pvc_mask_arg = lambda wildcards: f"-pvc_mask {config['pvc_mask']}" if config.get("pvc_mask") else "",
+        pvc_n_iter_arg = lambda wildcards: f"-pvc_n_iter {config['pvc_n_iter']}" if config.get("pvc_n_iter") else "",
+        pvc_n_deconv_arg = lambda wildcards: f"-pvc_n_deconv {config['pvc_n_deconv']}" if config.get("pvc_n_deconv") else "",
     log:
         os.path.join(root, "logs", "pvc", "sub-{subject}_ses-{session}_trc-{trc}.log")
     run:
@@ -149,9 +150,9 @@ rule pvc:
                     -psf {params.psf} \
                     -trc {wildcards.trc} \
                     -pvc_method {params.pvc_method} \
-                    -pvc_mask {params.pvc_mask} \
-                    -pvc_n_iter {params.pvc_n_iter} \
-                    -pvc_n_deconv {params.pvc_n_deconv} \
+                    {params.pvc_mask_arg} \
+                    {params.pvc_n_iter_arg} \
+                    {params.pvc_n_deconv_arg} \
                     >> {log} 2>&1
                 """)
         
@@ -161,8 +162,10 @@ rule suvr:
         pvc_pet_fs = rules.pvc.output.pvc_pet_fs,
         pvc_pet_native = rules.pvc.output.pvc_pet_native,
     output:
-        suvr_pet_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wFS_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_trc-{trc}_pet.nii.gz"),
-        suvr_pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNativepro_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_trc-{trc}_pet.nii.gz"),
+        suvr_pet_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wFS_pvc-none_ref-" + get_ref_region() + "_trc-{trc}_pet.nii.gz"),
+        suvr_pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNativepro_pvc-none_ref-" + get_ref_region() + "_trc-{trc}_pet.nii.gz"),
+        suvr_pet_fs_pvc = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wFS_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_trc-{trc}_pet.nii.gz"),
+        suvr_pet_native_pvc = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNativepro_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_trc-{trc}_pet.nii.gz"),
     params:
         bids_dir = config["bids_dir"],
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
@@ -218,7 +221,20 @@ def get_project_pet_data_inputs(wildcards):
 
 rule project_pet_data:
     input:
-        unpack(get_project_pet_data_inputs)
+        # unpack(get_project_pet_data_inputs)
+        fsLR_32k_L = rules.cortical_surface.output.fsLR_32k_L,
+        fsLR_32k_R = rules.cortical_surface.output.fsLR_32k_R,
+        # fsnative
+        fsnative_L = rules.cortical_surface.output.fsnative_L,
+        fsnative_R = rules.cortical_surface.output.fsnative_R,
+        
+        suvr_pet_fs = rules.suvr.output.suvr_pet_fs,
+        suvr_pet_native = rules.suvr.output.suvr_pet_native,
+        suvr_pet_fs_pvc = rules.suvr.output.suvr_pet_fs_pvc,
+        suvr_pet_native_pvc = rules.suvr.output.suvr_pet_native_pvc,
+        # Hippocampal surfaces
+        hipp_lh = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-L_space-T1w_den-2mm_label-hipp_midthickness.surf.gii"),
+        hipp_rh = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-R_space-T1w_den-2mm_label-hipp_midthickness.surf.gii"),
     output:
         # Cortical projection
         func_L = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_smooth-10mm_trc-{trc}_pet.func.gii"),
@@ -276,7 +292,9 @@ def get_subcortical_map_inputs(wildcards):
 
 rule subcortical_map:
     input:
-        unpack(get_subcortical_map_inputs)
+        # unpack(get_subcortical_map_inputs)
+        suvr_pet_fs = rules.suvr.output.suvr_pet_fs,
+        aparc_aseg = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "aparc+aseg.mgz"),
     output:
         csv = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "qc", "sub-{subject}_ses-{session}_subcortical_means_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_trc-{trc}_pet.csv"),
     params:

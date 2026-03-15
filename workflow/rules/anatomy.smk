@@ -84,14 +84,20 @@ def get_cortical_surface_inputs(wildcards):
         "sphere_rh": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "surf", "rh.sphere.reg"),
     }
     
-    # If using existing FreeSurfer dir, mark files as ancient (don't trigger fastsurfer rule)
-    if config.get("existing_freesurfer_dir", ""):
-        return {k: ancient(v) for k, v in base_paths.items()}
+    # # If using existing FreeSurfer dir, mark files as ancient (don't trigger fastsurfer rule)
+    # if config.get("existing_freesurfer_dir", ""):
+    #     return {k: ancient(v) for k, v in base_paths.items()}
     return base_paths
 
 rule cortical_surface:
     input:
-        unpack(get_cortical_surface_inputs)
+        # unpack(get_cortical_surface_inputs)
+        rules.fastsurfer.output.pial_lh,
+        rules.fastsurfer.output.white_lh,
+        rules.fastsurfer.output.sphere_lh,
+        rules.fastsurfer.output.pial_rh,
+        rules.fastsurfer.output.white_rh,
+        rules.fastsurfer.output.sphere_rh,
     output:
         # Expected outputs from cortical_surface.py
         fsLR_32k_L = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-L_space-T1wFS_surf-fsLR-32k_label-midthickness.surf.gii"),
@@ -132,16 +138,21 @@ def get_gtm_seg_inputs(wildcards):
         "talairach": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "transforms", "talairach.lta"),
         "brainmask": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "brainmask.mgz"),
     }
-    if config.get("existing_freesurfer_dir", ""):
-        return {k: ancient(v) for k, v in base_paths.items()}
+    # if config.get("existing_freesurfer_dir", ""):
+    #     return {k: ancient(v) for k, v in base_paths.items()}
     return base_paths
 
 rule gtm_seg:
     input:
-        unpack(get_gtm_seg_inputs)
+        # unpack(get_gtm_seg_inputs)
+        rules.fastsurfer.output.norm,
+        rules.fastsurfer.output.talairach,
+        rules.fastsurfer.output.brainmask,
     output:
-        gtmseg = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg.mgz"),
-        apas_head = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "apas+head.mgz"),
+        protected(os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg.mgz")),
+        protected(os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg_space-T1wFS.nii.gz")),
+        protected(os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg_space-T1wNativepro.nii.gz")),
+        # protected(os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "apas+head.mgz")),
     params:
         bids_dir = config["bids_dir"],
         # gtm_seg.py uses -subj_dir

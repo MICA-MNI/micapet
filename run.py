@@ -17,7 +17,11 @@ Example:
 """
 from pathlib import Path
 from snakebids import bidsapp, plugins
-
+import warnings
+import os
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
+os.environ["PYTHONWARNINGS"] = "ignore::FutureWarning:google.api_core"  # Suppress specific FutureWarnings from google.api_core
 
 def main():
     """Main entry point for the MICA-PET pipeline."""

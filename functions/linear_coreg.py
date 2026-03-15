@@ -123,13 +123,22 @@ else:
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting PET to MRI co-registration for subject: {subject}, session: {session}.")
 
 # 3d resample MRI to nativepro space
+# remove nativepro MRI if present
+nativepro_mri = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
+if os.path.exists(nativepro_mri):
+    print(f"Removing existing nativepro MRI: {nativepro_mri}")
+    os.remove(nativepro_mri)
+    
+
+os.environ['AFNI_NIFTI_TYPE_WARN'] = "NO"
 resample = afni.Resample()
 resample.inputs.in_file = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
 resample.inputs.orientation= 'LPI'
 resample.inputs.outputtype = 'NIFTI_GZ'
-resample.inputs.out_file = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
+resample.inputs.out_file = nativepro_mri
 print(f"Resampling T1w MRI to nativepro space: {resample.cmdline}")
 resample.run()
+
 
 ## MRICoreg
 FSCommand.set_default_subjects_dir(subj_dir)
@@ -182,7 +191,7 @@ def ANTS_reg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,spac
         fixed=fixed,
         moving=moving_transmission,
         type_of_transform='Rigid',
-        outprefix=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-{space}_'
+        outprefix=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-{space}_'
     )
 
     pet_in_mri = ants.apply_transforms(
@@ -192,27 +201,6 @@ def ANTS_reg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,spac
         interpolator='linear')
 
     ants.image_write(pet_in_mri, f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-none_trc-{trc}_pet.nii.gz')
-
-    # os.environ["PATH"] += os.pathsep + '/opt/ants/bin'
-    # FSCommand.set_default_subjects_dir(args.subj_dir)
-
-    # # convert ANTS mat to ITK txt
-    # ants_mat = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-pet_to-T1w_0GenericAffine.mat'
-    # itk_txt = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from_pet_to-T1w_xfm.txt'
-    # out_lta = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-FDG_pet_to-T1w_xfm.reg.lta'
-    # subprocess.call(['ConvertTransformFile', '3', 
-    #     ants_mat,
-    #     itk_txt])
-
-    # convert ITK txt to FreeSurfer LTA
-    # subprocess.call(['lta_convert',
-    #     '--initk',itk_txt,
-    #     '--outlta',out_lta,
-    #     '--src',pet,
-    #     '--trg',mri,
-    #     '--subject',f"sub-{subject}_ses-{session}",
-    #     '--ltavox2vox']) 
-
 
 for space in ['T1wFS','T1wNativepro']:
     if pvc_method == 'RBV-FS':

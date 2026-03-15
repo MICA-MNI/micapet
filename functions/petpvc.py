@@ -15,6 +15,7 @@ The script requires the following arguments:
     -pvc_mask   : (Optional) Custom mask to use for PETPVC. Must be a 4D NIfTI with one ROI per frame. Sum across timeframes must be 1 at each voxel. Must be in FreeSurfer/FastSurfer space (eg. orig.mgz). If not provided, a two tissue mask will be generated for MG PVC and a GM+WM+CSF+background mask will be generated for all others.
     -pvc_n_iter : (Optional) Number of iterations for iterative PVC methods (IY). Default: 10.
     -pvc_n_deconv : (Optional) Number of iterations for deconvolution PVC methods (RL, VC). Default: 10.
+    -output_dir : (Optional) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}.
 
 The script is intended for use by researchers and developers working with PET imaging data, particularly in the context of the MICA lab at McGill University.
 It is part of a larger pipeline for processing and analyzing neuroimaging data.
@@ -52,6 +53,8 @@ parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help=
 parser.add_argument("-pvc_dir", dest="pvc_dir", type=str, help="(Str) Specify PVC output directory. (Default {subj_dir}/sub-{subject}_ses-{session}/gtmpvc.output)")
 parser.add_argument("-pvc_n_iter", dest="pvc_n_iter", type=int, default=10, help="(Int) Number of iterations for iterative PVC methods (IY). Default: 10.")
 parser.add_argument("-pvc_n_deconv", dest="pvc_n_deconv", type=int, default=10, help="(Int) Number of iterations for deconvolution PVC methods (RL, VC). Default: 10.")
+parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}")
+
 
 args = parser.parse_args()
 
@@ -74,7 +77,11 @@ f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 FSCommand.set_default_subjects_dir(args.subj_dir)
 
 mica_pet_version = os.environ['MICA_PET_VERSION']
-mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
+# Support custom output_dir or default to bids_dir/derivatives
+if args.output_dir is not None:
+    mica_pet_derivatives = os.path.join(os.path.realpath(args.output_dir), f"MICA-PET_{mica_pet_version}")
+else:
+    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
 
 # Check BIDS directory structure if it doesn't exist
 if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):

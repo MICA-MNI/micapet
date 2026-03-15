@@ -88,16 +88,20 @@ if seg_type == 'freesurfer':
         gtmseg = freesurfer.GTMSeg()
         gtmseg.inputs.subject_id = f"sub-{subject}_ses-{session}"
         gtmseg.inputs.ctx_annot = ("aparc.DKTatlas.annot",1000,2000)
-        gtmseg.inputs.xcerseg = True
+        if os.path.exists(f"{f_surf_dir}/mri/apas+head.mgz"):
+            gtmseg.inputs.args = "--no-xcerseg"
+        else:
+            gtmseg.inputs.xcerseg = True
         # Try to set openmp if supported by nipype interface, or rely on OMP_NUM_THREADS
         try:
             gtmseg.inputs.openmp = args.threads
         except:
             pass
+        print(gtmseg.cmdline)
         gtmseg.run()
 
 elif seg_type == 'fastsurfer':
-    if os.path.exists(f"{f_surf_dir}/mri/gtmseg.mgz") and force==False:
+    if os.path.exists(f"{f_surf_dir}/mri/gtmseg_space-T1wFS.nii.gz") and force==False:
         print(f"GTMseg was run already for subject {subject}. Exiting.")
         sys.exit(0)
     else:
@@ -128,12 +132,17 @@ elif seg_type == 'fastsurfer':
             gtmseg = freesurfer.GTMSeg()
             gtmseg.inputs.subject_id = f"sub-{subject}_ses-{session}"
             gtmseg.inputs.ctx_annot = ("aparc.DKTatlas.annot",1000,2000)
-            gtmseg.inputs.xcerseg = True
+            if os.path.exists(f"{f_surf_dir}/mri/apas+head.mgz"):
+                gtmseg.inputs.args = "--no-xcerseg"
+            else:
+                gtmseg.inputs.xcerseg = True
             # Try to set openmp if supported by nipype interface, or rely on OMP_NUM_THREADS
             try:
                 gtmseg.inputs.openmp = args.threads
             except:
                 pass
+                
+            print(gtmseg.cmdline)
             gtmseg.run()
 
 
