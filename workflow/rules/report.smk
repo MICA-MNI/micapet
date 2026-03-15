@@ -10,8 +10,6 @@ rule report:
         suvr_pet_fs = rules.suvr.output.suvr_pet_fs,
         func_L = rules.project_pet_data.output.func_L,
         func_R = rules.project_pet_data.output.func_R,
-        hipp_func_L = rules.project_pet_data.output.hipp_func_L,
-        hipp_func_R = rules.project_pet_data.output.hipp_func_R,
         csv = rules.subcortical_map.output.csv,
     output:
         report = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "qc", "sub-{subject}_ses-{session}_pvc-"+get_pvc_method()+"_ref-"+get_ref_region()+"_trc-{trc}_report.html"),
@@ -23,7 +21,7 @@ rule report:
         log_dir = os.path.join(root, "logs", "report"),
         fs_license = config.get("fs_license"),
         pvc_method = lambda wildcards: get_pvc_method(),
-        
+        skip_hippunfold_arg = lambda wildcards: f"-hippocampal" if not config.get("skip_hippunfold", False) else "",
     log:
         os.path.join(root, "logs", "report", "sub-{subject}_ses-{session}_ref-"+get_ref_region()+"_trc-{trc}.log")
     shell:
@@ -42,5 +40,6 @@ rule report:
             -ref_region {params.ref_region} \
             -pvc_method {params.pvc_method} \
             -trc {wildcards.trc} \
+            {params.skip_hippunfold_arg} \
             > {log} 2>&1
         """

@@ -42,36 +42,37 @@ rule fastsurfer:
             > {log} 2>&1
         """
 
-rule hippunfold:
-    input:
-        t1 = inputs['T1w'].path
-    output:
-        hipp_lh = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-L_space-T1w_den-2mm_label-hipp_midthickness.surf.gii"),
-        hipp_rh = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-R_space-T1w_den-2mm_label-hipp_midthickness.surf.gii"),
-    params:
-        bids_dir = config["bids_dir"],
-        img = config.get("hippunfold_img"),
-        # hippunfold.py uses -hippunfold_dir NOT -output_dir
-        hippunfold_dir = os.path.join(root, HIPPUNFOLD_DIR_NAME),
-        cachedir_arg = lambda wildcards: f"-cachedir {config['hippunfold_cache_dir']}" if config.get("hippunfold_cache_dir") else "",
-        log_dir = os.path.join(root, "logs", "hippunfold"),
-    log:
-        os.path.join(root, "logs", "hippunfold", "sub-{subject}_ses-{session}.log")
-    threads: config.get("threads", 8)
-    shell:
-        """
-        mkdir -p {params.log_dir}
-        python -u {workflow.basedir}/../functions/hippunfold.py \
-            -sub {wildcards.subject} \
-            -ses {wildcards.session} \
-            -bids {params.bids_dir} \
-            -hippunfold_img {params.img} \
-            -hippunfold_dir {params.hippunfold_dir} \
-            -threads {threads} \
-            {params.cachedir_arg} \
-            -force \
-            > {log} 2>&1
-        """
+if not config.get("skip_hippunfold", False): #runs hippunfold if flag not set, skip hippunfold if flag set
+    rule hippunfold:
+        input:
+            t1 = inputs['T1w'].path
+        output:
+            hipp_lh = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-L_space-T1w_den-2mm_label-hipp_midthickness.surf.gii"),
+            hipp_rh = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-R_space-T1w_den-2mm_label-hipp_midthickness.surf.gii"),
+        params:
+            bids_dir = config["bids_dir"],
+            img = config.get("hippunfold_img"),
+            # hippunfold.py uses -hippunfold_dir NOT -output_dir
+            hippunfold_dir = os.path.join(root, HIPPUNFOLD_DIR_NAME),
+            cachedir_arg = lambda wildcards: f"-cachedir {config['hippunfold_cache_dir']}" if config.get("hippunfold_cache_dir") else "",
+            log_dir = os.path.join(root, "logs", "hippunfold"),
+        log:
+            os.path.join(root, "logs", "hippunfold", "sub-{subject}_ses-{session}.log")
+        threads: config.get("threads", 8)
+        shell:
+            """
+            mkdir -p {params.log_dir}
+            python -u {workflow.basedir}/../functions/hippunfold.py \
+                -sub {wildcards.subject} \
+                -ses {wildcards.session} \
+                -bids {params.bids_dir} \
+                -hippunfold_img {params.img} \
+                -hippunfold_dir {params.hippunfold_dir} \
+                -threads {threads} \
+                {params.cachedir_arg} \
+                -force \
+                > {log} 2>&1
+            """
 
 def get_cortical_surface_inputs(wildcards):
     """Get cortical surface inputs - mark as ancient if using existing outputs."""
@@ -149,10 +150,9 @@ rule gtm_seg:
         rules.fastsurfer.output.talairach,
         rules.fastsurfer.output.brainmask,
     output:
-        protected(os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg.mgz")),
-        protected(os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "anat", "sub-{subject}_ses-{session}_space-T1wFS_desc-gtmseg.nii.gz")),
-        
-        protected(os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "anat", "sub-{subject}_ses-{session}_space-T1wNativepro_desc-gtmseg.nii.gz")),
+        gtmseg = protected(os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg.mgz")),
+        gtmseg_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "anat", "sub-{subject}_ses-{session}_space-T1wFS_desc-gtmseg.nii.gz"),
+        gtmseg_nativepro = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "anat", "sub-{subject}_ses-{session}_space-T1wNativepro_desc-gtmseg.nii.gz"),
         # protected(os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "apas+head.mgz")),
     params:
         bids_dir = config["bids_dir"],

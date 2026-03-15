@@ -6,7 +6,7 @@
 
 # Set variables for test subject, session, and tracer
 MICA_PET_VERSION="v.alpha.0.5"
-test_subject="PX1801001"
+test_subject="PX003"
 test_session="pre"
 BIDS_DIR="/host/verges/tank/data/jack/FDG/BIDS_Beijing_FCD_test"
 OUTPUT_DIR="/host/verges/tank/data/jack/FDG/BIDS_Beijing_FCD_test/derivatives"
@@ -36,13 +36,13 @@ pvc_method="IY"
 # --participant-label ${test_subject} 
 
 conda run -n mica-pet python /host/fladgate/local_raid/jack/FDG/MICA-PET/scripts/run.py \
---fastsurfer_img /host/verges/tank/data/jack/fastsurfer-cpu-v2.4.2.sif \
---hippunfold_img /host/verges/tank/data/jack/hippunfold_v1.4.1.sif \
 --fs_license /host/verges/tank/data/jack/license.txt \
 --psf ${psf} \
 --ref_region ${ref_region} \
---smoothing 5 10 \
 --pvc-method ${pvc_method} \
+--existing-freesurfer-dir /host/verges/tank/data/BIDS_Beijing_FCD/derivatives/fastsurfer \
+--skip-hippunfold \
+--pvc-n_iter 20 \
 ${BIDS_DIR} ${OUTPUT_DIR} participant \
 --cores ${CORES} \
 --participant-label ${test_subject} 

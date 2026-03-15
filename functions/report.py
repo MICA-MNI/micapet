@@ -12,6 +12,7 @@ The script requires the following arguments:
     -ref_region : Reference regions to use. eg. ['pons','cerebellarGM','composite']. Default: ['pons'].
     -trc        : Tracer (eg. FDG, MK6240). Default: 'FDG'.
     -pvc_method : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'. Default: 'RBV-FS'.
+    -hippocampal: Presence of flag will perform hippocampal surface projection. If not set, will skip hippocampal maps in report.
     -max_value  : (Optional) Maximum SUVR value for color scale. Default: 1.5 times the 85th percentile SUVR in the data.
 
 The script is intended for use by researchers and developers working with PET imaging data, particularly in the context of the MICA lab at McGill University.
@@ -77,6 +78,7 @@ parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help=
 parser.add_argument("-ref_region",dest="ref_region", type=str, choices=['pons','cerebellarGM','composite'], default='pons',help="Specify reference region. Default: pons.")
 parser.add_argument("-trc", dest="trc", type=str, choices=['FDG','MK6240'], default='FDG', help="Tracer (eg. FDG, MK6240). Default: 'FDG'.")
 parser.add_argument("-pvc_method", dest="pvc_method", type=str, default='RBV-FS', choices=['RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'], help="(Str) PVC method used for PET image. Options: 'RBV-FS', 'MG','IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL' etc. Default: 'RBV-FS'.")
+parser.add_argument("-hippocampal", action='store_true', dest="hippocampal", help="(Flag) If present, perform hippocampal map report.")
 parser.add_argument("-max_value", dest="max_value", type=float, help="(Float) Maximum SUVR value for color scale. Default: 1.5 times the maximum SUVR value in the data.")
 parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}", default=None)
 
@@ -96,6 +98,7 @@ f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
 trc = args.trc
 pvc_method = args.pvc_method
+hippocampal_flag = args.hippocampal
 mica_pet_version = os.environ['MICA_PET_VERSION']
 
 # Support custom output_dir or default to bids_dir/derivatives
@@ -184,11 +187,12 @@ to_plot[~mask] = np.nan
 plot_hemispheres(pial_left,pial_right,to_plot,color_bar=True, cmap="jet",color_range=(0,np.max(to_plot[mask])*1.5), embed_nb=False,transparent_bg=True,size=(900,200),nan_color=(0.7, 0.7, 0.7, 1),screenshot=True,filename=f"{qc_dir}/sub-{subject}_ses-{session}_cortical_surf_screenshot.png")
 
 ## HC surface
-tmp_hcsurf_L = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_pet.func.gii")
-tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_pet.func.gii")
+if hippocampal_flag:
+    tmp_hcsurf_L = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_pet.func.gii")
+    tmp_hcsurf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_pet.func.gii")
 
-to_plot = np.hstack((np.expand_dims(tmp_hcsurf_L,axis=1),np.expand_dims(tmp_hcsurf_R,axis=1)))
-hm.plotting.surfplot_canonical_foldunfold(to_plot,hemis=['L','R'],den='2mm',labels=['hipp'],embed_nb=False,transparent_bg=True,tighten_cwindow=True,screenshot=True,filename=f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_hippunfold_screenshot.png")
+    to_plot = np.hstack((np.expand_dims(tmp_hcsurf_L,axis=1),np.expand_dims(tmp_hcsurf_R,axis=1)))
+    hm.plotting.surfplot_canonical_foldunfold(to_plot,hemis=['L','R'],den='2mm',labels=['hipp'],embed_nb=False,transparent_bg=True,tighten_cwindow=True,screenshot=True,filename=f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_hippunfold_screenshot.png")
 
 ## Plot PET-MRI overlay
 plotting.plot_roi(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-{ref_region}_trc-{trc}_pet_desc-brainmask.nii.gz",
@@ -584,12 +588,9 @@ if trc == "FDG":
         footer="Multimodal Imaging and Connectome Analysis (MICA) Lab - McGill University. For research use only.",
         logo=f"https://box.bic.mni.mcgill.ca/s/GbLcj26GmYWBfLL/download"
     ) as report:
-
-        view = rc.Block(
-            rc.Heading(label="Standard Uptake Value Ratio (SUVR)"),
-            
-            rc.Select(
-                blocks=[
+        
+        if hippocampal_flag:
+            SUVR_blocks = [
                     rc.Image(
                         cortical_SUVR,
                         label=f"Cortical {trc} SUVR",
@@ -606,13 +607,7 @@ if trc == "FDG":
                         extra_css="width: 450px; height: auto;",
                     ) 
                 ]
-            ),
-
-            rc.Heading(label="Asymmetry Index (AI)"), 
-                    # rc.Heading(label="(BLUE = Left < Right; RED = Right < Left)",level=3),
-            
-            rc.Select(
-                blocks=[
+            AI_blocks = [
                     # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
                     # Each `rc.Image()` block specifies the path to an image file and provides a label for
                     # that image.
@@ -629,8 +624,46 @@ if trc == "FDG":
                         label=f"Hippocampal {trc} SUVR AI",
                     ),
                     
-                ],
-                # label="(BLUE = Left < Right; RED = Right < Left)",
+                ]
+        else:
+            SUVR_blocks = [
+                    rc.Image(
+                        cortical_SUVR,
+                        label=f"Cortical {trc} SUVR",
+                        extra_css="width: 900px; height: auto;",
+                    ),
+                    rc.Image(
+                        plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
+                        label=f"Subcortical {trc} SUVR",
+                        extra_css="width: 900px; height: auto;",
+                    )
+                ]
+            AI_blocks = [
+                    # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
+                    # Each `rc.Image()` block specifies the path to an image file and provides a label for
+                    # that image.
+                    rc.Image(
+                        plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method),
+                        label=f"Cortical {trc} SUVR AI"
+                    ),
+                    rc.Image(
+                        plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc),
+                        label=f"Subcortical {trc} SUVR AI"
+                    ),       
+                ]
+
+        view = rc.Block(
+            rc.Heading(label="Standard Uptake Value Ratio (SUVR)"),
+            
+            rc.Select(
+                blocks=SUVR_blocks
+            ),
+
+            rc.Heading(label="Asymmetry Index (AI)"), 
+                    # rc.Heading(label="(BLUE = Left < Right; RED = Right < Left)",level=3),
+            
+            rc.Select(
+                blocks=AI_blocks
             ),
             rc.Group(
                 rc.Metric(
@@ -678,12 +711,9 @@ else:
         footer="Multimodal Imaging and Connectome Analysis (MICA) Lab - McGill University. For research use only.",
         logo=f"https://box.bic.mni.mcgill.ca/s/GbLcj26GmYWBfLL/download"
     ) as report:
-
-        view = rc.Block(
-            rc.Heading(label="Standard Uptake Value Ratio (SUVR)"),
-            
-            rc.Select(
-                blocks=[
+        
+        if hippocampal_flag:
+            SUVR_blocks = [
                     rc.Image(
                         cortical_SUVR,
                         label=f"Cortical {trc} SUVR",
@@ -700,13 +730,7 @@ else:
                         extra_css="width: 450px; height: auto;",
                     ) 
                 ]
-            ),
-
-            rc.Heading(label="Asymmetry Index (AI)"), 
-                    # rc.Heading(label="(BLUE = Left < Right; RED = Right < Left)",level=3),
-            
-            rc.Select(
-                blocks=[
+            AI_blocks = [
                     # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
                     # Each `rc.Image()` block specifies the path to an image file and provides a label for
                     # that image.
@@ -723,8 +747,46 @@ else:
                         label=f"Hippocampal {trc} SUVR AI",
                     ),
                     
-                ],
-                # label="(BLUE = Left < Right; RED = Right < Left)",
+                ]
+        else:
+            SUVR_blocks = [
+                    rc.Image(
+                        cortical_SUVR,
+                        label=f"Cortical {trc} SUVR",
+                        extra_css="width: 900px; height: auto;",
+                    ),
+                    rc.Image(
+                        plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
+                        label=f"Subcortical {trc} SUVR",
+                        extra_css="width: 900px; height: auto;",
+                    )
+                ]
+            AI_blocks = [
+                    # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
+                    # Each `rc.Image()` block specifies the path to an image file and provides a label for
+                    # that image.
+                    rc.Image(
+                        plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method),
+                        label=f"Cortical {trc} SUVR AI"
+                    ),
+                    rc.Image(
+                        plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc),
+                        label=f"Subcortical {trc} SUVR AI"
+                    ),       
+                ]
+
+        view = rc.Block(
+            rc.Heading(label="Standard Uptake Value Ratio (SUVR)"),
+            
+            rc.Select(
+                blocks=SUVR_blocks
+            ),
+
+            rc.Heading(label="Asymmetry Index (AI)"), 
+                    # rc.Heading(label="(BLUE = Left < Right; RED = Right < Left)",level=3),
+            
+            rc.Select(
+                blocks=AI_blocks
             ),
             rc.Group(
                 rc.Metric(

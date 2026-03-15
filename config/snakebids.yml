@@ -181,3 +181,9 @@ parse_args:
     help: "Path to existing HippUnfold outputs directory (optional). If provided, will create symlinks instead of running HippUnfold."
     dest: existing_hippunfold_dir
     default: ""
+
+  --skip-hippunfold:
+    help: "Flag to skip HippUnfold processing (optional). If set, will not run HippUnfold and will not require HippUnfold outputs."
+    dest: skip_hippunfold
+    action: 'store_true'
+    default: false
