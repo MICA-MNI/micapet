@@ -296,7 +296,7 @@ rule subcortical_map:
         suvr_pet_fs = rules.suvr.output.suvr_pet_fs,
         aparc_aseg = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "aparc+aseg.mgz"),
     output:
-        csv = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "qc", "sub-{subject}_ses-{session}_subcortical_means_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_trc-{trc}_pet.csv"),
+        csv = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "qc", "sub-{subject}_ses-{session}_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_trc-{trc}_subcortical_means_pet.csv"),
     params:
         bids_dir = config["bids_dir"],
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),

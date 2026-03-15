@@ -13,7 +13,8 @@ OUTPUT_DIR="/host/verges/tank/data/jack/MK6240/BIDS_test_MK6240/derivatives"
 CORES=32
 psf=2.4
 ref_region="cerebellarGM"
-pvc_method="IY"
+pvc_method="MG"
+pvc_n_iter=20
 
 # remove old outputs
 # rm -rf ${OUTPUT_DIR}/MICA-PET_${MICA_PET_VERSION}/sub-${test_subject}
@@ -43,6 +44,7 @@ conda run -n mica-pet python /host/fladgate/local_raid/jack/FDG/MICA-PET/scripts
 --ref_region ${ref_region} \
 --smoothing 5 10 \
 --pvc-method ${pvc_method} \
+--pvc-n_iter ${pvc_n_iter} \
 ${BIDS_DIR} ${OUTPUT_DIR} participant \
 --cores ${CORES} \
 --participant-label ${test_subject} 

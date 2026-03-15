@@ -150,8 +150,9 @@ rule gtm_seg:
         rules.fastsurfer.output.brainmask,
     output:
         protected(os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg.mgz")),
-        protected(os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg_space-T1wFS.nii.gz")),
-        protected(os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg_space-T1wNativepro.nii.gz")),
+        protected(os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "anat", "sub-{subject}_ses-{session}_space-T1wFS_desc-gtmseg.nii.gz")),
+        
+        protected(os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "anat", "sub-{subject}_ses-{session}_space-T1wNativepro_desc-gtmseg.nii.gz")),
         # protected(os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "apas+head.mgz")),
     params:
         bids_dir = config["bids_dir"],

@@ -115,7 +115,7 @@ regions = list(dict.keys())
 means = [np.mean(pet_resampled_data[aseg_aparc_data == dict[region]]) for region in regions]
 
 # Write to CSV
-output_file = f"{qc_dir}/sub-{subject}_ses-{session}_subcortical_means_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_pet.csv"
+output_file = f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_subcortical_means_pet.csv"
 with open(output_file, 'w', newline='') as f:
     writer = csv.writer(f)
     writer.writerow(regions)

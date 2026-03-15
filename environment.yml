@@ -17,6 +17,7 @@ dependencies:
   - cmake>=3.25         # Required for pyarrow (snakebids dependency)
   - pip
   - matplotlib==3.6.0
+  - petpvc
   - pip:
       - antspyx==0.6.1
       - brainstat==0.4.2

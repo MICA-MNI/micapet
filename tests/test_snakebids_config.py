@@ -251,7 +251,7 @@ class TestFunctionScripts:
             "suvr.py",
             "project_pet_data.py",
             "subcortical_map.py",
-            "clinical_reports.py",
+            "report.py",
         ]
     
     def test_function_scripts_exist(self, function_scripts):

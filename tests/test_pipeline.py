@@ -118,9 +118,9 @@ class TestPythonFunctionArguments:
         content = path.read_text()
         assert "-output_dir" in content
     
-    def test_clinical_reports_has_output_dir_arg(self):
-        """clinical_reports.py must accept -output_dir."""
-        path = FUNCTIONS_DIR / "clinical_reports.py"
+    def test_report_has_output_dir_arg(self):
+        """report.py must accept -output_dir."""
+        path = FUNCTIONS_DIR / "report.py"
         content = path.read_text()
         assert "-output_dir" in content
 
@@ -170,7 +170,7 @@ class TestSnakemakeRules:
         """Project PET data rule must pass -output_dir."""
         assert "project_pet_data.py" in pet_rules
     
-    def test_clinical_report_uses_output_dir(self, report_rules):
+    def test_report_uses_output_dir(self, report_rules):
         """Clinical report rule must pass -output_dir."""
         assert "-output_dir" in report_rules
 

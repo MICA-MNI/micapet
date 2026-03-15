@@ -201,7 +201,7 @@ plotting.plot_roi(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{
     resampling_interpolation='continuous',
     output_file=f"{qc_dir}/sub-{subject}_ses-{session}_SUVR_mosaic_screenshot.png")
 
-filename= f"/host/fladgate/local_raid/jack/FDG/sub-{subject}_ses-{session}_FDG_clinical_report.pdf"
+# filename= f"/host/fladgate/local_raid/jack/FDG/sub-{subject}_ses-{session}_FDG_report.pdf"
 
 sctx_left = read_surface(f"/app/surfaces/sctx.L.surf.gii", itype="gii")
 sctx_right = read_surface(f"/app/surfaces/sctx.R.surf.gii", itype="gii")
@@ -759,7 +759,6 @@ report.save(view, f"{qc_dir}/sub-{subject}_ses-{session}_trc-{trc}_report.html")
 # Clean up display
 # NOTE: Explicitly stopping the virtual display can trigger a fatal XIO error
 # with some plotting backends (e.g., VTK clients still disconnecting).
-# Let process teardown clean it up naturally.
 if display_flag:
     del display
 

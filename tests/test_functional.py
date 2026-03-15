@@ -175,7 +175,7 @@ class TestPathGeneration:
         expected = qc_dir / f"sub-{test_subject}_ses-{test_session}_subcortical_means_pvc-rbv_ref-pons_trc-{test_tracer}_pet.csv"
         assert expected.parent.exists()
     
-    def test_clinical_report_output_path(self, mock_bids_dir, test_subject, test_tracer, test_session):
+    def test_report_output_path(self, mock_bids_dir, test_subject, test_tracer, test_session):
         """Validate clinical report output path."""
         qc_dir = mock_bids_dir / "qc"
         expected = qc_dir / f"sub-{test_subject}_ses-{test_session}_report.html"
@@ -263,9 +263,9 @@ class TestArgumentParsers:
         for arg in required_args + optional_args:
             assert f'"{arg}"' in code or f"'{arg}'" in code, f"Missing arg: {arg}"
     
-    def test_clinical_reports_args(self):
-        """Test clinical_reports.py argument parser."""
-        code = (FUNCTIONS_DIR / "clinical_reports.py").read_text()
+    def test_report_args(self):
+        """Test report.py argument parser."""
+        code = (FUNCTIONS_DIR / "report.py").read_text()
         
         required_args = ["-sub", "-ses", "-bids", "-subj_dir"]
         optional_args = ["-output_dir", "-ref_region", "-max_value"]
@@ -340,9 +340,9 @@ class TestOutputDirectoryLogic:
         assert "args.output_dir" in code
         assert "if args.output_dir" in code
     
-    def test_clinical_reports_output_dir_logic(self, mock_env):
-        """Test clinical_reports.py handles output_dir correctly."""
-        code = (FUNCTIONS_DIR / "clinical_reports.py").read_text()
+    def test_report_output_dir_logic(self, mock_env):
+        """Test report.py handles output_dir correctly."""
+        code = (FUNCTIONS_DIR / "report.py").read_text()
         
         assert "args.output_dir" in code
         assert "if args.output_dir" in code

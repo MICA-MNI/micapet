@@ -101,7 +101,7 @@ if seg_type == 'freesurfer':
         gtmseg.run()
 
 elif seg_type == 'fastsurfer':
-    if os.path.exists(f"{f_surf_dir}/mri/gtmseg_space-T1wFS.nii.gz") and force==False:
+    if os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-T1wFS_desc-gtmseg.nii.gz") and force==False: 
         print(f"GTMseg was run already for subject {subject}. Exiting.")
         sys.exit(0)
     else:
@@ -154,7 +154,7 @@ def resample_gtmseg(gtm,mri,space):
     applyreg.inputs.reg_header=True
     applyreg.inputs.interp = 'nearest'
     applyreg.inputs.target_file= mri
-    applyreg.inputs.transformed_file=f'{f_surf_dir}/mri/gtmseg_space-{space}.nii.gz'
+    applyreg.inputs.transformed_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-gtmseg.nii.gz'
     applyreg.run()
     
 gtm = f'{f_surf_dir}/mri/gtmseg.mgz'

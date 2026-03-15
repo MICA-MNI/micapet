@@ -19,6 +19,7 @@ This script is licensed under the MIT License. See the LICENSE file for details.
 Copyright (c) 2025 MICA-MNI
 """
 import argparse
+from operator import sub
 import os
 import sys
 from datetime import datetime
@@ -94,7 +95,7 @@ print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting reference regi
 def ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, pvc_method, erode=False):
     print(f"Creating ROI mask for ROI {roi}...")
 
-    in_file = nib.load(f"{f_surf_dir}/mri/gtmseg_space-{space}.nii.gz")
+    in_file = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-gtmseg.nii.gz")
     in_data = in_file.get_fdata()
     roi_data = np.zeros(in_data.shape)
     # Set values in roi_data to 1 where in_data equals roi
