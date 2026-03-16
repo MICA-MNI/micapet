@@ -42,7 +42,7 @@ rule fastsurfer:
             > {log} 2>&1
         """
 
-if not config.get("skip_hippunfold", False): #runs hippunfold if flag not set, skip hippunfold if flag set
+if not config.get("skip_hippunfold", False) and not config.get("existing_hippunfold_dir", ""): #runs hippunfold if flag not set and existing dir not specified, skip hippunfold if flag set or if existing dir specified
     rule hippunfold:
         input:
             t1 = inputs['T1w'].path

@@ -39,10 +39,11 @@ conda run -n mica-pet python /host/fladgate/local_raid/jack/FDG/MICA-PET/scripts
 --fs_license /host/verges/tank/data/jack/license.txt \
 --psf ${psf} \
 --ref_region ${ref_region} \
+--smoothing 5 \
 --pvc-method ${pvc_method} \
 --existing-freesurfer-dir /host/verges/tank/data/BIDS_Beijing_FCD/derivatives/fastsurfer \
---skip-hippunfold \
+--existing-hippunfold-dir /host/verges/tank/data/BIDS_Beijing_FCD/derivatives/hippunfold_v1.4.1 \
 --pvc-n_iter 20 \
 ${BIDS_DIR} ${OUTPUT_DIR} participant \
 --cores ${CORES} \
---participant-label ${test_subject} 
+--participant-label ${test_subject}

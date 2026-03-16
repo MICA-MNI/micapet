@@ -219,7 +219,9 @@ def get_project_pet_data_inputs(wildcards):
     
     if not config.get("skip_hippunfold", False): # If not skipping HippUnfold, add HippUnfold outputs to inputs_dict
         inputs_dict["hipp_lh"] = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", f"sub-{wildcards.subject}", f"ses-{wildcards.session}", "surf", f"sub-{wildcards.subject}_ses-{wildcards.session}_hemi-L_space-T1w_den-2mm_label-hipp_midthickness.surf.gii")
+        
         inputs_dict["hipp_rh"] = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", f"sub-{wildcards.subject}", f"ses-{wildcards.session}", "surf", f"sub-{wildcards.subject}_ses-{wildcards.session}_hemi-R_space-T1w_den-2mm_label-hipp_midthickness.surf.gii")
+        
         if config.get("existing_hippunfold_dir", ""): # If using existing HippUnfold outputs, mark as ancient
             inputs_dict["hipp_lh"] = ancient(inputs_dict["hipp_lh"])
             inputs_dict["hipp_rh"] = ancient(inputs_dict["hipp_rh"])

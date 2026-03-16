@@ -846,7 +846,7 @@ report.save(view, f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{r
 # NOTE: Explicitly stopping the virtual display can trigger a fatal XIO error
 # with some plotting backends (e.g., VTK clients still disconnecting).
 if display_flag:
-    # display.stop()
+    display.stop()
     del display
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] QC screenshots completed.")
