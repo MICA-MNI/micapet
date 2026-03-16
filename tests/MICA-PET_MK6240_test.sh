@@ -48,5 +48,7 @@ conda run -n mica-pet python /host/fladgate/local_raid/jack/FDG/MICA-PET/scripts
 --pvc-n_iter ${pvc_n_iter} \
 --pvc-n_deconv ${pvc_n_deconv} \
 ${BIDS_DIR} ${OUTPUT_DIR} participant \
---cores ${CORES} #\
+--cores ${CORES} \
+--rerun-incomplete 
+#\
 # --participant-label ${test_subject} 

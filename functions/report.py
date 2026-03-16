@@ -177,10 +177,32 @@ if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/s
 pial_left, pial_right = fetch_template_surface("fslr32k",join=False)
 mask = fetch_mask("fslr32k")
 
+def get_surf_path(mica_pet_derivatives, subject, session, hemi, pvc_method, ref_region, trc):
+    """Return the surface .func.gii path with the highest smooth-Xmm kernel,
+    falling back to smooth-none if no smoothed file exists."""
+    import glob
+    import re
+    pattern = (
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/"
+        f"sub-{subject}_ses-{session}_hemi-{hemi}_surf-fsLR-32k_label-midthickness"
+        f"_pvc-{pvc_method}_ref-{ref_region}_smooth-*mm_trc-{trc}_pet.func.gii"
+    )
+    matches = glob.glob(pattern)
+    if matches:
+        def smooth_val(p):
+            m = re.search(r'smooth-(\d+)mm', p)
+            return int(m.group(1)) if m else 0
+        return max(matches, key=smooth_val)
+    return (
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/"
+        f"sub-{subject}_ses-{session}_hemi-{hemi}_surf-fsLR-32k_label-midthickness"
+        f"_pvc-{pvc_method}_ref-{ref_region}_smooth-none_trc-{trc}_pet.func.gii"
+    )
+
 ## Cortical surface
 print("Generating cortical surface QC images...")
-tmp_surf_L = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_smooth-5mm_trc-{trc}_pet.func.gii")
-tmp_surf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_smooth-5mm_trc-{trc}_pet.func.gii")
+tmp_surf_L = nilearn.surface.load_surf_data(get_surf_path(mica_pet_derivatives, subject, session, "L", pvc_method, ref_region, trc))
+tmp_surf_R = nilearn.surface.load_surf_data(get_surf_path(mica_pet_derivatives, subject, session, "R", pvc_method, ref_region, trc))
 
 to_plot = np.hstack((tmp_surf_L,tmp_surf_R))
 to_plot[~mask] = np.nan
@@ -291,8 +313,9 @@ def _load_data_sctx(
     return data_lh, data_rh
 
 def plot_SUVR(subject,session,bids_dir,qc_dir,pial_left,pial_right,mask,max_value,mica_pet_derivatives,ref_region,trc,pvc_method):
-    tmp_pt_FDG_surf_L = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_smooth-10mm_trc-{trc}_pet.func.gii");
-    tmp_pt_FDG_surf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_smooth-10mm_trc-{trc}_pet.func.gii");
+
+    tmp_pt_FDG_surf_L = nilearn.surface.load_surf_data(get_surf_path(mica_pet_derivatives, subject, session, "L", pvc_method, ref_region, trc))
+    tmp_pt_FDG_surf_R = nilearn.surface.load_surf_data(get_surf_path(mica_pet_derivatives, subject, session, "R", pvc_method, ref_region, trc))
 
     to_plot = np.hstack((tmp_pt_FDG_surf_L,tmp_pt_FDG_surf_R))
     to_plot[~mask] = np.nan
@@ -357,8 +380,9 @@ def plot_hippunfold_AI(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_
 # Plotting asymmetry -------------------------------------------------------------
     
 def plot_AI(subject,session,bids_dir,qc_dir,pial_left,pial_right,mica_pet_derivatives,ref_region,trc,pvc_method):
-    tmp_pt_FDG_surf_L = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_smooth-10mm_trc-{trc}_pet.func.gii");
-    tmp_pt_FDG_surf_R = nilearn.surface.load_surf_data(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_smooth-10mm_trc-{trc}_pet.func.gii");
+    
+    tmp_pt_FDG_surf_L = nilearn.surface.load_surf_data(get_surf_path(mica_pet_derivatives, subject, session, "L", pvc_method, ref_region, trc))
+    tmp_pt_FDG_surf_R = nilearn.surface.load_surf_data(get_surf_path(mica_pet_derivatives, subject, session, "R", pvc_method, ref_region, trc))
 
     AI_R = (tmp_pt_FDG_surf_R - tmp_pt_FDG_surf_L)/ (0.5 * (tmp_pt_FDG_surf_R + tmp_pt_FDG_surf_L))
     AI_L = (tmp_pt_FDG_surf_L - tmp_pt_FDG_surf_R)/ (0.5 * (tmp_pt_FDG_surf_R + tmp_pt_FDG_surf_L))
@@ -434,8 +458,8 @@ def plot_Zscore(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,
     FDG_surf_ctrl_hist_norm_mean = np.genfromtxt(f'/app/surfaces/FDG_surf_ctrl_hist_norm_mean.csv', delimiter=',', missing_values='""', filling_values=np.nan)
     FDG_surf_ctrl_hist_norm_std = np.genfromtxt(f'/app/surfaces/FDG_surf_ctrl_hist_norm_std.csv', delimiter=',', missing_values='""', filling_values=np.nan)
     
-    tmp_L = nilearn.surface.load_surf_data(f'{pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-{pvc}_ref-{ref_region}_smooth-10mm_trc-{trc}_pet.func.gii');
-    tmp_R = nilearn.surface.load_surf_data(f'{pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-{pvc}_ref-{ref_region}_smooth-10mm_trc-{trc}_pet.func.gii');
+    tmp_L = nilearn.surface.load_surf_data(get_surf_path(pet_derivatives, subject, session, "L", pvc, ref_region, trc))
+    tmp_R = nilearn.surface.load_surf_data(get_surf_path(pet_derivatives, subject, session, "R", pvc, ref_region, trc))
 
     tmp = np.hstack((tmp_L,tmp_R))
     tmp[~mask] = np.nan
