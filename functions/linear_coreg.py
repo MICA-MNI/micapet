@@ -91,9 +91,9 @@ mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{s
 
 # Create BIDS directory structure
 for directory in [
-    f"{bids_dir}/rawdata/sub-{subject}/ses-{session}",
-    f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat",
-    f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet",
+    # f"{bids_dir}/rawdata/sub-{subject}/ses-{session}",
+    # f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat",
+    # f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet",
     f"{mica_pet_derivatives}/sub-{subject}/ses-{session}",
     f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat",
     f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet",

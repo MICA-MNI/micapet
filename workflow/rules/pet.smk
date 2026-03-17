@@ -101,7 +101,7 @@ rule pvc:
         pet_fs = rules.linear_coreg.output.pet_fs,
         pet_raw = inputs['pet'].path,
         lta = rules.linear_coreg.output.reg_lta_fs,
-        gtmseg = rules.gtm_seg.output.gtmseg, # gtmseg.mgz from anatomy rule
+        # gtmseg = rules.gtm_seg.output.gtmseg, # gtmseg.mgz from anatomy rule
         gtmseg_fs = rules.gtm_seg.output.gtmseg_fs, # gtmseg in T1wFS space
         gtmseg_nativepro = rules.gtm_seg.output.gtmseg_nativepro, # gtmseg in T1wNativepro space
         # gtmseg = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg.mgz"),

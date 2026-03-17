@@ -12,7 +12,7 @@ BIDS_DIR="/host/verges/tank/data/jack/MK6240/BIDS_test_MK6240"
 OUTPUT_DIR="/host/verges/tank/data/jack/MK6240/BIDS_test_MK6240/derivatives"
 CORES=32
 psf=2.4
-ref_region="composite"
+ref_region="cerebellarGM"
 pvc_method="IY+RL"
 pvc_n_iter=20
 pvc_n_deconv=20
@@ -40,6 +40,7 @@ pvc_n_deconv=20
 conda run -n mica-pet python /host/fladgate/local_raid/jack/FDG/MICA-PET/scripts/run.py \
 --fastsurfer_img /host/verges/tank/data/jack/fastsurfer-cpu-v2.4.2.sif \
 --hippunfold_img /host/verges/tank/data/jack/hippunfold_v1.4.1.sif \
+--hippunfold-cache-dir /host/verges/tank/data/jack/FDG/BIDS_Beijing_FCD_test/derivatives/hippunfold_v1.4.1/fake_home/.cache/hippunfold \
 --fs_license /host/verges/tank/data/jack/license.txt \
 --psf ${psf} \
 --ref_region ${ref_region} \
@@ -49,6 +50,5 @@ conda run -n mica-pet python /host/fladgate/local_raid/jack/FDG/MICA-PET/scripts
 --pvc-n_deconv ${pvc_n_deconv} \
 ${BIDS_DIR} ${OUTPUT_DIR} participant \
 --cores ${CORES} \
---rerun-incomplete 
-#\
-# --participant-label ${test_subject} 
+--participant-label ${test_subject} \
+--forcerun report

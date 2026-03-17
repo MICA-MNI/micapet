@@ -101,9 +101,8 @@ if seg_type == 'freesurfer':
         gtmseg.run()
 
 elif seg_type == 'fastsurfer':
-    if os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-T1wFS_desc-gtmseg.nii.gz") and force==False: 
-        print(f"GTMseg was run already for subject {subject}. Exiting.")
-        sys.exit(0)
+    if os.path.exists(f"{f_surf_dir}/mri/gtmseg.mgz") and force==False: 
+        print(f"GTMseg was run already for subject {subject}. Re-run with -force flag to rerun GTMseg.")
     else:
         # Create talairach.m3z if it doesn't exist
         if not os.path.exists(f"{f_surf_dir}/mri/transforms/talairach.m3z"):

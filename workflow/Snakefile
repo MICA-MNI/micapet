@@ -339,7 +339,7 @@ if config.get("gtmseg_threads") is None:
     config["gtmseg_threads"] = max(8, int(TOTAL_CORES * 0.5))
 
 # --- Display Splash Screen at Start of Pipeline ---
-display_splash_screen()
+# display_splash_screen()
 
 # --- Handle Existing Outputs via Symbolic Links ---
 # If user provides paths to existing FreeSurfer/HippUnfold outputs,
@@ -415,7 +415,6 @@ def setup_existing_outputs_symlinks():
 
 # Call setup function before workflow starts
 setup_existing_outputs_symlinks()
-
 
 # --- Wildcard constraints ---
 wildcard_constraints:

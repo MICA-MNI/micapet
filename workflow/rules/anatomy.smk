@@ -70,7 +70,6 @@ if not config.get("skip_hippunfold", False) and not config.get("existing_hippunf
                 -hippunfold_dir {params.hippunfold_dir} \
                 -threads {threads} \
                 {params.cachedir_arg} \
-                -force \
                 > {log} 2>&1
             """
 
@@ -150,7 +149,7 @@ rule gtm_seg:
         rules.fastsurfer.output.talairach,
         rules.fastsurfer.output.brainmask,
     output:
-        gtmseg = protected(os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg.mgz")),
+        # gtmseg = protected(os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg.mgz")),
         gtmseg_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "anat", "sub-{subject}_ses-{session}_space-T1wFS_desc-gtmseg.nii.gz"),
         gtmseg_nativepro = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "anat", "sub-{subject}_ses-{session}_space-T1wNativepro_desc-gtmseg.nii.gz"),
         # protected(os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "apas+head.mgz")),
@@ -175,6 +174,5 @@ rule gtm_seg:
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
             -subj_dir {params.subj_dir} \
-            -force \
             >> {log} 2>&1
         """
