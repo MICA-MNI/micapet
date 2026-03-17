@@ -72,6 +72,7 @@ psf: 4.5                    # Scanner PSF FWHM in mm
 ref_region: 'pons'          # Options: pons, cerebellarGM, composite, none
 pvc_method: 'RBV-FS'        # Options: Freesurfer: RBV-FS; PETPVC: MG, IY, LABBE, RL, VC, RBV, LABBE+RBV, RBV+VC, RBV+RL, LABBE+RBV+VC, LABBE+RBV+RL, MTC, LABBE+MTC, MTC+VC, MTC+RL, LABBE+MTC+VC, LABBE+MTC+RL, IY+VC, IY+RL, MG+VC, MG+RL 
 threads: 8                  # Threads for multithreaded steps
+keep-incomplete: true # do not delete outputs of failed jobs
 
 # --- Custom CLI Arguments ---
 # These arguments are added to the command-line interface
@@ -172,7 +173,7 @@ parse_args:
     dest: hippunfold_cache_dir
     default: ""
   
-  --existing-freesurfer-dir:
+  --existing-freesurfer-dir: 
     help: "Path to existing FastSurfer/FreeSurfer outputs directory (optional). If provided, will create symlinks instead of running FastSurfer."
     dest: existing_freesurfer_dir
     default: ""

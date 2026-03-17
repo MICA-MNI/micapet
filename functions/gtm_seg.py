@@ -73,8 +73,17 @@ if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
     print(f"Error: BIDS directory for subject {subject}, session {session} does not exist.")
     sys.exit(1)
 if not os.path.exists(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}"):
-    print(f"Error: BIDS derivatives directory for subject {subject}, session {session} does not exist.")
-    sys.exit(1)
+    print(f"BIDS derivatives directory for subject {subject}, session {session} does not exist. Creating directory structure...")
+    # Create BIDS directory structure
+    for directory in [
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}",
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat",
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet",
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf",
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm",
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/qc",
+    ]:
+        os.makedirs(directory, exist_ok=True)
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting gtmseg for subject: {subject}, session: {session}.")
 
