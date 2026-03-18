@@ -103,8 +103,8 @@ force = args.force
 force_command=[]
 
 if os.path.exists(f"{hippunfold_dir}/hippunfold/sub-{subject}/ses-{session}") and force==False: #check if HippUnfold run already & if no force flag
-    print("HippUnfold already run. Please rerun with -force flag to overwrite.")
-    sys.exit(1)
+    print("HippUnfold already run. Skipping (use -force to overwrite).")
+    sys.exit(0)
 elif force==True: # Always pass --force-output when -force flag is set
     force_command=["--force-output", "--rerun-incomplete"] # ensure Snakemake reruns incomplete files
 
