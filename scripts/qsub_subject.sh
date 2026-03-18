@@ -89,6 +89,7 @@ singularity run --cleanenv \
     -B "$PROJECT_ROOT/workflow:/app/workflow" \
     -B "$PROJECT_ROOT/config:/app/config" \
     -B "$PROJECT_ROOT/run.py:/app/run.py" \
+    -B "$PROJECT_ROOT/resources/AFNI:/opt/AFNI" \
     --env XDG_CACHE_HOME="$HOST_ROOT/.cache" \
     --env PYTHONUNBUFFERED=1 \
     "$SIF_PATH" \
