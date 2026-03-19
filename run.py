@@ -27,7 +27,7 @@ def main():
     """Main entry point for the MICA-PET pipeline."""
     # Get the directory where this script is located
     script_dir = Path(__file__).parent.absolute()
-    
+
     # Create the snakebids app with the SnakemakeBidsApp plugin
     app = bidsapp.app(
         [

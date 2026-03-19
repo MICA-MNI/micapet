@@ -3,184 +3,269 @@
 **Version:** v.alpha.0.3
 
 ## Overview
-The **MICA-PET Pipeline** is a specialized neuroimaging processing workflow designed for PET data analysis. Built using the **Snakebids** framework, it orchestrates a comprehensive anatomical and functional processing stream, integrating state-of-the-art tools including **FastSurfer**, **HippUnfold**, and **GTMseg**.
 
-This pipeline automates the entire process from raw BIDS input to surface-projected PET maps and subcortical statistics.
+The **MICA-PET Pipeline** is a neuroimaging processing workflow for FDG-PET data analysis. Built on the **Snakebids** framework, it orchestrates a complete anatomical and functional processing stream using **FastSurfer**, **HippUnfold**, and **GTMseg**.
+
+The pipeline takes raw BIDS input and produces surface-projected PET maps, subcortical statistics, and a visual QC report.
 
 ## Pipeline Steps
-The pipeline consists of the following key stages:
 
-1.  **Anatomical Processing:**
-    *   **FastSurfer:** Rapid volumetric segmentation and cortical surface reconstruction.
-    *   **HippUnfold:** Advanced hippocampal unfolding and subfield segmentation.
-    *   **GTMseg:** Geometric Transfer Matrix segmentation for accurate partial volume correction (PVC).
+1. **Anatomical Processing**
+   - **FastSurfer** — cortical surface reconstruction and volumetric segmentation
+   - **HippUnfold** — hippocampal unfolding and subfield segmentation
+   - **GTMseg** — Geometric Transfer Matrix segmentation for PVC
 
-2.  **PET Processing:**
-    *   **Linear Coregistration:** Aligns PET images to T1-weighted anatomical images (both Native and FreeSurfer spaces).
-    *   **Partial Volume Correction (PVC):** Applies Region-Based Voxel-wise (RBV) correction using GTM segmentation.
-    *   **SUVR Calculation:** Computes Standardized Uptake Value Ratios relative to a reference region (default: Pons).
+2. **PET Processing**
+   - **Linear Coregistration** — aligns PET to T1w in Native and FreeSurfer spaces
+   - **Partial Volume Correction (PVC)** — RBV-FS (default) or any PETPVC method
+   - **SUVR Calculation** — normalises uptake relative to a reference region
 
-3.  **Projections & Sampling:**
-    *   **Cortical Projection:** Maps PET data onto the `fsLR-32k` cortical surface.
-    *   **Hippocampal Projection:** Maps PET data onto unfolded hippocampal surfaces.
-    *   **Subcortical Statistics:** Extracts mean uptake values for subcortical structures.
+3. **Surface Projections & Sampling**
+   - **Cortical Projection** — PET mapped to `fsLR-32k` and `fsLR-5k` surfaces with configurable smoothing
+   - **Hippocampal Projection** — PET mapped to unfolded hippocampal surfaces
+   - **Subcortical Statistics** — mean uptake per subcortical structure (CSV)
 
-4.  **Quality Control:**
-    *   Generates visual reports for coregistration and segmentation quality.
+4. **Quality Control**
+   - Per-subject HTML report with SUVR maps, asymmetry index, Z-score maps, and a PET–MRI overlay mosaic
 
 ## Requirements
 
 ### Software
-*   **Python** >= 3.10
-*   **Apptainer (Singularity)** (for running containerized tools like FastSurfer and HippUnfold)
-*   **FreeSurfer License** (`license.txt`)
+- **Python** ≥ 3.10
+- **Singularity / Apptainer** — required on the host to run the MICA-PET container
+- **FreeSurfer license** (`license.txt`)
 
 ### Container Images
-You must have the following Singularity/Apptainer images available locally:
-*   MICA-PET FastSurfer Image (`.sif`)
-*   MICA-PET HippUnfold Image (`.sif`)
+- **MICA-PET `.sif`** — built from this repo (see [Build](#build-the-singularity-image))
+- **FastSurfer `.sif`** — tested with `fastsurfer-cpu-v2.4.2.sif`
+- **HippUnfold `.sif`** — tested with `hippunfold_v1.4.1.sif`
 
 ## Installation
 
-The project uses a Conda environment for dependency management.
-
-1.  **Clone the repository:**
-    ```bash
-    git clone <repo_url>
-    cd micapet
-    ```
-
-2.  **Create and activate the environment:**
-    ```bash
-    conda env create -f environment.yml
-    conda activate micapet
-    ```
-
-3.  **Ensure script is executable:**
-    ```bash
-    chmod +x run.py
-    ```
+```bash
+git clone <repo_url>
+cd micapet
+conda env create -f environment.yml
+conda activate micapet
+chmod +x run.py
+```
 
 ## Usage
 
- The pipeline is executed via the `run.py` script. It follows the BIDS App standard.
+The pipeline follows the BIDS App convention:
 
-### Basic Command
-```bash
-./run.py <bids_dir> <output_dir> participant \
-    --fastsurfer-img /path/to/fastsurfer.sif \
-    --hippunfold-img /path/to/hippunfold.sif \
-    --fs-license /path/to/license.txt
+```
+run.py <bids_dir> <output_dir> participant [options]
 ```
 
-### Arguments
+### Minimal example
+
+```bash
+./run.py /data/bids /data/out participant \
+    --fastsurfer-img /opt/fastsurfer.sif \
+    --hippunfold-img /opt/hippunfold.sif \
+    --fs-license /opt/license.txt
+```
+
+### Full argument reference
+
+#### Positional (required)
+
+| Argument | Description |
+| :--- | :--- |
+| `bids_dir` | Path to the input BIDS dataset root |
+| `output_dir` | Directory where all outputs are written |
+| `participant` | Analysis level — only `participant` is supported |
+
+#### Container paths
 
 | Argument | Description | Required | Default |
 | :--- | :--- | :---: | :---: |
-| `bids_dir` | Path to the input BIDS dataset root directory. | Yes | - |
-| `output_dir` | Directory where outputs will be stored. | Yes | - |
-| `participant` | Analysis level (currently only `participant` is supported). | Yes | - |
-| `--fastsurfer-img` | Path to FastSurfer Apptainer/Singularity image. | **Yes** | - |
-| `--hippunfold-img` | Path to HippUnfold Apptainer/Singularity image. | **Yes** | - |
-| `--fs-license` | Path to FreeSurfer `license.txt` file. | **Yes** | - |
-| `--psf` | Scanner Point Spread Function (FWHM in mm). | No | `4.5` |
-| `--ref-region` | Reference region for SUVR (`pons`, `cerebellarGM`, `composite`, `none`). | No | `pons` |
-| `--threads` | Number of threads for multithreaded steps. | No | `8` |
+| `--fastsurfer-img` | Path to FastSurfer Singularity image | No | — |
+| `--hippunfold-img` | Path to HippUnfold Singularity image | No | — |
+| `--fs-license` | Path to FreeSurfer `license.txt` | **Yes** | — |
 
-### Example
+#### Processing parameters
+
+| Argument | Description | Required | Default |
+| :--- | :--- | :---: | :---: |
+| `--psf` | Scanner PSF FWHM in mm | No | `4.5` |
+| `--ref-region` | SUVR reference region: `pons`, `cerebellarGM`, `composite`, `none` | No | `pons` |
+| `--pvc-method` | PVC method (see below) | No | `RBV-FS` |
+| `--pvc-mask` | Custom 4D NIfTI mask for PETPVC (GM+WM+CSF+BG; FS space) | No | auto-generated |
+| `--pvc-n_iter` | Iterations for iterative PETPVC methods (IY) | No | `10` |
+| `--pvc-n_deconv` | Iterations for deconvolution PETPVC methods (RL, VC) | No | `10` |
+| `--smoothing` | Surface smoothing FWHM(s) in mm, space-separated | No | `10` |
+| `--threads` | Threads for multithreaded steps | No | `8` |
+
+**PVC methods** — `--pvc-method`:
+- FreeSurfer RBV: `RBV-FS` *(default)*
+- PETPVC: `MG`, `IY`, `RL`, `VC`, `RBV`, `LABBE`, `MTC`, and combinations (`LABBE+RBV`, `RBV+VC`, `IY+VC`, `MG+VC`, `LABBE+MTC`, etc.)
+
+#### Optional inputs (skip heavy steps)
+
+| Argument | Description | Default |
+| :--- | :--- | :---: |
+| `--existing-freesurfer-dir` | Path to an existing FastSurfer/FreeSurfer derivatives folder. Symlinks are created instead of re-running FastSurfer. | — |
+| `--existing-hippunfold-dir` | Path to an existing HippUnfold derivatives folder. Symlinks are created instead of re-running HippUnfold. | — |
+| `--skip-hippunfold` | Skip all HippUnfold steps entirely (flag) | `false` |
+| `--hippunfold-cache-dir` | Pre-downloaded HippUnfold model cache directory | — |
+
+#### Snakemake pass-through options
+
+Any snakemake argument can be appended directly:
+
+| Option | Description |
+| :--- | :--- |
+| `--cores N` | Number of CPU cores (default: all) |
+| `--rerun-incomplete` | Re-run any jobs that were interrupted |
+| `-n` / `--dry-run` | Print rules without executing |
+| `--unlock` | Remove a stale snakemake lock |
+| `--participant-label ID` | Process only the listed participant(s) |
+
+### Extended example
+
 ```bash
-./run.py /data/bids_input /data/derivatives participant \
-    --fastsurfer-img /opt/images/fastsurfer_v2.sif \
-    --hippunfold-img /opt/images/hippunfold_v1.4.1.sif \
-    --fs-license /opt/freesurfer/license.txt \
-    --ref-region cerebellarGM \
-    --threads 16
+./run.py /data/bids /data/out participant \
+    --fastsurfer-img /opt/fastsurfer.sif \
+    --hippunfold-img /opt/hippunfold.sif \
+    --fs-license /opt/license.txt \
+    --existing-freesurfer-dir /data/derivatives/fastsurfer \
+    --skip-hippunfold \
+    --psf 3.3 \
+    --ref-region pons \
+    --pvc-method RBV-FS \
+    --smoothing 5 10 \
+    --cores 16 \
+    --participant-label PX003
 ```
 
 ## Input / Output Structure
 
 ### Input (BIDS)
-The input directory must follow the BIDS structure, containing at least:
-*   `anat/`: T1-weighted images (`_T1w.nii.gz`)
-*   `pet/`: PET images (`_pet.nii.gz`) with corresponding JSON sidecars.
+```
+bids_dir/
+└── rawdata/
+    └── sub-<ID>/
+        └── ses-<ID>/
+            ├── anat/   sub-<ID>_ses-<ID>_T1w.nii.gz
+            └── pet/    sub-<ID>_ses-<ID>_trc-FDG_pet.nii.gz
+                        sub-<ID>_ses-<ID>_trc-FDG_pet.json
+```
 
 ### Output
-The output directory will be structured as follows:
-
 ```
 output_dir/
-├── fastsurfer/                  # FastSurfer processing outputs
-├── hippunfold_v1.4.1/           # HippUnfold processing outputs
-├── MICA-PET_v.alpha.0.3/        # Main pipeline derivatives
+├── fastsurfer/                        # FastSurfer outputs
+├── hippunfold_v1.4.1/                 # HippUnfold outputs
+├── MICA-PET_v.alpha.0.3/              # Main pipeline derivatives
 │   └── sub-<ID>/
 │       └── ses-<ID>/
-│           ├── pet/             # Processed PET files (Coreg, PVC, SUVR)
-│           ├── surf/            # Surface projected maps (func.gii)
-│           ├── xfm/             # Registration transform files (.lta)
-│           └── anat/            # Anatomical references
-├── qc/                          # Quality control reports and CSV stats
-└── logs/                        # Processing logs
+│           ├── pet/                   # PET volumes (coreg, PVC, SUVR)
+│           ├── surf/                  # Surface-projected maps (.func.gii)
+│           ├── xfm/                   # Registration transforms (.lta)
+│           └── anat/                  # Anatomical reference files
+├── qc/                                # QC reports and stats
+│   └── sub-<ID>/
+│       └── ses-<ID>/
+│           ├── sub-<ID>_ses-<ID>_..._report.html
+│           └── sub-<ID>_ses-<ID>_..._subcortical_means_*.csv
+└── logs/                              # Per-step logs
 ```
 
-## Troubleshooting
-*   **Missing Dependencies:** Ensure all conda packages are installed and the environment is active.
-*   **Container Errors:** Verify paths to `.sif` images are correct and accessible.
-*   **License Errors:** Ensure the FreeSurfer license file is valid.
+## Containerisation (Singularity / Apptainer)
 
-## Containerization (Singularity / Apptainer)
-
-The pipeline is designed to run via **Singularity (Apptainer)**, which is the standard for high-performance computing (HPC) environments.
-
-### 1. Build the Singularity Image
-You must first build the Docker image and then convert it to a Singularity Image File (`.sif`).
+### Build the Singularity image
 
 ```bash
-# Step 1: Build Docker Image
+# 1. Build Docker image from the repo
 docker build -t micalab/micapet .
 
-# Step 2: Convert to Singularity (.sif)
-# Note: You can run this on your personal machine and scp the .sif to the server
+# 2. Convert to SIF (can be done on a local machine and SCP'd to the cluster)
 apptainer build micapet.sif docker-daemon://micalab/micapet:latest
 ```
 
-### 2. Run using Singularity
-To run the pipeline, you need to bind the necessary paths. The container has `apptainer` installed inside it, allowing it to Execute nested containers for FastSurfer and HippUnfold.
+### Run via Singularity (single subject)
 
-**Crucial Bindings:**
-*   **BIDS Data & Output:** Bind your data storage locations (e.g., `-B /host:/host`).
-*   **Code Overlay (Optional but Recommended):** You can bind your local code into the container to test changes without rebuilding:
-    *   `-B /path/to/micapet/functions:/app/functions`
-    *   `-B /path/to/micapet/workflow:/app/workflow`
-
-**Example Command:**
+The container includes Apptainer internally to launch nested FastSurfer/HippUnfold containers.
 
 ```bash
-# Define paths
-SIF_PATH="/path/to/micapet.sif"
-BIDS_DIR="/path/to/bids_dataset"
-OUTPUT_DIR="/path/to/output_directory"
-FS_LICENSE="/path/to/license.txt"
+SIF="/path/to/micapet.sif"
+BIDS="/path/to/bids"
+OUT="/path/to/output"
+PROJECT="/path/to/micapet_repo"   # for live code overlay
 
-# External Containers
-FASTSURFER_SIF="/path/to/fastsurfer.sif"
-HIPPUNFOLD_SIF="/path/to/hippunfold.sif"
-
-# Run
 singularity run --cleanenv \
     -B /host:/host \
     -B /export03:/export03 \
-    "$SIF_PATH" \
-    "$BIDS_DIR" \
-    "$OUTPUT_DIR" \
-    participant \
-    --participant_label PX001 \
-    --fastsurfer-img "$FASTSURFER_SIF" \
-    --hippunfold-img "$HIPPUNFOLD_SIF" \
-    --fs-license "$FS_LICENSE" \
+    -B "$PROJECT/functions:/app/functions" \
+    -B "$PROJECT/workflow:/app/workflow" \
+    -B "$PROJECT/config:/app/config" \
+    -B "$PROJECT/run.py:/app/run.py" \
+    --env XDG_CACHE_HOME="$OUT/.cache" \
+    --env PYTHONUNBUFFERED=1 \
+    "$SIF" \
+    "$BIDS" "$OUT" participant \
+    --participant-label PX001 \
+    --fastsurfer-img /path/to/fastsurfer.sif \
+    --hippunfold-img /path/to/hippunfold.sif \
+    --fs-license /path/to/license.txt \
     --cores 16
 ```
 
-**Note:** The `--cleanenv` flag is important to prevent host environment variables from conflicting with the container.
+> `--cleanenv` prevents host environment variables from conflicting with the container.
+> The code-overlay bindings (`-B $PROJECT/...:/app/...`) let you test code changes without rebuilding the SIF.
+
+## HPC Batch Submission (PBS/Torque)
+
+Two scripts in `scripts/` handle multi-subject cluster submission.
+
+### Key design: per-subject output directories
+
+When many jobs share one output directory, Snakebids writes all merged configs to the same `<output_dir>/config/snakebids.yml` file simultaneously, causing an intermittent `WorkflowError: Config file must be given as JSON or YAML with keys at top level` crash. The fix is to give each subject job its own output directory so config files never collide.
+
+### Submit a batch of subjects
+
+```bash
+# Submit any number of participants in one call
+bash scripts/submit_participants.sh PX003 PX012 PX017 PX020
+
+# Or read from a file
+bash scripts/submit_participants.sh $(cat my_participants.txt)
+```
+
+Each subject is queued as a separate PBS job (`micapet_<SUBJECT>`) and writes to:
+```
+/export03/data/enning/micapet/micapet_output/sub-<SUBJECT>/
+```
+
+### Customise `scripts/qsub_subject.sh`
+
+Edit the top of `qsub_subject.sh` to set your cluster paths:
+
+| Variable | Description |
+| :--- | :--- |
+| `HOST_ROOT` | Base directory for outputs and SIF |
+| `BIDS_DIR` | Path to your BIDS dataset |
+| `SIF_PATH` | Path to the MICA-PET `.sif` file |
+| `FASTSURFER_SIF` | Path to FastSurfer `.sif` |
+| `HIPPUNFOLD_SIF` | Path to HippUnfold `.sif` |
+| `FS_LICENSE` | Path to FreeSurfer `license.txt` |
+| `CORES` | CPU cores per job (default: 16) |
+| `#PBS -l walltime` | Max walltime per job (default: 24h) |
+
+## Troubleshooting
+
+| Problem | Solution |
+| :--- | :--- |
+| `WorkflowError: Config file must be given as JSON or YAML` | Race condition from concurrent jobs sharing one output dir. Use `scripts/submit_participants.sh` (per-subject output dirs) or re-run the failed job. |
+| `LockException: Directory cannot be locked` | A previous job was killed mid-run. Re-run with `--unlock` flag, then run again normally. |
+| `MissingOutputException` after a rule completes | Filesystem latency. Add `--latency-wait 30` to the singularity run call. |
+| Pipeline hangs / no output | Check `logs/<rule>/sub-<ID>_ses-<ID>.log` for the failing step. |
+| FreeSurfer errors | Verify `--fs-license` path and that the file is a valid FreeSurfer license. |
+| Container can't find nested SIF | Ensure `/host` or the relevant storage partition is bound with `-B`. |
+| Slow run without re-using existing data | Use `--existing-freesurfer-dir` and/or `--existing-hippunfold-dir` to symlink existing outputs and skip those steps. |
 
 ## Maintainers
-*   Current Code Maintainer: [Your Name/Team]
+
+- Current Code Maintainer: MICA Lab
