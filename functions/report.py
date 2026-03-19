@@ -21,6 +21,7 @@ This script is licensed under the MIT License. See the LICENSE file for details.
 Copyright (c) 2025 MICA-MNI
 """
 import argparse
+import gc
 import os
 import sys
 from datetime import datetime
@@ -843,14 +844,14 @@ else:
 report.save(view, f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_report.html")
 
 # Clean up display
-# NOTE: Explicitly stopping the virtual display can trigger a fatal XIO error
-# with some plotting backends (e.g., VTK clients still disconnecting).
-try: 
-    if display_flag:
-        # display.stop()
-        del display
-except:
-    pass
+# Close all matplotlib figures and force-GC VTK render window objects so
+# their X connections are dropped before Xvfb is killed.  Without this,
+# display.stop() triggers a fatal XIO error from VTK; without stop() at all
+# the Xvfb process leaks and accumulates across runs.
+if display_flag:
+    pltl.close('all')
+    gc.collect()
+    display.stop()
 
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] QC screenshots completed.")

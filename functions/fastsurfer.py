@@ -140,13 +140,12 @@ if shutil.which('singularity') is None:
     print("Error: 'singularity' executable not found in PATH. Please ensure Singularity is installed.")
     sys.exit(1)
 
-try: 
-    Client.execute(
-        image=fastsurfer_img,
-        command=command,
-        options=options
+try:
+    subprocess.run(
+        ["singularity", "exec"] + options + [fastsurfer_img] + command,
+        check=True
     )
-except Exception as e:
+except subprocess.CalledProcessError as e:
     print(f"An error occurred during Singularity execution: {e}")
     sys.exit(1)
 

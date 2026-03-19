@@ -162,6 +162,7 @@ rule gtm_seg:
         bids_dir = config["bids_dir"],
         # gtm_seg.py uses -subj_dir
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
+        output_dir = root,
         log_dir = os.path.join(root, "logs", "gtm_seg"),
         fs_license = config.get("fs_license"),
     log:
@@ -179,5 +180,6 @@ rule gtm_seg:
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
             -subj_dir {params.subj_dir} \
+            -output_dir {params.output_dir} \
             >> {log} 2>&1
         """

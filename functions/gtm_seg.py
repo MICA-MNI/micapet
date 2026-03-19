@@ -36,6 +36,7 @@ parser.add_argument("-sub", type=str, required=True, help="(Str) Subject identif
 parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '01')")
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
+parser.add_argument("-output_dir", dest="output_dir", type=str, default=None, help="(Str) Output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives.")
 parser.add_argument("-force", action='store_true', help="Force gtmseg even if output exists.")
 parser.add_argument("-threads", dest="threads", type=int, default=1, help="(Int) Number of threads to use. Default: 1")
 
@@ -66,7 +67,10 @@ os.environ['SUBJECTS_DIR'] = os.path.realpath(args.subj_dir)
 os.environ['OMP_NUM_THREADS'] = str(args.threads)
 
 mica_pet_version = os.environ['MICA_PET_VERSION']
-mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
+if args.output_dir is not None:
+    mica_pet_derivatives = os.path.join(os.path.realpath(args.output_dir), f"MICA-PET_{mica_pet_version}")
+else:
+    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
 
 # Check BIDS directory structure if it doesn't exist
 if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
