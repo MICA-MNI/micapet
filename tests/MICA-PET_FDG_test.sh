@@ -51,6 +51,6 @@ conda run -n mica-pet python /host/fladgate/local_raid/jack/FDG/MICA-PET/scripts
 --existing-freesurfer-dir ${existing_freesurfer_dir} \
 ${BIDS_DIR} ${OUTPUT_DIR} participant \
 --cores ${CORES} \
---participant-label ${test_subject}
+--participant-label ${test_subject} --forcerun report
 
 # 

@@ -189,7 +189,7 @@ def get_surf_path(mica_pet_derivatives, subject, session, hemi, pvc_method, ref_
     )
     matches = glob.glob(pattern)
     if matches:
-        def smooth_val(p):
+        def smooth_val(p): # return image with highest smoothing
             m = re.search(r'smooth-(\d+)mm', p)
             return int(m.group(1)) if m else 0
         return max(matches, key=smooth_val)
@@ -322,7 +322,7 @@ def plot_SUVR(subject,session,bids_dir,qc_dir,pial_left,pial_right,mask,max_valu
     
 
     if max_value is None:
-        max_value = np.percentile(to_plot[mask],85) *1.5
+        max_value = np.max(to_plot[mask]) *1.5
         
     img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_SUVR_clin_report.png"
     plot_hemispheres(pial_left,pial_right,to_plot,color_bar=True, 
@@ -463,7 +463,7 @@ def plot_Zscore(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,
 
     tmp = np.hstack((tmp_L,tmp_R))
     tmp[~mask] = np.nan
-    norm_factor = max_hist(tmp)
+    norm_factor = max_hist(tmp) #normalize by histogram max
     test_FDG_surf_pt = tmp / norm_factor
 
     Zscore = (test_FDG_surf_pt - FDG_surf_ctrl_hist_norm_mean)/ FDG_surf_ctrl_hist_norm_std
