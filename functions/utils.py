@@ -83,30 +83,36 @@ class BIDSderivativeName:
         
         return "_".join(parts)
 
-# class BIDSName:
-#     ALLOWED_SUFFIXES = ["FLAIR", "PDT2", "PDw", "T1w", "T2starw", "T2w", "UNIT1", "angio", "inplaneT1", "inplaneT2"] 
-#     def __init__(self, **kwargs):
-#         self.keys = ["sub", "ses", "task", "acq", "ce", "rec", "run", "echo", "part", "chunk", "suffix"]
-#         self.values = kwargs    
-#         # Validate suffix
-#         if 'suffix' in self.values and self.values['suffix'] not in self.ALLOWED_SUFFIXES:
-#             invalid_suffix = self.values['suffix']
-#             raise ValueError(f"Invalid suffix '{invalid_suffix}'. Must be one of {self.ALLOWED_SUFFIXES}")
+class BIDSName:
+    # based on BIDS especifications v1.11.1
+    ALLOWED_SUFFIXES = ["FLAIR", "PDT2", "PDw", "T1w", "T2starw", "T2w", "UNIT1", "angio", "inplaneT1", "inplaneT2",
+                        "T2starmap", "inv-1_MP2RAGE", "inv-2_MP2RAGE", "T1map", "angio", "MTR", "MTRmap", "MTsat",
+                        "sbref", "bold","dwi","asl","m0scan","noRF",
+                         "epi, fieldmap", "magnitude","phase", "TB1DAM", "TB1EPI", "TB1AFI", "TB1RFM", "TBTFL", "TB1SRGE"] 
     
-#     def build(self):
-#         parts = []
-#         for key in self.keys:
-#             if key in self.values:
-#                 if key == "suffix":
-#                     # Directly append the suffix without a prefix "suffix-"
-#                     suffix = self.values[key]
-#                     parts.append(suffix)
-#                 elif isinstance(self.values[key], str):
-#                     parts.append(f"{key}-{self.values[key]}")
-#                 elif isinstance(self.values[key], int):
-#                     parts.append(f"{key}-{self.values[key]}")
+    # Entitites
+    def __init__(self, **kwargs):
+        self.keys = ["sub", "ses", "task", "acq", "ce", "rec","dir","run","mod","echo","mt", "part", "chunk", "suffix"]
+        self.values = kwargs    
+        # Validate suffix
+        if 'suffix' in self.values and self.values['suffix'] not in self.ALLOWED_SUFFIXES:
+            invalid_suffix = self.values['suffix']
+            raise ValueError(f"Invalid suffix '{invalid_suffix}'. Must be one of {self.ALLOWED_SUFFIXES}")
+    
+    def build(self):
+        parts = []
+        for key in self.keys:
+            if key in self.values:
+                if key == "suffix":
+                    # Directly append the suffix without a prefix "suffix-"
+                    suffix = self.values[key]
+                    parts.append(suffix)
+                elif isinstance(self.values[key], str):
+                    parts.append(f"{key}-{self.values[key]}")
+                elif isinstance(self.values[key], int):
+                    parts.append(f"{key}-{self.values[key]}")
         
-#         return "_".join(parts)
+        return "_".join(parts)
 
 # def merge_json_files(json_pet, json_subject):
 #     """
