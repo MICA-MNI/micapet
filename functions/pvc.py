@@ -36,7 +36,7 @@ repo_dir = os.path.dirname(script_dir)
 
 # Argument Parsing
 parser = argparse.ArgumentParser(add_help=True)
-parser.add_argument("-trc", type=str, dest='trc', default='FDG',choices=['FDG','MK6240'],help="(Str) Select tracer for analysis ('FDG','MK6240'). (Default 'FDG').")
+parser.add_argument("-trc", type=str, dest='trc', default='FDG',help="(Str) Select tracer for analysis ('FDG','MK6240'). (Default 'FDG').")
 parser.add_argument("-sub", type=str, required=True, help="(Str) Subject identifier (eg. '0001')")
 parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '01')")
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")

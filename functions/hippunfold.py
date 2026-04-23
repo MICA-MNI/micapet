@@ -121,7 +121,8 @@ args = [
     "--participant-label",f"{subject}",
     "--modality", "T1w",
     "--output-density","2mm",
-    "--cores", str(threads)
+    "--cores", str(threads),
+    "--force-output", "--rerun-incomplete"
     ]
 args.extend(T1_path)
 args.extend(force_command)
