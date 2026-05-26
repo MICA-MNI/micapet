@@ -20,6 +20,9 @@ talairach.label_intensities.txt
 list_of_tests.txt
 .dockerignore
 .vscode/*
+push_changes*
+ADNI_validation.ipynb
+resources/lamareg/*
 
 # Python cache (all directories)
 __pycache__/

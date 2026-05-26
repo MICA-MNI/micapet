@@ -188,3 +188,9 @@ parse_args:
     dest: skip_hippunfold
     action: 'store_true'
     default: false
+
+  --nonlinear-coreg:
+    help: "Flag to perform nonlinear co-registration to MNI space (optional). If set, will run lamareg nonlinear registration."
+    dest: nonlinear_coreg
+    action: 'store_true'
+    default: false

@@ -9,9 +9,8 @@ The script requires the following arguments:
     -bids       : Path to BIDS directory ( . or FULL PATH)
     -subj_dir : Specify path to FreeSurfer/FastSurfer subjects directory. (Default fastsurfer subdirectory in BIDS derivatives directory.)
     -pvc_method : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'. Default: 'RBV-FS'.
-    -pet        : (Optional) Specify path to PET nifti file. Default: sub-<sub>_ses-<ses>_trc-<trc>_pet.nii.gz in pet BIDS directory.
     -ref_region : Reference regions to use. eg. ['pons','cerebellarGM','composite']. Default: ['pons'].
-    -out        : (Optional) Output directory. Default: BIDS directory.
+    -output_dir        : (Optional) Output directory. Default: BIDS directory.
 
 The script is intended for use by researchers and developers working with PET imaging data, particularly in the context of the MICA lab at McGill University.
 It is part of a larger pipeline for processing and analyzing neuroimaging data.
@@ -19,13 +18,10 @@ This script is licensed under the MIT License. See the LICENSE file for details.
 Copyright (c) 2025 MICA-MNI
 """
 import argparse
-import glob
 import os
-import shutil
 import sys
 from datetime import datetime
-from nipype.interfaces.freesurfer import MRIConvert
-from nipype.interfaces.ants import RegistrationSynQuick, ApplyTransforms
+import subprocess
 
 # Load utilities functions from utils.py
 import utils
@@ -42,7 +38,6 @@ parser.add_argument("-sub", type=str, required=True, help="(Str) Subject identif
 parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '01')")
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
-parser.add_argument("-pet", dest="pet", type=str, help="(Str) Path to PET nifti file. Default: sub-<sub>_ses-<ses>_trc-<trc>_pet.nii.gz in pet BIDS directory.")
 parser.add_argument("-ref_region",dest="ref_region", type=str, choices=['pons','cerebellarGM','composite'], default='pons',help="Specify reference region. Default: pons.")
 parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}")
 
@@ -74,45 +69,62 @@ else:
         sys.exit(1)
 
 mica_pet_version = os.environ['MICA_PET_VERSION']
+
+# MNI_path = "/app/resources/mni_icbm152_t1_tal_nlin_sym_09a.nii.gz"
+
+MNI_path = "/host/fladgate/local_raid/jack/FDG/MICA-PET/scripts/resources/"
+
 # Support custom output_dir or default to bids_dir/derivatives
 if args.output_dir is not None:
     mica_pet_derivatives = os.path.join(os.path.realpath(args.output_dir), f"MICA-PET_{mica_pet_version}")
 else:
     mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
     
-mni_aparc_aseg = f"{repo_dir}/surfaces/mni_icbm152_t1_tal_nlin_sym_09a_aparc.DKTatlas+aseg.nii.gz"
-subj_aparc_aseg = f"{subj_dir}/sub-{subject}_ses-{session}/mri/aparc.DKTatlas+aseg.nii.gz"
-
-#convert mgz to nii.gz
-if not os.path.exists(f"{subj_dir}/sub-{subject}_ses-{session}/mri/aparc.DKTatlas+aseg.nii.gz"):
-    mc = MRIConvert()
-    mc.inputs.in_file = f"{subj_dir}/sub-{subject}_ses-{session}/mri/aparc.DKTatlas+aseg.mgz"
-    mc.inputs.out_file = subj_aparc_aseg
-    mc.inputs.out_type = 'niigz'
-    mc.run()
     
-# register subject aparc+aseg to MNI aparc+aseg using antsRegistrationSyNQuick
-reg = RegistrationSynQuick()
-reg.inputs.dimension = 3
-reg.inputs.fixed_image = mni_aparc_aseg
-reg.inputs.moving_image = subj_aparc_aseg
-reg.inputs.output_prefix = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wFS_to-MNI_"
-reg.inputs.transform_type = 's'
-reg.inputs.precision_type = 'double'
-reg.run()
-
-# apply transforms
-
-for ref in ['none',ref_region]:
-    for pvc in ['none',pvc_method]:
-        at = ApplyTransforms()
-        at.inputs.dimension = 3
-        at.inputs.input_image = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wFS_pvc-{pvc}_ref-{ref}_trc-{trc}_pet.nii.gz"
-        at.inputs.reference_image = mni_aparc_aseg
-        at.inputs.transforms = [f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wFS_to-MNI_1Warp.nii.gz", f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wFS_to-MNI_0GenericAffine.mat"]
-        at.inputs.output_image = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-MNI_pvc-{pvc}_ref-{ref}_trc-{trc}_pet.nii.gz"
-        at.inputs.float = True
-        at.run()
+for pvc in ['none']:
+    # register PET to MNI
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting PET to MNI nonlinear co-registration for sub-{subject} ses-{session}...")
+    cmd = ["lamareg",
+        "register",
+        "--moving",
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz",
+        "--fixed",
+        f"{MNI_path}/mni_icbm152_t1_tal_nlin_sym_09a.nii.gz",
+        "--output",
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-MNI_T1w.nii.gz",
+        "--fixed-parc",
+        f"{MNI_path}/mni_icbm152_t1_tal_nlin_sym_09a_parc.nii.gz",
+        "--skip-fixed-parc",
+        "--affine",
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wNativepro_to-MNI_lamaregAffine.mat",
+        "--warpfield",
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wNativepro_to-MNI_lamaregWarp1.nii.gz",
+        "--secondary-warpfield",
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wNativepro_to-MNI_lamaregWarp2.nii.gz",
+        "--threads", "8"]
+    
+    subprocess.call(cmd)
+    
+# apply existing transforms to other PET images
+for pvc in ['none',pvc_method]:
+    for ref in ['none',ref_region]:
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Applying PET to MNI nonlinear co-registration for sub-{subject} ses-{session} with PVC: {pvc} and reference region: {ref}...")
+        cmd = ["lamareg",
+            "apply-warpfield",
+            "--moving",
+            f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wNativepro_pvc-{pvc}_ref-{ref}_trc-{trc}_pet.nii.gz",
+            "--fixed",
+            f"{MNI_path}/mni_icbm152_t1_tal_nlin_sym_09a.nii.gz",
+            "--output",
+            f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-MNI_pvc-{pvc}_ref-{ref}_trc-{trc}_pet.nii.gz",
+            "--affine",
+            f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wNativepro_to-MNI_lamaregAffine.mat",
+            "--warpfield",
+            f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wNativepro_to-MNI_lamaregWarp1.nii.gz",
+            "--secondary-warpfield",
+            f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wNativepro_to-MNI_lamaregWarp2.nii.gz",
+            "--threads", "8"]
         
+        subprocess.call(cmd)        
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] PET to MNI nonlinear co-registration completed.")

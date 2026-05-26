@@ -165,7 +165,6 @@ rule pvc:
                     {params.pvc_n_deconv_arg} \
                     >> {log} 2>&1
                 """)
-        
 
 rule suvr:
     input:
@@ -205,6 +204,51 @@ rule suvr:
             -pvc_method {params.pvc_method} \
             >> {log} 2>&1
         """
+
+if config.get("nonlinear_coreg", True):
+    rule nonlinear_coreg:
+        input:
+            suvr_pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNativepro_pvc-none_ref-" + get_ref_region() + "_trc-{trc}_pet.nii.gz"),
+            suvr_pet_native_pvc = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNativepro_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_trc-{trc}_pet.nii.gz"),
+            nonsuvr_pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNativepro_pvc-none_ref-none_trc-{trc}_pet.nii.gz"),
+            nonsuvr_pet_native_pvc = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNativepro_pvc-"+get_pvc_method()+"_ref-none_trc-{trc}_pet.nii.gz"),
+        output:
+            affine = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "xfm", "sub-{subject}_ses-{session}_trc-{trc}_from-T1wNativepro_to-MNI_lamaregAffine.mat"),
+            warp1 = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "xfm", "sub-{subject}_ses-{session}_trc-{trc}_from-T1wNativepro_to-MNI_lamaregWarp1.nii.gz"),
+            warp2 = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "xfm", "sub-{subject}_ses-{session}_trc-{trc}_from-T1wNativepro_to-MNI_lamaregWarp2.nii.gz"),
+            suvr_pet_native_mni = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-MNI_pvc-none_ref-" + get_ref_region() + "_trc-{trc}_pet.nii.gz"),
+            suvr_pet_native_pvc_mni = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-MNI_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_trc-{trc}_pet.nii.gz"),
+            nonsuvr_pet_native_mni = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-MNI_pvc-none_ref-none_trc-{trc}_pet.nii.gz"),
+            nonsuvr_pet_native_pvc_mni = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-MNI_pvc-"+get_pvc_method()+"_ref-none_trc-{trc}_pet.nii.gz"),
+        params:
+            bids_dir = config["bids_dir"],
+            subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
+            ref_region = lambda wildcards: get_ref_region(),
+            output_dir = root,
+            log_dir = os.path.join(root, "logs", "nonlinear_coreg"),
+            pvc_method = lambda wildcards: get_pvc_method(),
+        log:
+            os.path.join(root, "logs", "nonlinear_coreg", "sub-{subject}_ses-{session}_trc-{trc}.log")
+        shell:
+            """
+            set +eu  # Disable strict mode completely
+            export FREESURFER_HOME=/opt/freesurfer-7.4.1
+            export FS_LICENSE={params.fs_license}
+            source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
+            mkdir -p {params.log_dir}
+            echo "=== Starting nonlinear_coreg.py at $(date) ===" > {log} 2>&1
+            python {workflow.basedir}/../functions/nonlinear_coreg.py \
+                -trc {wildcards.trc} \
+                -sub {wildcards.subject} \
+                -ses {wildcards.session} \
+                -bids {params.bids_dir} \
+                -subj_dir {params.subj_dir} \
+                -pvc_method {params.pvc_method} \
+                -ref_region {params.ref_region} \
+                -output_dir {params.output_dir} \
+                >> {log} 2>&1
+            """
+            
 
 def get_project_pet_data_inputs(wildcards):
     """Get project_pet_data inputs - mark surfaces as ancient if using existing outputs."""

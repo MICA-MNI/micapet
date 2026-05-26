@@ -29,3 +29,4 @@ dependencies:
       - netneurotools==0.2.5
       - pyvirtualdisplay
       - brainspace==0.1.22
+      - lamareg==1.7.1
