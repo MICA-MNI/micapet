@@ -5,10 +5,12 @@ This script is part of MICA-PET pipeline for standard uptake value ratio (SUVR) 
 GTMseg and partial volume correction must have been run first.
 
 The script requires the following arguments:
+    -trc        : Tracer (eg. FDG, MK6240)
     -sub        : Subject identification. (eg. PX001)
     -ses        : Session. (eg. 01)
     -bids       : Path to BIDS directory ( . or FULL PATH)
     -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory.
+    -pvc_method : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'. Default: 'RBV-FS'.
     -ref_region : Options: 'pons', 'cerebellarGM', 'composite' (supratentorial white matter, cerebellum, brainstem)
 
 The script is intended for use by researchers and developers working with PET imaging data, particularly in the context of the MICA lab at McGill University.
@@ -17,6 +19,7 @@ This script is licensed under the MIT License. See the LICENSE file for details.
 Copyright (c) 2025 MICA-MNI
 """
 import argparse
+from operator import sub
 import os
 import sys
 from datetime import datetime
@@ -41,6 +44,9 @@ parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '0
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
 parser.add_argument("-ref_region",dest="ref_region", type=str, action='store',nargs='*', default=['pons'],help="Specify reference region(s). eg: '-ref_region pons cerebellarGM composite'. Default: pons.")
+parser.add_argument("-trc", type=str, dest='trc', default='FDG',help="(Str) Select tracer for analysis ('FDG','MK6240'). (Default 'FDG').")
+parser.add_argument("-pvc_method", dest="pvc_method", type=str, default='RBV-FS', choices=['RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'], help="(Str) PVC method used for PET image. Options: 'RBV-FS', 'MG','IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL' etc. Default: 'RBV-FS'.")
+parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}")
 
 args = parser.parse_args()
 
@@ -55,13 +61,19 @@ if not any(region in ['pons', 'cerebellarGM', 'composite'] for region in args.re
     sys.exit(1)
     
 # Normalize paths and variables
+trc = args.trc
 session = f"{args.ses.replace('ses-', '')}"
 subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 ref_region = args.ref_region
-
-mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{os.environ['MICA_PET_VERSION']}" 
+pvc_method = args.pvc_method
+# Support custom output_dir or default to bids_dir/derivatives
+mica_pet_version = os.environ['MICA_PET_VERSION']
+if args.output_dir is not None:
+    mica_pet_derivatives = os.path.join(os.path.realpath(args.output_dir), f"MICA-PET_{mica_pet_version}")
+else:
+    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
 
 FSCommand.set_default_subjects_dir(args.subj_dir)
 
@@ -80,10 +92,10 @@ if not os.path.exists(f"{f_surf_dir}/mri/gtmseg.mgz"):
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting reference region creation and SUVR calculation for subject: {subject}, session: {session}.")
 
-def ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, erode=False):
+def ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, pvc_method, erode=False):
     print(f"Creating ROI mask for ROI {roi}...")
 
-    in_file = nib.load(f"{f_surf_dir}/mri/gtmseg_space-{space}.nii.gz")
+    in_file = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-gtmseg.nii.gz")
     in_data = in_file.get_fdata()
     roi_data = np.zeros(in_data.shape)
     # Set values in roi_data to 1 where in_data equals roi
@@ -116,7 +128,7 @@ def combineROIs(ref,mica_pet_derivatives,subject,session,space):
     # applyreg = ApplyVolTransform()
     # applyreg.inputs.source_file= f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-{ref}_mask.nii.gz"
     # applyreg.inputs.reg_header=True
-    # applyreg.inputs.target_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc}_ref-none_trc-FDG_pet.nii.gz"
+    # applyreg.inputs.target_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc}_ref-none_trc-{trc}_pet.nii.gz"
     # applyreg.inputs.transformed_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc}_desc-{ref}_mask.nii.gz"
     # applyreg.run()
     
@@ -125,27 +137,27 @@ def combineROIs(ref,mica_pet_derivatives,subject,session,space):
         os.remove(mask)
         
 ## Create ROIs and calculate SUVR       
-for space in ['T1wFS','T1wNative']:
+for space in ['T1wFS','T1wNativepro']:
     for ref in ref_region:
         print(f"Processing reference region: {ref}...")
         if ref == 'pons':
             for roi in [174]:
-                ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, erode=True)
+                ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, pvc_method, erode=True)
         elif ref == 'cerebellarGM':
             for roi in [8,47]:
-                ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, erode=False)
+                ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, pvc_method, erode=False)
         elif ref == 'composite':
             for roi in [7,8,16,46,47,174]: # L cerebellar WM, L cerebellar GM, brainstem, R cerebellar WM, R cerebellar GM, pons
-                ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, erode=False)
+                ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, pvc_method, erode=False)
             for roi in [2,41]: # L & R WM. To be eroded
-                ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, erode=True)
-        combineROIs(ref,mica_pet_derivatives,subject,session,space)
-        
-        for pvc in ['none','rbv']:
+                ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, pvc_method, erode=True)
+        combineROIs(ref,mica_pet_derivatives,subject,session,space)      
+            
+        for pvc in [pvc_method, 'none']:
             # Calculate avg in reference region
             print(f"Calculating average uptake in reference region: {ref}, PVC: {pvc}, space: {space}...")
             
-            in_file = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc}_ref-none_trc-FDG_pet.nii.gz")
+            in_file = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc}_ref-none_trc-{trc}_pet.nii.gz")
             in_data = in_file.get_fdata()
             mask_file = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-{ref}_mask.nii.gz")
             mask_data = mask_file.get_fdata()
@@ -156,10 +168,10 @@ for space in ['T1wFS','T1wNative']:
 
             # Calculate SUVR
             print("Calculating SUVR image...")
-            in_file = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc}_ref-none_trc-FDG_pet.nii.gz")
+            in_file = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc}_ref-none_trc-{trc}_pet.nii.gz")
             in_data = in_file.get_fdata()
             suvr_data = in_data / float(ref_region_avg)
             out_file = nib.Nifti1Image(suvr_data, in_file.affine, in_file.header)
-            nib.save(out_file, f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz")
+            nib.save(out_file, f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc}_ref-{ref}_trc-{trc}_pet.nii.gz")
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] SUVR calculation completed.")

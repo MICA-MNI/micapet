@@ -1,0 +1,445 @@
+# ---- snakebids boilerplate ----
+import os
+import snakebids
+from snakebids import bids, generate_inputs
+
+
+configfile: "config/snakebids.yml"
+
+
+# --- Generate inputs from BIDS dataset ---
+# This parses the BIDS directory and creates the 'inputs' object
+# which contains paths and wildcards for each input type
+inputs = generate_inputs(
+    bids_dir=config["bids_dir"],
+    pybids_inputs=config["pybids_inputs"],
+    participant_label=config.get("participant_label"),
+    exclude_participant_label=config.get("exclude_participant_label"),
+)
+
+# --- Global variables derived from config ---
+MICA_PET_VERSION = os.environ.get("MICA_PET_VERSION", "v.alpha.0.5")
+MICAPET_DIR_NAME = f"MICA-PET_{MICA_PET_VERSION}"
+FASTSURFER_DIR_NAME = "fastsurfer"
+HIPPUNFOLD_DIR_NAME = "hippunfold_v1.4.1"
+
+# Output root directory (from snakebids app or config)
+root = config.get("output_dir", os.path.join(config["bids_dir"], "derivatives"))
+
+# Set PYTHONPATH to include functions directory so scripts can import utils
+os.environ["PYTHONPATH"] = os.path.join(workflow.basedir, "..", "functions") + os.pathsep + os.environ.get("PYTHONPATH", "")
+
+
+# --- Dynamic Resource Allocation ---
+import multiprocessing
+import sys
+
+def get_max_threads():
+    """Determine available cores from Snakemake arguments with fallback."""
+    # Check if --cores/-c/-j/--jobs were passed manually
+    args = sys.argv
+    for i, arg in enumerate(args):
+        if arg in ['--cores', '-c', '--jobs', '-j'] and i + 1 < len(args):
+            try:
+                # If specific number is given
+                val = int(args[i+1])
+                return val
+            except ValueError:
+                # If 'all' or similar is given, assume full count
+                return multiprocessing.cpu_count()
+        if arg.startswith(('--cores=', '-c=', '--jobs=', '-j=')):
+             try:
+                val = int(arg.split('=')[1])
+                return val
+             except ValueError:
+                return multiprocessing.cpu_count()
+    
+    # If using workflow.cores (set by snakemake automatically if not command line)
+    # But usually sys.argv is safer check for explicit user intent wrapper
+    # Fallback to system count
+    return multiprocessing.cpu_count()
+
+
+TOTAL_CORES = get_max_threads()
+
+# --- Splash Screen Function ---    
+import shutil
+from datetime import datetime
+
+class bcolors:
+    RED = '\033[91m'
+    PURPLE = '\033[95m'
+    GREEN = '\033[92m'
+    BLUE = '\033[94m'
+    TEAL = '\033[38;5;37m'
+    CIAN = '\033[38;5;45m'
+    WARNING = '\033[38;5;220m' #yellow
+    ERROR = '\033[38;5;1m' #red
+    BOLD = '\033[1m'
+    RESET = '\033[0m'
+
+
+    def disable(self):
+        self.INFO = ''
+        self.RED = ''
+        self.PURPLE = ''
+        self.GREEN = ''
+        self.BLUE = ''
+        self.TEAL = ''
+        self.CIAN = ''
+        self.WARNING = ''
+        self.ERROR = ''
+        self.BOLD = ''
+        self.RESET = ''
+
+def display_splash_screen():
+    """
+    Prints a string centered inside a box made of '#' characters,
+    sized to the full width of the terminal.
+    """
+
+    try:
+        # 1. Get the current terminal width
+        width = shutil.get_terminal_size().columns
+    except OSError:
+        # print(f"{bcolors.ERROR}Error: Could not determine terminal size.{bcolors.RESET}")
+        return
+
+    # Ensure the text is not longer than the terminal width
+    max_text_len = width - 4  # -4 accounts for the surrounding '#  #' and padding
+    
+    ### Title ###
+    title = f"Running MICA-PET Pipeline"
+    # print(f"Title length: {len(title)}")
+    
+    if len(title) > max_text_len:
+        # print(f"{bcolors.ERROR}Error: Text is too long for the current terminal width.{bcolors.RESET}")
+        # Truncate the text if necessary
+        title = title[:max_text_len - 3] + "..."
+
+    # The text should be printed with one space of padding on the left and right.
+    # Total characters used by the frame and inner padding: 4 ('#',' ','text',' ','#')
+    
+    # Calculate the total inner space available for padding
+    inner_width = width - 2 # -2 for the two outer '#' characters
+    
+    # 2. Calculate the required left and right padding for centering
+    # The total space needed for the text and its two inner spaces (' ' + text + ' ')
+    title_len = len(title) +2
+    
+    # Remaining space to be divided for left/right padding
+    remaining_space = inner_width - title_len
+    
+    # Calculate padding for left and right side
+    padding_left = remaining_space // 2
+    padding_right = remaining_space - padding_left # Takes care of odd remaining space
+
+    # --- 3. Construct the output lines ---
+
+    # A. Content Line (Centered Text)
+    # The structure is: # [padding_left] [ ] [text] [ ] [padding_right] #
+    title_line = (
+        f'#' +
+        ' ' * padding_left +
+        ' ' + f"{bcolors.BOLD}{bcolors.RED}{title}{bcolors.RESET}" + ' ' +  # Inner space around text
+        ' ' * padding_right +
+        f'#'
+    )
+    
+    ### VERSION ###
+    subtitle = f"MICA-PET Version: "
+    version = os.environ['MICA_PET_VERSION']
+    if len(version) + len(subtitle) > max_text_len:
+        # Truncate the text if necessary
+        version = version[:max_text_len - len(subtitle) - 5] + "..."
+    text_len = len(subtitle) + len(version) +2
+    
+    remaining_space = inner_width - text_len
+    padding_left = remaining_space // 2
+    padding_right = remaining_space - padding_left
+    version_line = (
+        f'#' +
+        ' ' * padding_left +
+        ' ' + f"{bcolors.BOLD}{bcolors.PURPLE}{subtitle}{bcolors.RESET}{version}" + ' ' +  # Inner space around text
+        ' ' * padding_right +
+        f'#'
+    )
+    
+    ### DATETIME ###
+    subtitle = f"Start time: "
+    current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if len(current_datetime) + len(subtitle) > max_text_len:
+        # Truncate the text if necessary
+        current_datetime = current_datetime[:max_text_len - len(subtitle) - 5] + "..."
+    current_datetime_len = len(subtitle) + len(current_datetime) +2
+    
+    remaining_space = inner_width - current_datetime_len
+    padding_left = remaining_space // 2
+    padding_right = remaining_space - padding_left
+    current_datetime_line = (
+        f'#' +
+        ' ' * padding_left +
+        ' ' + f"{bcolors.BOLD}{bcolors.BLUE}{subtitle}{bcolors.RESET}{current_datetime}" + ' ' +  # Inner space around text
+        ' ' * padding_right +
+        f'#'
+    )
+        
+    subject_list=inputs["T1w"].zip_lists["subject"]
+    session_list=inputs["T1w"].zip_lists["session"]
+    
+    # Top and Bottom Borders (full width of '#')
+    border = '#' * width
+    # Blank lines for visual spacing
+    blank_padding = '#' + ' ' * (width - 2) + '#'
+
+    # --- 4. Print the final box ---
+    print("\n"*2)
+    print(border)
+    print(blank_padding)
+    print(title_line)
+    print(blank_padding)
+    print(version_line)
+    print(blank_padding)
+    print(current_datetime_line)
+    print(blank_padding)
+    print_splash_screen_line("Subject(s): ",subject_list)
+    print_splash_screen_line("Session(s): ",session_list)
+    print_splash_screen_line("BIDS Directory: ",config["bids_dir"])
+    print_splash_screen_line("Output Directory: ",root)
+    print_splash_screen_line("PSF (mm): ", str(config.get("psf")))
+    print_splash_screen_line("Reference Region: ",config.get("ref_region"))
+    print_splash_screen_line("PVC Method: ",config.get("pvc_method"))
+    print_splash_screen_line("Smoothing: ",str(config.get("smoothing")))
+    
+    print_splash_screen_line("FreeSurfer License: ",config.get("fs_license"))
+    if config.get("fastsurfer_img") is not None:
+        print_splash_screen_line("FastSurfer Image: ",config.get("fastsurfer_img"))
+    if config.get("existing_freesurfer_dir") is not None:
+        print_splash_screen_line("Existing FreeSurfer/FastSurfer Directory: ",config.get("existing_freesurfer_dir"))
+    if config.get("hippunfold_img") is not None:
+        print_splash_screen_line("HippUnfold Image: ",config.get("hippunfold_img"))     
+    if config.get("existing_hippunfold_dir") is not None:
+        print_splash_screen_line("Existing HippUnfold Directory: ",config.get("existing_hippunfold_dir"))
+    if config.get("hippunfold_cache_dir") is not None:
+        print_splash_screen_line("Hippunfold Cache Directory: ",config.get("hippunfold_cache_dir"))
+        
+    print_splash_screen_line(f"Dynamic Resource Allocation (Total): ", f"{TOTAL_CORES}")
+    print_splash_screen_line(f"  - FastSurfer: ", f"{config['fastsurfer_threads']} threads")
+    print_splash_screen_line(f"  - HippUnfold: ", f"{config['hippunfold_threads']} threads")
+    print_splash_screen_line(f"  - GTMseg: ", f"{config['gtmseg_threads']} threads")
+
+    print(border)
+    print("\n"*2)
+
+def print_splash_screen_line(subtitle, text):
+    
+    if isinstance(text, list):
+        text = ", ".join(text)
+    
+    width = shutil.get_terminal_size().columns
+    max_text_len = width - 4
+    inner_width = width - 2
+    blank_padding = '#' + ' ' * (width - 2) + '#'
+    
+    # Split text into multiple lines if it exceeds the maximum length
+    lines = []
+    while len(text) + len(subtitle) >= max_text_len:
+        # Find the maximum length of text that fits on one line
+        split_index = max_text_len - len(subtitle) - 5
+        lines.append(text[:split_index])
+        text = text[split_index:]
+    lines.append(text)  # Add the remaining text
+
+    # Print each line
+    for i, line in enumerate(lines):
+        if i == 0:
+            # First line includes the subtitle
+            text_len = len(subtitle) + len(line) + 2
+            remaining_space = inner_width - text_len
+            padding_left = 2
+            padding_right = remaining_space - padding_left
+            text_line = (
+                f'#' +
+                ' ' * padding_left +
+                ' ' + f"{bcolors.BOLD}{bcolors.GREEN}{subtitle}{bcolors.RESET}{line}" + ' ' +  # Inner space around text
+                ' ' * padding_right +
+                f'#'
+            )
+        else:
+            # Subsequent lines do not include the subtitle
+            text_len = len(line) + 2
+            remaining_space = inner_width - text_len
+            padding_left = 10
+            padding_right = remaining_space - padding_left
+            text_line = (
+                f'#' +
+                ' ' * padding_left +
+                ' ' + f"{line}" + ' ' +  # Inner space around text
+                ' ' * padding_right +
+                f'#'
+            )
+        print(text_line)
+    print(blank_padding)
+
+def display_subsection_splash_screen(title):
+    """
+    Prints a string centered inside a box made of '#' characters,
+    sized to the full width of the terminal, and writes it to the log file if provided.
+    """
+    try:
+        # Get the current terminal width
+        width = shutil.get_terminal_size().columns
+    except OSError:
+        width = 80  # Default width if terminal size cannot be determined
+
+    # Ensure the text is not longer than the terminal width
+    max_text_len = width - 4  # -4 accounts for the surrounding '#  #' and padding
+
+    if len(title) > max_text_len:
+        title = title[:max_text_len - 3] + "..."
+
+    # Calculate padding for centering
+    inner_width = width - 2
+    title_len = len(title) + 2
+    remaining_space = inner_width - title_len
+    padding_left = remaining_space // 2
+    padding_right = remaining_space - padding_left
+
+    # Construct the output lines
+    border = '#' * width
+    blank_padding = '#' + ' ' * (width - 2) + '#'
+    title_line = (
+        f'#' +
+        ' ' * padding_left +
+        ' ' + f"{bcolors.BOLD}{bcolors.RED}{title}{bcolors.RESET}" + ' ' +
+        ' ' * padding_right +
+        f'#'
+    )
+
+    # Print to terminal
+    print("\n" * 2)
+    print(border)
+    print(blank_padding)
+    print(title_line)
+    print(blank_padding)
+    print(border)
+    print("\n" * 2)
+
+
+# Set dynamic defaults if not provided by user
+# FastSurfer/HippUnfold: 50% of cores (min 1)
+if config.get("fastsurfer_threads") is None:
+    config["fastsurfer_threads"] = max(8, int(TOTAL_CORES * 0.5))
+
+if config.get("hippunfold_threads") is None:
+    config["hippunfold_threads"] = max(8, int(TOTAL_CORES * 0.5))
+
+# GTMseg: 50% of cores (min 1)
+if config.get("gtmseg_threads") is None:
+    config["gtmseg_threads"] = max(8, int(TOTAL_CORES * 0.5))
+
+# --- Display Splash Screen at Start of Pipeline ---
+# display_splash_screen()
+
+# --- Handle Existing Outputs via Symbolic Links ---
+# If user provides paths to existing FreeSurfer/HippUnfold outputs,
+# create symbolic links to avoid rerunning those steps
+def setup_existing_outputs_symlinks():
+    """Create subject-level symbolic links to existing outputs if provided."""
+    import glob
+    
+    existing_fs = config.get("existing_freesurfer_dir")
+    existing_hipp = config.get("existing_hippunfold_dir")
+    
+    subject_list=inputs["T1w"].zip_lists["subject"]
+    session_list=inputs["T1w"].zip_lists["session"]
+    
+    # Handle FastSurfer/FreeSurfer outputs at subject level
+    if existing_fs and existing_fs != "null":
+        
+        display_subsection_splash_screen("Setting up symbolic links to existing FreeSurfer/FastSurfer outputs...")
+        
+        target_base = os.path.join(root, FASTSURFER_DIR_NAME)
+        os.makedirs(target_base, exist_ok=True)
+        
+        for idx in range(len(subject_list)):
+            subject = subject_list[idx]
+            session = session_list[idx]
+            print(f"Processing subject {subject}, session {session} for existing FreeSurfer/FastSurfer outputs...")
+            
+            existing_subject = glob.glob(os.path.join(existing_fs, f"sub-{subject}_ses-{session}"))
+            
+            if existing_subject:
+                print(f"Found existing FreeSurfer/FastSurfer output for subject {subject}, session {session} in {existing_fs}")
+                subj_dir = existing_subject[0]  # Take the first match
+                subj_name = os.path.basename(subj_dir)  # e.g., sub-01_ses-01
+                target = os.path.join(target_base, subj_name)
+                
+                if not os.path.exists(target):
+                    print(f"  Creating symlink: {subj_name} -> {subj_dir}")
+                    os.symlink(subj_dir, target, target_is_directory=True)
+                else:
+                    print(f"  Subject already exists: {subj_name}")
+            else:
+                print(f"Warning: No FreeSurfer/FastSurfer output found for subject {subject}, session {session} in {existing_fs}")
+            
+    
+    # Handle HippUnfold outputs at subject level
+    if existing_hipp and existing_hipp != "null":
+        target_base = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold")
+        os.makedirs(target_base, exist_ok=True)
+        
+        display_subsection_splash_screen("Setting up symbolic links to existing Hippunfold outputs...")
+        
+        for idx in range(len(subject_list)):
+            subject = subject_list[idx]
+            session = session_list[idx]
+            print(f"Processing subject {subject}, session {session} for existing Hippunfold outputs...")
+            
+            existing_subject = glob.glob(os.path.join(existing_hipp, "hippunfold", f"sub-{subject}"))
+            
+            if existing_subject:
+                print(f"Found existing HippUnfold output for subject {subject}, session {session} in {existing_hipp}")
+                subj_dir = existing_subject[0]  # Take the first match
+                subj_name = os.path.basename(subj_dir)  # e.g., sub-01
+                target = os.path.join(target_base, subj_name)
+                
+                if not os.path.exists(target):
+                    print(f"  Creating symlink: {subj_name} -> {subj_dir}")
+                    os.symlink(subj_dir, target, target_is_directory=True)
+                else:
+                    print(f"  Subject already exists: {subj_name}")
+            else:
+                print(f"Warning: No HippUnfold output found for subject {subject}, session {session} in {existing_hipp}")
+        
+
+# Call setup function before workflow starts
+setup_existing_outputs_symlinks()
+
+# --- Wildcard constraints ---
+wildcard_constraints:
+    subject="[a-zA-Z0-9]+",
+    session="[a-zA-Z0-9]+",
+    tracer="[a-zA-Z0-9]+",
+
+
+# --- Include rule files ---
+include: "rules/anatomy.smk"
+include: "rules/pet.smk"
+include: "rules/report.smk"
+
+
+# --- Target rule ---
+
+def get_pvc_method():
+    return config.get("pvc_method","RBV-FS")
+
+def get_ref_region():
+    return config.get("ref_region","pons")
+
+rule all:
+    input:
+        inputs['pet'].expand(
+            os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "qc", "sub-{subject}_ses-{session}_pvc-"+get_pvc_method()+"_ref-"+get_ref_region()+"_trc-{trc}_report.html"),
+            allow_missing=True,
+        )

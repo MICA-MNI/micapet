@@ -9,6 +9,7 @@ The script requires the following arguments:
     -image_type : Type of image to convert (e.g.,   'pet', 'mri'). Default 'pet'.
     -dicom_dir  : Input directory with DICOMs.
     -bids       : Path to BIDS directory ( . or FULL PATH)
+    -trc        : Tracer name (eg. FDG, MK6240). (Default: 'FDG')
     -series     : Specify DICOM series number to convert. For PET, select the attenuation corrected image. Default 12.
 
 The script is intended for use by researchers and developers working with PET imaging data, particularly in the context of the MICA lab at McGill University.
@@ -38,6 +39,7 @@ parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '0
 parser.add_argument("-image_type", type=str, choices=["pet","mri"], default = "pet", help="(Str) Type of image to convert (e.g., 'pet', 'mri'). Default = 'pet'")
 parser.add_argument("-dicom_dir", type=str, required=True, help="(Str) DICOM directory")
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
+parser.add_argument("-trc", type=str, default="FDG", help="(Str) Tracer name (eg. FDG, MK6240). Default: 'FDG'")
 parser.add_argument("-series", type=int, default=12, help="(Int) Specify DICOM series number to convert (default: 12 for PET attenuation corrected images at McGill University Health Centre)")
 
 args = parser.parse_args()
@@ -75,7 +77,7 @@ dcm2niix.convert_only_this_crc = str(series)
 dcm2niix.conflict_write_behavior = 2
 
 if pet_mri == "pet":
-    dcm2niix.filename = f"sub-{subject}_ses-{session}_trc-FDG_pet"
+    dcm2niix.filename = f"sub-{subject}_ses-{session}_trc-{args.trc}_pet"
 elif pet_mri == "anat":
     dcm2niix.filename = f"sub-{subject}_ses-{session}_T1w"
 

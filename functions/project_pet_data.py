@@ -11,9 +11,11 @@ The script requires the following arguments:
     -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory.
     -hippunfold_dir : Specify path to HippUnfold output directory. (Default: hippunfold subdirectory in BIDS derivatives directory.)
     -ref_region : List of reference regions to use for projection. eg. ['pons','cerebellarGM','composite']. Default: ['pons'].
-    -pvc        : Presence of flag will project partial volume corrected data + non-PVC data.
+    -pvc_method : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'. Default: 'RBV-FS'. Presence of flag will project partial volume corrected data + non-PVC data.
+    -trc        : Tracer (eg. 'FDG', 'MK6240'). Default: 'FDG'
     -cortical   : Presence of flag will perform cortical surface projection.
     -hippocampal: Presence of flag will perform hippocampal surface projection.
+    -smoothing  : List of smoothing FWHM in mm for surface projection. eg. '-smoothing 5 10'. Default: None (no smoothing).
     -tmpdir     : Path to temporary directory. 
 
 The script is intended for use by researchers and developers working with PET imaging data, particularly in the context of the MICA lab at McGill University.
@@ -27,7 +29,7 @@ import sys
 from datetime import datetime
 from nipype.interfaces.freesurfer import FSCommand, MRICoreg, ApplyVolTransform
 from nipype.interfaces.workbench.base import WBCommand
-
+import numpy as np
 import shutil
 
 # Load utilities functions from utils.py
@@ -45,10 +47,13 @@ parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(St
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
 parser.add_argument("-hippunfold_dir", dest="hippunfold_dir", type=str, help="(Str) Specify path to HippUnfold output directory.")
 parser.add_argument("-ref_region",dest="ref_region", type=str, action='store',nargs='*', default=['pons'],help="Specify reference region(s). eg: '-ref_region pons cerebellarGM composite'. Default: pons.")
-parser.add_argument("-pvc", action='store_true', dest="pvc", help="(Flag) If present, project both partial volume corrected data and non-PVC data.")
+parser.add_argument("-pvc_method", dest="pvc_method", type=str, default='RBV-FS', choices=['RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'], help="(Str) PVC method used for PET image. Options: 'RBV-FS', 'MG','IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL' etc. Default: 'RBV-FS'.")
+parser.add_argument("-trc", dest="trc", type=str, default='FDG', help="(Str) Tracer (eg. 'FDG', 'MK6240'). Default: 'FDG'")
 parser.add_argument("-cortical", action='store_true', dest="cortical", help="(Flag) If present, perform cortical surface projection.")
 parser.add_argument("-hippocampal", action='store_true', dest="hippocampal", help="(Flag) If present, perform hippocampal surface projection.")
+parser.add_argument("-smoothing", dest="smoothing", type=float, nargs='*', default=0, help="(List of float) List of smoothing FWHM in mm for surface projection. eg. '-smoothing 5 10'. Default: 0 (no smoothing).")
 parser.add_argument("-tmpdir", dest="tmpdir", type=str, help="(Str) Specify path to temporary directory.")
+parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}")
 
 args = parser.parse_args()
 
@@ -73,14 +78,31 @@ f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
 
 ref_region = args.ref_region
 ref_region.append('none')
-pvc_options = ['none', 'rbv'] if args.pvc else ['none']
+pvc_method = args.pvc_method
+pvc_options = ['none', pvc_method]
 cortical = args.cortical
 hippocampal = args.hippocampal
-tmpdir = args.tmpdir
+smoothing = args.smoothing
+smoothing_int = [int(x) for x in args.smoothing]
+trc = args.trc
 
 mica_pet_version = os.environ['MICA_PET_VERSION']
-mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
 
+# Support custom output_dir or default to bids_dir/derivatives
+if args.output_dir is not None:
+    mica_pet_derivatives = os.path.join(os.path.realpath(args.output_dir), f"MICA-PET_{mica_pet_version}")
+else:
+    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
+
+if args.tmpdir is None:
+        tmpdir = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/tmp"
+        os.makedirs(tmpdir, exist_ok=True)
+else:
+    if not os.path.exists(os.path.realpath(args.tmpdir)):
+        print(f"Error: Specified temporary directory does not exist. Please enter a valid -tmpdir.")
+        sys.exit(1)
+    tmpdir = os.path.realpath(args.tmpdir)
+    
 FSCommand.set_default_subjects_dir(args.subj_dir)
 
 # Check BIDS directory structure if it doesn't exist
@@ -115,11 +137,11 @@ if cortical:
         for pvc in pvc_options:
             for ref in ref_region:
                 print(f"Processing PVC method: {pvc}, reference region: {ref}, hemisphere: {hemi}...")
-                SUVR_map=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
+                SUVR_map=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc}_ref-{ref}_trc-{trc}_pet.nii.gz'
                 
                 surf_fsnative=f'{f_surf_dir}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-fsnative_label-midthickness.surf.gii'
                 
-                SUVR_on_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-fsnative_label-midthickness_pvc-{pvc}_ref-{ref}_trc-FDG_pet.func.gii'
+                SUVR_on_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-fsnative_label-midthickness_pvc-{pvc}_ref-{ref}_trc-{trc}_pet.func.gii'
                 WBCommand(f'wb_command -volume-to-surface-mapping {SUVR_map} {surf_fsnative} {SUVR_on_surf} -trilinear').run()
                 
                 for surf in ['fsLR-32k','fsLR-5k']:
@@ -129,17 +151,18 @@ if cortical:
                     
                     reg_surf_gii=f'{repo_dir}/surfaces/{surf}.{hemi}.sphere.reg.surf.gii'
                     
-                    SUVR_resampled_out=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-{surf}_label-midthickness_pvc-{pvc}_ref-{ref}_smooth-none_trc-FDG_pet.func.gii'
+                    SUVR_resampled_out=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-{surf}_label-midthickness_pvc-{pvc}_ref-{ref}_smooth-none_trc-{trc}_pet.func.gii'
                     
                     WBCommand(f'wb_command -metric-resample {SUVR_on_surf} {sphere_surf} {reg_surf_gii} BARYCENTRIC {SUVR_resampled_out}').run()
                     
-                    for smooth in [5,10]:
-                        print(f"Smoothing with {smooth}mm kernel...")
-                        midthick_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-{space}_surf-{surf}_label-midthickness.surf.gii'
+                    if np.max(smoothing) > 0: # only do smoothing if user specified smoothing values > 0
+                        for smooth in smoothing_int:
+                            print(f"Smoothing with {smooth}mm kernel...")
+                            midthick_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-{space}_surf-{surf}_label-midthickness.surf.gii'
+                            
+                            SUVR_resampled_smooth_out=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-{surf}_label-midthickness_pvc-{pvc}_ref-{ref}_smooth-{smooth}mm_trc-{trc}_pet.func.gii'
                         
-                        SUVR_resampled_smooth_out=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-{surf}_label-midthickness_pvc-{pvc}_ref-{ref}_smooth-{smooth}mm_trc-FDG_pet.func.gii'
-                        
-                        WBCommand(f'wb_command -metric-smoothing {midthick_surf} {SUVR_resampled_out} {smooth} {SUVR_resampled_smooth_out}').run()
+                            WBCommand(f'wb_command -metric-smoothing {midthick_surf} {SUVR_resampled_out} {smooth} {SUVR_resampled_smooth_out}').run()
 
 if hippocampal:
     print("Doing hippocampal surface projection.")
@@ -156,15 +179,15 @@ if hippocampal:
         for pvc in pvc_options:
             # apply inverse transforms to PET images -> they will be in hippunfold T1w space
             applyreg = ApplyVolTransform()
-            applyreg.inputs.source_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wFS_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
+            applyreg.inputs.source_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wFS_pvc-{pvc}_ref-{ref}_trc-{trc}_pet.nii.gz'
             applyreg.inputs.lta_inv_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-T1wHippUnfold_to-T1wFS_xfm.reg.lta'
             applyreg.inputs.target_file=f'{hippunfold_dir}/hippunfold/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_desc-preproc_T1w.nii.gz'
-            applyreg.inputs.transformed_file=f'{tmpdir}/sub-{subject}_ses-{session}_space-T1wHippUnfold_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
+            applyreg.inputs.transformed_file=f'{tmpdir}/sub-{subject}_ses-{session}_space-T1wHippUnfold_pvc-{pvc}_ref-{ref}_trc-{trc}_pet.nii.gz'
             applyreg.run()
             
             for hemi in ['L','R']:
                 print(f"Processing PVC method: {pvc}, reference region: {ref}, hemisphere: {hemi}...")
-                SUVR_map=f'{tmpdir}/sub-{subject}_ses-{session}_space-T1wHippUnfold_pvc-{pvc}_ref-{ref}_trc-FDG_pet.nii.gz'
+                SUVR_map=f'{tmpdir}/sub-{subject}_ses-{session}_space-T1wHippUnfold_pvc-{pvc}_ref-{ref}_trc-{trc}_pet.nii.gz'
                 
                 if os.path.exists(SUVR_map) is False:
                     print(f"Error: SUVR map in T1w space does not exist... Needed for HippUnfold projection.")
@@ -172,7 +195,7 @@ if hippocampal:
                 
                 hipp_surf=f'{hippunfold_dir}/hippunfold/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-T1w_den-2mm_label-hipp_midthickness.surf.gii'
                 
-                SUVR_on_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-hipp_den-2mm_label-midthickness_pvc-{pvc}_ref-{ref}_trc-FDG_pet.func.gii'
+                SUVR_on_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_surf-hipp_den-2mm_label-midthickness_pvc-{pvc}_ref-{ref}_trc-{trc}_pet.func.gii'
                 
                 WBCommand(f'wb_command -volume-to-surface-mapping {SUVR_map} {hipp_surf} {SUVR_on_surf} -trilinear').run()
                     
