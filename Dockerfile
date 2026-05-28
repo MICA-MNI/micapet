@@ -34,7 +34,7 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     libfontconfig1 libfreetype6 libopenblas0 \
     build-essential libseccomp-dev pkg-config uidmap fakeroot \
     tzdata squashfs-tools dh-apparmor cryptsetup libgpgme11-dev \
-    libssl-dev uuid-dev xvfb x11-utils \
+    libssl-dev uuid-dev golang-go xvfb x11-utils \
     connectome-workbench fuse3 fuse-overlayfs squashfuse fuse2fs gocryptfs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -82,7 +82,10 @@ RUN if [ -f /tmp/resources/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz ]; then 
     --exclude='subjects/fsaverage5' \
     --exclude='subjects/fsaverage6' \
     --exclude='subjects/fsaverage_sym' \
-    && rm -f /tmp/fs.tar.gz
+    && rm -f /tmp/fs.tar.gz \
+    && mv /opt/freesurfer-7.4.1/freesurfer /opt/freesurfer_tmp \
+    && rm -r /opt/freesurfer-7.4.1 \
+    && mv /opt/freesurfer_tmp /opt/freesurfer-7.4.1
 
 # # Install ANTs
 RUN curl -fsSL -o /tmp/ants.zip https://github.com/ANTsX/ANTs/releases/download/v2.4.3/ants-2.4.3-centos7-X64-gcc.zip \
@@ -115,7 +118,8 @@ RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkg
 # Install Lamareg models directly into the freshly created conda environment
 RUN mkdir -p $CONDA_DIR/envs/mica-pet/lib/python3.10/site-packages/lamareg/scripts/models \
     && if [ -d /tmp/resources/lamareg ]; then mv /tmp/resources/lamareg/* $CONDA_DIR/envs/mica-pet/lib/python3.10/site-packages/lamareg/scripts/models/; fi \
-    && rm -rf /tmp/resources  # Wipe out the temp resource directory completely to save space
+    && rm -rf /tmp/resources  
+    # Wipe out the temp resource directory completely to save space
 
 # ==========================================
 # 6. Copy Application

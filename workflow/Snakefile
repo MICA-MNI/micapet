@@ -437,9 +437,20 @@ def get_pvc_method():
 def get_ref_region():
     return config.get("ref_region","pons")
 
-rule all:
-    input:
-        inputs['pet'].expand(
-            os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "qc", "sub-{subject}_ses-{session}_pvc-"+get_pvc_method()+"_ref-"+get_ref_region()+"_trc-{trc}_report.html"),
+def get_all_targets(wildcards):
+    targets = inputs['pet'].expand(
+        os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "qc", "sub-{subject}_ses-{session}_pvc-"+get_pvc_method()+"_ref-"+get_ref_region()+"_trc-{trc}_report.html"),
+        allow_missing=True,
+    )
+
+    if config.get("nonlinear_coreg", False):
+        targets += inputs['pet'].expand(
+            os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-MNI_pvc-"+get_pvc_method()+"_ref-"+get_ref_region()+"_trc-{trc}_pet.nii.gz"),
             allow_missing=True,
         )
+
+    return targets
+
+rule all:
+    input:
+        get_all_targets

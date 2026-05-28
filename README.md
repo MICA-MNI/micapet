@@ -1,6 +1,6 @@
 # MICA-PET Pipeline
 
-**Version:** v.alpha.0.3
+**Version:** v.alpha.0.6
 
 ## Overview
 

@@ -226,6 +226,7 @@ if config.get("nonlinear_coreg", True):
             ref_region = lambda wildcards: get_ref_region(),
             output_dir = root,
             log_dir = os.path.join(root, "logs", "nonlinear_coreg"),
+            fs_license = config.get("fs_license"),
             pvc_method = lambda wildcards: get_pvc_method(),
         log:
             os.path.join(root, "logs", "nonlinear_coreg", "sub-{subject}_ses-{session}_trc-{trc}.log")

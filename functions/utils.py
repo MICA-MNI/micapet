@@ -7,7 +7,7 @@ from nilearn.image import load_img, mean_img
 from nilearn.surface import load_surf_data
 import nibabel as nib
 
-mica_pet_version = 'v.alpha.0.5'
+mica_pet_version = 'v.alpha.0.6'
 os.environ['MICA_PET_VERSION'] = mica_pet_version
 
 class bcolors:

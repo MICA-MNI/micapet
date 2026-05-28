@@ -65,7 +65,7 @@ targets_by_analysis_level:
 # Default values for pipeline parameters
 
 # MICA-PET version used for derivatives folder naming
-# mica_pet_version: 'v.alpha.0.5'
+# mica_pet_version: 'v.alpha.0.6'
 
 # Processing options with defaults
 psf: 4.5                    # Scanner PSF FWHM in mm
