@@ -34,7 +34,6 @@ from brainstat.datasets import fetch_mask, fetch_template_surface
 from brainspace.plotting import plot_hemispheres
 import hippomaps as hm
 import matplotlib.pyplot as pltl
-import hippomaps as hm
 import pandas as pd
 from PIL import Image
 import report_creator as rc
