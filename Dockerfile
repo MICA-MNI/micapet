@@ -121,6 +121,10 @@ RUN mkdir -p $CONDA_DIR/envs/mica-pet/lib/python3.10/site-packages/lamareg/scrip
     && rm -rf /tmp/resources  
     # Wipe out the temp resource directory completely to save space
 
+# Addresses missing libgcrypt.so.11 dependency error
+RUN conda run -n mica-pet conda remove -n mica-pet --force -y vtk \
+    && conda run -n mica-pet pip install --no-cache-dir "vtk==9.2.6"
+    
 # ==========================================
 # 6. Copy Application
 # ==========================================

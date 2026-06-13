@@ -101,7 +101,7 @@ for pvc in ['none']:
         f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wNativepro_to-MNI_lamaregWarp1.nii.gz",
         "--secondary-warpfield",
         f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wNativepro_to-MNI_lamaregWarp2.nii.gz",
-        "--threads", "8"]
+        "--threads", "4"]
     
     subprocess.call(cmd)
     
@@ -123,7 +123,7 @@ for pvc in ['none',pvc_method]:
             f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wNativepro_to-MNI_lamaregWarp1.nii.gz",
             "--secondary-warpfield",
             f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wNativepro_to-MNI_lamaregWarp2.nii.gz",
-            "--threads", "8"]
+            "--threads", "4"]
         
         subprocess.call(cmd)        
 
