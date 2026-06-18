@@ -99,7 +99,7 @@ if pvc_mask is None:
     gtmseg = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-T1wFS_desc-gtmseg.nii.gz")
     gtmseg_data = gtmseg.get_fdata()
 
-    GM_idx = [8, 10, 11, 12, 13,17,18,26,28,47,49,50,51,52,53,54,58,60,172,1002,1003,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015,1016,1017,1018,1019,1020,1021,1022,1023,1024,1025,1026,1027,1028,1029,1030,1031,1034,1035,2002,2003,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025,2026,2027,2028,2029,2030,2031,2034,2035]
+    GM_idx = [8, 10, 11, 12, 13,17,18,26,28,47,49,50,51,52,53,54,58,60,172,1001,1002,1003,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015,1016,1017,1018,1019,1020,1021,1022,1023,1024,1025,1026,1027,1028,1029,1030,1031,1032,1033,1034,1035,2001,2002,2003,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025,2026,2027,2028,2029,2030,2031,2032,2033,2034,2035]
     CSF_idx = [4,5,14,15,24,31,43,44,63,257]
     WM_idx = [2,7,16,41,46,85,174]
     background_idx = [0,130,165,258]
@@ -145,7 +145,7 @@ def resample_PET(pet,mri,mica_pet_derivatives,subject,session,space,pvc_method,t
     print(f"Resampling PET to {space} space...")
     applyreg = ApplyVolTransform()
     applyreg.inputs.source_file= pet
-    applyreg.inputs.reg_header=True
+    applyreg.inputs.reg_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wFS_to-T1wNativepro_xfm.reg.lta'
     applyreg.inputs.target_file= mri
     applyreg.inputs.transformed_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc_method}_ref-none_trc-{trc}_pet.nii.gz"
     applyreg.run()

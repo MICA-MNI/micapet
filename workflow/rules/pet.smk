@@ -37,14 +37,14 @@ def get_linear_coreg_fs_check(wildcards):
 
 LINEAR_COREG_REG_LTA_FS = (
     "sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wFS_xfm.reg.lta"
-    if get_pvc_method() == "RBV-FS"
-    else "sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wFS_0GenericAffine.mat"
+    # if get_pvc_method() == "RBV-FS"
+    # else "sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wFS_0GenericAffine.mat"
 )
 
 LINEAR_COREG_REG_LTA_NATIVEPRO = (
     "sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wNativepro_xfm.reg.lta"
-    if get_pvc_method() == "RBV-FS"
-    else "sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wNativepro_0GenericAffine.mat"
+    # if get_pvc_method() == "RBV-FS"
+    # else "sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wNativepro_0GenericAffine.mat"
 )
     
 rule linear_coreg:

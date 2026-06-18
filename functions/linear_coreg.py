@@ -139,13 +139,26 @@ resample.inputs.out_file = nativepro_mri
 print(f"Resampling T1w MRI to nativepro space: {resample.cmdline}")
 resample.run()
 
+# Register T1wFS to nativepro space
+print("Registering T1wFS to T1wNativepro")
+coreg = MRICoreg()
+coreg.inputs.source_file=f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.mgz"
+coreg.inputs.reference_file=nativepro_mri
+coreg.inputs.out_lta_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wFS_to-T1wNativepro_xfm.reg.lta'
+print(coreg.cmdline)
+coreg.run()
 
 ## MRICoreg
 FSCommand.set_default_subjects_dir(subj_dir)
-def mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,trc):
+def mricoreg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,space,trc):
     print(f"Co-registering PET to {space}...")
     coreg = MRICoreg()
-    coreg.inputs.source_file=pet
+    if transmission is not None: # check if transmission scan exists and use it for co-registration if it does
+        print(f"Using transmission scan for co-registration to space {space}...")
+        coreg.inputs.source_file=transmission
+    else:
+        coreg.inputs.source_file=pet
+
     if space == 'T1wFS': # use FreeSurfer mgz as reference
         coreg.inputs.subjects_dir=subj_dir
         coreg.inputs.subject_id=f"sub-{subject}_ses-{session}"
@@ -165,47 +178,7 @@ def mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,trc):
     applyreg.inputs.transformed_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-none_trc-{trc}_pet.nii.gz'
     applyreg.run()
 
-## ANTS
-
-def ANTS_reg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,space,trc):
-    if space == 'T1wFS': # use FreeSurfer mgz as reference
-        mri = f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.nii.gz"
-        if not os.path.exists(mri):
-            mc = MRIConvert()
-            mc.inputs.in_file = f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.mgz"
-            mc.inputs.out_file = mri
-            mc.inputs.out_type = 'niigz'
-            mc.run()
-    else: # use nativepro mri
-        mri = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
-        
-    fixed = ants.image_read(mri)
-    moving = ants.image_read(pet)
-    if transmission is not None:
-        print(f"Using transmission scan for registration to space {space}...")
-        moving_transmission = ants.image_read(transmission)
-    else:
-        moving_transmission = moving
-    
-    mytx = ants.registration(
-        fixed=fixed,
-        moving=moving_transmission,
-        type_of_transform='Rigid',
-        outprefix=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-{space}_'
-    )
-
-    pet_in_mri = ants.apply_transforms(
-        fixed=fixed, 
-        moving=moving,
-        transformlist=mytx['fwdtransforms'],
-        interpolator='linear')
-
-    ants.image_write(pet_in_mri, f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-none_trc-{trc}_pet.nii.gz')
-
 for space in ['T1wFS','T1wNativepro']:
-    if pvc_method == 'RBV-FS':
-        mricoreg(pet,subject,session,subj_dir,mica_pet_derivatives,space,trc)
-    else: 
-        ANTS_reg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,space,trc)
+    mricoreg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,space,trc)
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] PET to MRI co-registration completed.")
