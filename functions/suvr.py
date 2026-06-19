@@ -157,7 +157,7 @@ for space in ['T1wFS','T1wNativepro']:
             # Calculate avg in reference region
             print(f"Calculating average uptake in reference region: {ref}, PVC: {pvc}, space: {space}...")
             
-            in_file = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc}_ref-none_trc-{trc}_pet.nii.gz")
+            in_file = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-none_trc-{trc}_pet.nii.gz")
             in_data = in_file.get_fdata()
             mask_file = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-{ref}_mask.nii.gz")
             mask_data = mask_file.get_fdata()
