@@ -114,7 +114,10 @@ def resample_RBV(rbv,mri,mica_pet_derivatives,subject,session,space):
     print(f"Resampling RBV to {space} space...")
     applyreg = ApplyVolTransform()
     applyreg.inputs.source_file= rbv
-    applyreg.inputs.reg_header=True
+    if space == 'T1wFS':
+        applyreg.inputs.reg_header=True
+    elif space == 'T1wNativepro':
+        applyreg.inputs.reg_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wFS_to-T1wNativepro_xfm.reg.lta'
     applyreg.inputs.target_file= mri
     applyreg.inputs.transformed_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-RBV-FS_ref-none_trc-{trc}_pet.nii.gz"
     applyreg.run()
