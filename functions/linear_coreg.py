@@ -9,6 +9,7 @@ The script requires the following arguments:
     -bids       : Path to BIDS directory ( . or FULL PATH)
     -subj_dir : Specify path to FreeSurfer/FastSurfer subjects directory. (Default fastsurfer subdirectory in BIDS derivatives directory.)
     -pvc_method : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'. Default: 'RBV-FS'.
+    -edge_reg   : Uses edge-based registration method for PET to T1w registration rather than FreeSurfer mri_coreg.
     -pet        : (Optional) Specify path to PET nifti file. Default: sub-<sub>_ses-<ses>_trc-<trc>_pet.nii.gz in pet BIDS directory.
     -mri        : (Optional) Specify path to MRI nifti file. Default: sub-<sub>_ses-<ses>_T1w.nii.gz in anat BIDS directory.
     -out        : (Optional) Output directory. Default: BIDS directory.
@@ -25,9 +26,12 @@ import shutil
 import sys
 from datetime import datetime
 import ants
-import subprocess
+import numpy as np
+import nibabel as nib
+
 # from nipype.interfaces.freesurfer import FSCommand
 from nipype.interfaces.freesurfer import MRICoreg, ApplyVolTransform, FSCommand, MRIConvert
+from nipype.interfaces.freesurfer.utils import LTAConvert
 from nipype.interfaces import afni
 
 # Load utilities functions from utils.py
@@ -45,6 +49,7 @@ parser.add_argument("-sub", type=str, required=True, help="(Str) Subject identif
 parser.add_argument("-ses", type=str, required=True, help="(Str) Session (eg. '01')")
 parser.add_argument("-bids", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
 parser.add_argument("-subj_dir", dest="subj_dir", type=str, help="(Str) Specify path to FreeSurfer/FastSurfer subjects directory.")
+parser.add_argument("-edge_reg", dest="edge_reg", action='store_true', help="Use edge-based registration method for PET to T1w registration rather than FreeSurfer mri_coreg.")
 parser.add_argument("-pet", dest="pet", type=str, help="(Str) Path to PET nifti file. Default: sub-<sub>_ses-<ses>_trc-<trc>_pet.nii.gz in pet BIDS directory.")
 parser.add_argument("-mri", dest="mri", type=str, help="(Str) Path to MRI nifti file. Default: sub-<sub>_ses-<ses>_T1w.nii.gz in mri BIDS directory.")
 parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}")
@@ -82,6 +87,8 @@ if args.output_dir is not None:
 else:
     mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{mica_pet_version}"
     
+edge_reg = args.edge_reg
+
 pet = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-{trc}_pet.nii.gz"
 transmission_list = sorted(glob.glob(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_*transmission*.nii.gz"))
 if len(transmission_list) > 1:
@@ -178,7 +185,132 @@ def mricoreg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,spac
     applyreg.inputs.transformed_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-none_trc-{trc}_pet.nii.gz'
     applyreg.run()
 
-for space in ['T1wFS','T1wNativepro']:
-    mricoreg(transmission,pet,subject,session,subj_dir,mica_pet_derivatives,space,trc)
+# edgereg
+def pet_to_t1w_edge_registration(
+    pet_path: str,
+    subject: str,
+    session: str,
+    subj_dir: str,
+    mica_pet_derivatives: str,
+    space: str,
+    trc: str,
+    smooth_sigma_mm: float = 1.0,
+    interpolator: str = "nearestNeighbor",
+) -> nib.Nifti1Image:
+    """
+    Register PET to T1w using edge-based affine registration.
+ 
+    Mirrors: antsRegistrationSyN.sh -d 3 -t a -j 1 on smoothed edge images,
+    then antsApplyTransforms -n NearestNeighbor on the original PET.
+ 
+    Parameters
+    ----------
+    pet_path        : path to PET NIfTI (average or single frame)
+    t1w_path        : path to T1w NIfTI (registration target)
+    output_prefix   : ANTs output prefix; affine .mat saved here
+    smooth_sigma_mm : Gaussian sigma in mm (default 1.0 → fslmaths -s 1)
+    interpolator    : interpolation for final warp (default "nearestNeighbor")
+ 
+    Returns
+    -------
+    nib.Nifti1Image  PET resampled into T1w space
+    """
+ 
+    # ------------------------------------------------------------------
+    # Step 0 – load
+    
+    if space == 'T1wNativepro':
+        t1w_path = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
+    elif space == 'T1wFS':
+        t1w_path = f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.nii.gz"
+        if not os.path.exists(t1w_path):
+            # Convert FreeSurfer mgz to nifti if not already done
+            mc = MRIConvert()
+            mc.inputs.in_file = f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.mgz"
+            mc.inputs.out_file = t1w_path
+            mc.inputs.out_type = 'niigz'
+            mc.run()
+    t1w_nib = nib.load(t1w_path)          # kept only for output header/affine
+    pet = ants.image_read(pet_path)
+    t1w = ants.image_read(t1w_path)
+    output_prefix = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-{space}_"
+ 
+    # ------------------------------------------------------------------
+    # Step 1 – smooth  (fslmaths -s sigma)
+    pet_smooth = ants.smooth_image(pet, smooth_sigma_mm, sigma_in_physical_coordinates=True)
+    t1w_smooth = ants.smooth_image(t1w, smooth_sigma_mm, sigma_in_physical_coordinates=True)
+ 
+    # ------------------------------------------------------------------
+    # Step 2 – edge filter  (fslmaths -edge → gradient magnitude)
+    def _edge(img):
+        d, sp = img.numpy().astype(np.float64), np.array(img.spacing)
+        g = [np.gradient(d, sp[i], axis=i) for i in range(3)]
+        return img.new_image_like(np.sqrt(sum(gi**2 for gi in g)))
+ 
+    pet_edge = _edge(pet_smooth)
+    t1w_edge = _edge(t1w_smooth)
+ 
+    # ------------------------------------------------------------------
+    # Step 3 – affine registration on edge images
+    # use_legacy_histogram_matching=True mirrors -j 1 in antsRegistrationSyN.sh
+    reg = ants.registration(
+        fixed             = t1w_edge,
+        moving            = pet_edge,
+        type_of_transform = "Affine",
+        outprefix         = output_prefix,
+        use_legacy_histogram_matching = True,
+    )
+ 
+    # ------------------------------------------------------------------
+    # Step 4 – apply transform to original (unmodified) PET
+    pet_warped = ants.apply_transforms(
+        fixed         = t1w,
+        moving        = pet,
+        transformlist = reg["fwdtransforms"],
+        interpolator  = interpolator,
+    )
+    
+    # ------------------------------------------------------------------
+    # Step 5 – convert .mat to .lta for FreeSurfer compatibility
+    # Convert ANTs affine matrix to FreeSurfer LTA format
+    tx = ants.read_transform(f"{output_prefix}0GenericAffine.mat")
 
+    ants.write_transform(tx, f"{output_prefix}0GenericAffine.txt")
+
+    lta_convert = LTAConvert()
+    lta_convert.inputs.in_itk = f"{output_prefix}0GenericAffine.txt"
+    lta_convert.inputs.out_lta = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-{space}_xfm.reg.lta"
+    lta_convert.inputs.source_file = pet_path
+    lta_convert.inputs.target_file = t1w_path
+    lta_convert.cmdline
+    lta_convert.run()
+    
+    # ------------------------------------------------------------------
+    # Step 6 – save resampled PET in T1w space
+     
+    out = nib.Nifti1Image(pet_warped.numpy(), t1w_nib.affine, t1w_nib.header)
+
+    nib.save(out, f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-none_trc-{trc}_pet.nii.gz")
+
+
+for space in ['T1wFS','T1wNativepro']:
+    if edge_reg:
+        pet_to_t1w_edge_registration(
+            pet_path=pet,
+            subject=subject,
+            session=session,
+            subj_dir=subj_dir,
+            mica_pet_derivatives=mica_pet_derivatives,
+            space=space,
+            trc=trc)
+    else:
+        mricoreg(transmission,
+                 pet,
+                 subject,
+                 session,
+                 subj_dir,
+                 mica_pet_derivatives,
+                 space,
+                 trc)
+    
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] PET to MRI co-registration completed.")

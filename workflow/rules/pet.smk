@@ -27,6 +27,12 @@ def get_skip_hippunfold_arg():
         return ""
     else:
         return "-hippocampal"
+    
+def get_edge_reg_arg():
+    if config.get("edge_reg", False):
+        return "-edge_reg"
+    else:
+        return ""
 
 def get_linear_coreg_fs_check(wildcards):
     """Get fs_check input - mark as ancient if using existing outputs."""
@@ -36,15 +42,15 @@ def get_linear_coreg_fs_check(wildcards):
     return fs_check
 
 LINEAR_COREG_REG_LTA_FS = (
+    "sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wFS_0GenericAffine.mat" 
+    if config.get("edge_reg", False) else 
     "sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wFS_xfm.reg.lta"
-    # if get_pvc_method() == "RBV-FS"
-    # else "sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wFS_0GenericAffine.mat"
 )
 
 LINEAR_COREG_REG_LTA_NATIVEPRO = (
+    "sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wNativepro_0GenericAffine.mat" 
+    if config.get("edge_reg", False) else 
     "sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wNativepro_xfm.reg.lta"
-    # if get_pvc_method() == "RBV-FS"
-    # else "sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wNativepro_0GenericAffine.mat"
 )
     
 rule linear_coreg:
@@ -68,6 +74,7 @@ rule linear_coreg:
         log_dir = os.path.join(root, "logs", "linear_coreg"),
         fs_license = config.get("fs_license"),
         pvc_method = lambda wildcards: get_pvc_method(),
+        edge_reg_arg = lambda wildcards: get_edge_reg_arg() if config.get("edge_reg", False) else "",
     log:
         os.path.join(root, "logs", "linear_coreg", "sub-{subject}_ses-{session}_trc-{trc}.log")
     shell:
@@ -93,6 +100,7 @@ rule linear_coreg:
             -mri {input.t1} \
             -trc {wildcards.trc} \
             -pvc_method {params.pvc_method} \
+            {params.edge_reg_arg} \
             >> {log} 2>&1
         """
 
