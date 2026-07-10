@@ -179,6 +179,7 @@ rule gtm_seg:
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
+            -trc {wildcards.trc} \
             -subj_dir {params.subj_dir} \
             -output_dir {params.output_dir} \
             >> {log} 2>&1

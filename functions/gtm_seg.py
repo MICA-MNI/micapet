@@ -7,6 +7,7 @@ The script requires the following arguments:
     -sub        : Subject identification. (eg. PX001)
     -ses        : Session. (eg. 01)
     -bids       : Path to BIDS directory ( . or FULL PATH)
+    -trc        : Tracer (eg. FDG, MK6240)
     -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory.
     -force      : (Optional) Force gtmseg even if output exists.
 
@@ -39,7 +40,7 @@ parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help=
 parser.add_argument("-output_dir", dest="output_dir", type=str, default=None, help="(Str) Output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives.")
 parser.add_argument("-force", action='store_true', help="Force gtmseg even if output exists.")
 parser.add_argument("-threads", dest="threads", type=int, default=1, help="(Int) Number of threads to use. Default: 1")
-
+parser.add_argument("-trc", type=str, dest='trc', default='FDG',help="(Str) Select tracer for analysis ('FDG','MK6240'). (Default 'FDG').")
 args = parser.parse_args()
 
 # Validate mandatory arguments
@@ -53,6 +54,7 @@ session = f"{args.ses.replace('ses-', '')}"
 subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
+trc = args.trc
 force = args.force
 
 # Determine segmentation type   
@@ -159,7 +161,7 @@ elif seg_type == 'fastsurfer':
 
 
 # Resample GTMseg to T1w/nativepro space
-def resample_gtmseg(gtm,mri,space):
+def resample_gtmseg(gtm,mri,space,trc):
     print(f"Resampling GTMseg to {space} space...")
     applyreg = ApplyVolTransform()
     applyreg.inputs.source_file= gtm
@@ -179,7 +181,7 @@ for space in ['T1wFS','T1wNativepro']:
         mri = f"{f_surf_dir}/mri/orig.mgz"
     else: 
         mri = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
-    resample_gtmseg(gtm,mri,space)
+    resample_gtmseg(gtm,mri,space,trc)
 
 
 # resample_gtmseg(gtm,mri,'T1w')
