@@ -149,7 +149,8 @@ def get_gtm_seg_inputs(wildcards):
 
 rule gtm_seg:
     input:
-        unpack(get_gtm_seg_inputs)
+        unpack(get_gtm_seg_inputs),
+        rules.linear_coreg.output.reg_lta_fs_nativepro,
         # rules.fastsurfer.output.norm,
         # rules.fastsurfer.output.talairach,
         # rules.fastsurfer.output.brainmask,
@@ -165,6 +166,7 @@ rule gtm_seg:
         output_dir = root,
         log_dir = os.path.join(root, "logs", "gtm_seg"),
         fs_license = config.get("fs_license"),
+        trc = config.get("trc", "FDG"),
     log:
         os.path.join(root, "logs", "gtm_seg", "sub-{subject}_ses-{session}.log")
     shell:
@@ -179,7 +181,7 @@ rule gtm_seg:
             -sub {wildcards.subject} \
             -ses {wildcards.session} \
             -bids {params.bids_dir} \
-            -trc {wildcards.trc} \
+            -trc {params.trc} \
             -subj_dir {params.subj_dir} \
             -output_dir {params.output_dir} \
             >> {log} 2>&1

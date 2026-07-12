@@ -195,7 +195,7 @@ parse_args:
     action: 'store_true'
     default: false
 
---edge_reg: 
+  --edge-reg: 
     help: "Flag to use edge-based registration method for PET to T1w registration rather than FreeSurfer mri_coreg."
     dest: edge_reg
     action: 'store_true'
