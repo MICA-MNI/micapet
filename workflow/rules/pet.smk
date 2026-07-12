@@ -105,12 +105,57 @@ rule linear_coreg:
             >> {log} 2>&1
         """
 
+def get_gtm_seg_inputs(wildcards):
+    """Get GTM seg inputs - mark as ancient if using existing outputs."""
+    base_paths = {
+        "norm": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "norm.mgz"),
+        "talairach": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "transforms", "talairach.lta"),
+        "brainmask": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "brainmask.mgz"),
+    }
+    if config.get("existing_freesurfer_dir", ""):
+        return {k: ancient(v) for k, v in base_paths.items()}
+    return base_paths
+
+rule gtm_seg:
+    input:
+        unpack(get_gtm_seg_inputs),
+        rules.linear_coreg.output.reg_lta_fs_nativepro,
+    output:
+        gtmseg_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "anat", "sub-{subject}_ses-{session}_space-T1wFS_desc-gtmseg.nii.gz"),
+        gtmseg_nativepro = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "anat", "sub-{subject}_ses-{session}_space-T1wNativepro_desc-gtmseg.nii.gz"),
+    params:
+        bids_dir = config["bids_dir"],
+        # gtm_seg.py uses -subj_dir
+        subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
+        output_dir = root,
+        log_dir = os.path.join(root, "logs", "gtm_seg"),
+        fs_license = config.get("fs_license"),
+        trc = config.get("trc", "FDG"),
+    log:
+        os.path.join(root, "logs", "gtm_seg", "sub-{subject}_ses-{session}.log")
+    shell:
+        """
+        set +eu  # Disable strict mode completely
+        export FREESURFER_HOME=/opt/freesurfer-7.4.1
+        export FS_LICENSE={params.fs_license}
+        source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
+        mkdir -p {params.log_dir}
+        echo "=== Starting gtm_seg.py at $(date) ===" > {log} 2>&1
+        python -u {workflow.basedir}/../functions/gtm_seg.py \
+            -sub {wildcards.subject} \
+            -ses {wildcards.session} \
+            -bids {params.bids_dir} \
+            -trc {params.trc} \
+            -subj_dir {params.subj_dir} \
+            -output_dir {params.output_dir} \
+            >> {log} 2>&1
+        """
+
 rule pvc:
     input:
         pet_fs = rules.linear_coreg.output.pet_fs,
         pet_raw = inputs['pet'].path,
         lta = rules.linear_coreg.output.reg_lta_fs,
-        # gtmseg = rules.gtm_seg.output.gtmseg, # gtmseg.mgz from anatomy rule
         gtmseg_fs = rules.gtm_seg.output.gtmseg_fs, # gtmseg in T1wFS space
         gtmseg_nativepro = rules.gtm_seg.output.gtmseg_nativepro, # gtmseg in T1wNativepro space
         # gtmseg = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg.mgz"),
