@@ -7,7 +7,7 @@ USER root
 # ==========================================
 ENV DEBIAN_FRONTEND=noninteractive \
     LC_ALL=C \
-    FREESURFER_HOME="/opt/freesurfer-7.4.1" \
+    FREESURFER_HOME="/micapet/freesurfer" \ 
     ANTSPATH="/opt/ants" \
     AFNIPATH="/opt/AFNI" \
     CONDA_DIR="/opt/conda" \
@@ -18,6 +18,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     VTK_DEFAULT_OPENGL_WINDOW='vtkOSOpenGLRenderWindow' \
     MESA_GL_VERSION_OVERRIDE=3.3 \
     MICA_PET_VERSION="v.alpha.0.6"
+
+    # FREESURFER_HOME="/opt/freesurfer-7.4.1" \
 
 # Combine all binary directories safely into a single PATH declaration
 ENV PATH="${CONDA_DIR}/bin:${FREESURFER_HOME}/bin:${FREESURFER_HOME}/mni/bin:${ANTSPATH}/bin:${AFNIPATH}:/usr/local/go/bin:${GOPATH}/bin:${PATH}"
@@ -61,31 +63,31 @@ RUN git clone https://github.com/apptainer/apptainer.git /usr/local/src/apptaine
 COPY resources/ /tmp/resources/
 
 # Install FreeSurfer (minimal extraction)
-RUN if [ -f /tmp/resources/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz ]; then \
-        echo "Found local FreeSurfer archive"; \
-        mv /tmp/resources/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz /tmp/fs.tar.gz; \
-    else \
-        echo "Downloading FreeSurfer archive..."; \
-        wget -O /tmp/fs.tar.gz https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.4.1/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz; \
-    fi \
-    && mkdir -p $FREESURFER_HOME \
-    && tar -xzf /tmp/fs.tar.gz -C $FREESURFER_HOME --strip-components=1 \
-    --exclude='average/mult-comp-cor' \
-    --exclude='lib/qt' \
-    --exclude='lib/cuda' \
-    --exclude='trctrain' \
-    --exclude='subjects/bert' \
-    --exclude='subjects/V1_average' \
-    --exclude='subjects/cvs_*' \
-    --exclude='subjects/fsaverage3' \
-    --exclude='subjects/fsaverage4' \
-    --exclude='subjects/fsaverage5' \
-    --exclude='subjects/fsaverage6' \
-    --exclude='subjects/fsaverage_sym' \
-    && rm -f /tmp/fs.tar.gz \
-    && mv /opt/freesurfer-7.4.1/freesurfer /opt/freesurfer_tmp \
-    && rm -r /opt/freesurfer-7.4.1 \
-    && mv /opt/freesurfer_tmp /opt/freesurfer-7.4.1
+# RUN if [ -f /tmp/resources/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz ]; then \
+#         echo "Found local FreeSurfer archive"; \
+#         mv /tmp/resources/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz /tmp/fs.tar.gz; \
+#     else \
+#         echo "Downloading FreeSurfer archive..."; \
+#         wget -O /tmp/fs.tar.gz https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.4.1/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz; \
+#     fi \
+#     && mkdir -p $FREESURFER_HOME \
+#     && tar -xzf /tmp/fs.tar.gz -C $FREESURFER_HOME --strip-components=1 \
+#     --exclude='average/mult-comp-cor' \
+#     --exclude='lib/qt' \
+#     --exclude='lib/cuda' \
+#     --exclude='trctrain' \
+#     --exclude='subjects/bert' \
+#     --exclude='subjects/V1_average' \
+#     --exclude='subjects/cvs_*' \
+#     --exclude='subjects/fsaverage3' \
+#     --exclude='subjects/fsaverage4' \
+#     --exclude='subjects/fsaverage5' \
+#     --exclude='subjects/fsaverage6' \
+#     --exclude='subjects/fsaverage_sym' \
+#     && rm -f /tmp/fs.tar.gz \
+#     && mv /opt/freesurfer-7.4.1/freesurfer /opt/freesurfer_tmp \
+#     && rm -r /opt/freesurfer-7.4.1 \
+#     && mv /opt/freesurfer_tmp /opt/freesurfer-7.4.1
 
 # # Install ANTs
 RUN curl -fsSL -o /tmp/ants.zip https://github.com/ANTsX/ANTs/releases/download/v2.4.3/ants-2.4.3-centos7-X64-gcc.zip \
@@ -133,9 +135,9 @@ COPY . /app
 
 # Ensure correct permissions & remove redundant resources to minimize final image size
 RUN chmod +x /app/run.py \
-    && rm /app/resources/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz \
     && rm -rf /app/resources/lamareg \
     && rm -rf /app/resources/AFNI
+    # && rm /app/resources/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz \
 
 # Set the entrypoint to run seamlessly within the conda environment context
 ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "mica-pet", "python", "/app/run.py"]
