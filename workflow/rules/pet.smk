@@ -81,7 +81,7 @@ rule linear_coreg:
     shell:
         """
         set +eu  # Disable strict mode completely
-        export FREESURFER_HOME=/opt/freesurfer-7.4.1
+        export FREESURFER_HOME=/micapet/freesurfer
         export FS_LICENSE={params.fs_license}
         source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
         mkdir -p {params.log_dir}
@@ -137,7 +137,7 @@ rule gtm_seg:
     shell:
         """
         set +eu  # Disable strict mode completely
-        export FREESURFER_HOME=/opt/freesurfer-7.4.1
+        export FREESURFER_HOME=/micapet/freesurfer
         export FS_LICENSE={params.fs_license}
         source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
         mkdir -p {params.log_dir}
@@ -181,7 +181,7 @@ rule pvc:
         if params.pvc_method == "RBV-FS":
             shell("""
                 set +eu  # Disable strict mode completely
-                export FREESURFER_HOME=/opt/freesurfer-7.4.1
+                export FREESURFER_HOME=/micapet/freesurfer
                 export FS_LICENSE={params.fs_license}
                 source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
                 mkdir -p {params.log_dir}
@@ -201,7 +201,7 @@ rule pvc:
         else: 
             shell("""
                 set +eu  # Disable strict mode completely
-                export FREESURFER_HOME=/opt/freesurfer-7.4.1
+                export FREESURFER_HOME=/micapet/freesurfer
                 export FS_LICENSE={params.fs_license}
                 source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
                 mkdir -p {params.log_dir}
@@ -243,7 +243,7 @@ rule suvr:
     shell:
         """
         set +eu  # Disable strict mode completely
-        export FREESURFER_HOME=/opt/freesurfer-7.4.1
+        export FREESURFER_HOME=/micapet/freesurfer
         export FS_LICENSE={params.fs_license}
         source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
         mkdir -p {params.log_dir}
@@ -288,7 +288,7 @@ if config.get("nonlinear_coreg", True):
         shell:
             """
             set +eu  # Disable strict mode completely
-            export FREESURFER_HOME=/opt/freesurfer-7.4.1
+            export FREESURFER_HOME=/micapet/freesurfer
             export FS_LICENSE={params.fs_license}
             source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
             mkdir -p {params.log_dir}
@@ -378,7 +378,7 @@ rule project_pet_data:
     shell:
         """
         set +eu  # Disable strict mode completely
-        export FREESURFER_HOME=/opt/freesurfer-7.4.1
+        export FREESURFER_HOME=/micapet/freesurfer
         export FS_LICENSE={params.fs_license}
         source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
         mkdir -p {params.log_dir}

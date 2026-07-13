@@ -121,7 +121,7 @@ rule cortical_surface:
     shell:
         """
         set +eu  # Disable strict mode completely
-        export FREESURFER_HOME=/opt/freesurfer-7.4.1
+        export FREESURFER_HOME=/micapet/freesurfer
         export FS_LICENSE={params.fs_license}
         source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
         mkdir -p {params.log_dir}
@@ -172,7 +172,7 @@ rule cortical_surface:
 #     shell:
 #         """
 #         set +eu  # Disable strict mode completely
-#         export FREESURFER_HOME=/opt/freesurfer-7.4.1
+#         export FREESURFER_HOME=/micapet/freesurfer
 #         export FS_LICENSE={params.fs_license}
 #         source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
 #         mkdir -p {params.log_dir}
