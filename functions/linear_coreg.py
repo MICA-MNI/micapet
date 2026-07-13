@@ -146,14 +146,14 @@ resample.inputs.out_file = nativepro_mri
 print(f"Resampling T1w MRI to nativepro space: {resample.cmdline}")
 resample.run()
 
-# Register T1wFS to nativepro space
-print("Registering T1wFS to T1wNativepro")
-coreg = MRICoreg()
-coreg.inputs.source_file=f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.mgz"
-coreg.inputs.reference_file=nativepro_mri
-coreg.inputs.out_lta_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-T1wFS_to-T1wNativepro_xfm.reg.lta'
-print(coreg.cmdline)
-coreg.run()
+# # Register T1wFS to nativepro space
+# print("Registering T1wFS to T1wNativepro")
+# coreg = MRICoreg()
+# coreg.inputs.source_file=f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.mgz"
+# coreg.inputs.reference_file=nativepro_mri
+# coreg.inputs.out_lta_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-T1wFS_to-T1wNativepro_xfm.reg.lta'
+# print(coreg.cmdline)
+# coreg.run()
 
 ## MRICoreg
 FSCommand.set_default_subjects_dir(subj_dir)
