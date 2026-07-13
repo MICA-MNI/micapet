@@ -26,7 +26,6 @@ from nipype.interfaces.freesurfer import MRICoreg, ApplyVolTransform
 
 # Load utilities functions from utils.py
 import utils
-from workflow.rules.pet import subj_dir
 
 # Set the working directory to the script's location
 script_dir = os.path.dirname(os.path.abspath(__file__))
