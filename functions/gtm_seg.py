@@ -168,7 +168,7 @@ def resample_gtmseg(gtm,mri,space,trc):
     if space == 'T1wFS':
         applyreg.inputs.reg_header=True
     elif space == 'T1wNativepro':
-        applyreg.inputs.reg_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wFS_to-T1wNativepro_xfm.reg.lta'
+        applyreg.inputs.reg_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-T1wFS_to-T1wNativepro_xfm.reg.lta'
     applyreg.inputs.interp = 'nearest'
     applyreg.inputs.target_file= mri
     applyreg.inputs.transformed_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-gtmseg.nii.gz'

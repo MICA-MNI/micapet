@@ -151,7 +151,7 @@ print("Registering T1wFS to T1wNativepro")
 coreg = MRICoreg()
 coreg.inputs.source_file=f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.mgz"
 coreg.inputs.reference_file=nativepro_mri
-coreg.inputs.out_lta_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wFS_to-T1wNativepro_xfm.reg.lta'
+coreg.inputs.out_lta_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-T1wFS_to-T1wNativepro_xfm.reg.lta'
 print(coreg.cmdline)
 coreg.run()
 
