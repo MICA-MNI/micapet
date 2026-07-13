@@ -168,17 +168,17 @@ def resample_gtmseg(gtm,mri,space,trc):
     if space == 'T1wFS':
         applyreg.inputs.reg_header=True
     elif space == 'T1wNativepro':
-        applyreg.inputs.reg_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-T1wFS_to-T1wNativepro_xfm.reg.lta'
-        
-        if not os.path.exists(applyreg.inputs.reg_file):
+        if not os.path.exists(f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-T1wFS_to-T1wNativepro_xfm.reg.lta'):
             # Register T1wFS to nativepro space
             print("Registering T1wFS to T1wNativepro")
             coreg = MRICoreg()
-            coreg.inputs.source_file=f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.mgz"
-            coreg.inputs.reference_file=nativepro_mri
-            coreg.inputs.out_lta_file=applyreg.inputs.reg_file
+            coreg.inputs.source_file=f"{f_surf_dir}/mri/orig.mgz"
+            coreg.inputs.reference_file=mri
+            coreg.inputs.out_lta_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-T1wFS_to-T1wNativepro_xfm.reg.lta'
             print(coreg.cmdline)
             coreg.run()
+
+        applyreg.inputs.reg_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-T1wFS_to-T1wNativepro_xfm.reg.lta'
 
     applyreg.inputs.interp = 'nearest'
     applyreg.inputs.target_file= mri
