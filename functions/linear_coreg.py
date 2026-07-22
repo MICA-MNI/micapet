@@ -33,6 +33,7 @@ import nibabel as nib
 from nipype.interfaces.freesurfer import MRICoreg, ApplyVolTransform, FSCommand, MRIConvert
 from nipype.interfaces.freesurfer.utils import LTAConvert
 from nipype.interfaces import afni
+from resample_to_nativepro import resample_to_nativepro
 
 # Load utilities functions from utils.py
 import utils
@@ -135,16 +136,25 @@ nativepro_mri = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{s
 if os.path.exists(nativepro_mri):
     print(f"Removing existing nativepro MRI: {nativepro_mri}")
     os.remove(nativepro_mri)
-    
 
-os.environ['AFNI_NIFTI_TYPE_WARN'] = "NO"
-resample = afni.Resample()
-resample.inputs.in_file = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
-resample.inputs.orientation= 'LPI'
-resample.inputs.outputtype = 'NIFTI_GZ'
-resample.inputs.out_file = nativepro_mri
-print(f"Resampling T1w MRI to nativepro space: {resample.cmdline}")
-resample.run()
+input_mri = f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.nii.gz"
+if not os.path.exists(input_mri):
+    # Convert FreeSurfer mgz to nifti if not already done
+    mc = MRIConvert()
+    mc.inputs.in_file = f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.mgz"
+    mc.inputs.out_file = input_mri
+    mc.inputs.out_type = 'niigz'
+    mc.run()
+    
+resample_to_nativepro(input_mri, nativepro_mri)
+# os.environ['AFNI_NIFTI_TYPE_WARN'] = "NO"
+# resample = afni.Resample()
+# resample.inputs.in_file = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+# resample.inputs.orientation= 'LPI'
+# resample.inputs.outputtype = 'NIFTI_GZ'
+# resample.inputs.out_file = nativepro_mri
+# print(f"Resampling T1w MRI to nativepro space: {resample.cmdline}")
+# resample.run()
 
 # # Register T1wFS to nativepro space
 # print("Registering T1wFS to T1wNativepro")

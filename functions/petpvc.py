@@ -32,6 +32,7 @@ import nipype.interfaces.petpvc as PETPVC
 import nibabel as nib
 import numpy as np
 import shutil
+from resample_to_nativepro import resample_to_nativepro
 
 # Load utilities functions from utils.py
 import utils
@@ -141,19 +142,8 @@ outs = pvc.run()
 
 ##############
 # Resample to T1w/nativepro space
-def resample_PET(pet,mri,mica_pet_derivatives,subject,session,space,pvc_method,trc):
-    print(f"Resampling PET to {space} space...")
-    applyreg = ApplyVolTransform()
-    applyreg.inputs.source_file= pet
-    applyreg.inputs.reg_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-T1wFS_to-T1wNativepro_xfm.reg.lta'
-    applyreg.inputs.target_file= mri
-    applyreg.inputs.transformed_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc_method}_ref-none_trc-{trc}_pet.nii.gz"
-    applyreg.run()
-
-for space in ['T1wNativepro']:
-    pet = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wFS_pvc-{pvc_method}_ref-none_trc-{trc}_pet.nii.gz"
-    mri = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
-    
-    resample_PET(pet,mri,mica_pet_derivatives,subject,session,space,pvc_method,trc)
+resample_to_nativepro(
+    f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wFS_pvc-{pvc_method}_ref-none_trc-{trc}_pet.nii.gz",
+    f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wNativepro_pvc-{pvc_method}_ref-none_trc-{trc}_pet.nii.gz")
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Partial volume correction completed.")

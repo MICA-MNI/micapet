@@ -22,7 +22,8 @@ import sys
 from datetime import datetime
 # from nipype.interfaces.freesurfer.petsurfer import GTMSeg
 from nipype.interfaces import freesurfer
-from nipype.interfaces.freesurfer import MRICoreg, ApplyVolTransform
+from nipype.interfaces.freesurfer import MRICoreg, ApplyVolTransform, MRIConvert
+from resample_to_nativepro import resample_to_nativepro
 
 # Load utilities functions from utils.py
 import utils
@@ -167,25 +168,24 @@ def resample_gtmseg(gtm,mri,space,trc):
     applyreg.inputs.source_file= gtm
     if space == 'T1wFS':
         applyreg.inputs.reg_header=True
+        applyreg.inputs.interp = 'nearest'
+        applyreg.inputs.target_file= mri
+        applyreg.inputs.transformed_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-gtmseg.nii.gz'
+        applyreg.run()
+
     elif space == 'T1wNativepro':
-        if not os.path.exists(f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-T1wFS_to-T1wNativepro_xfm.reg.lta'):
-            # Register T1wFS to nativepro space
-            print("Registering T1wFS to T1wNativepro")
-            coreg = MRICoreg()
-            coreg.inputs.source_file=f"{f_surf_dir}/mri/orig.mgz"
-            coreg.inputs.reference_file=mri
-            coreg.inputs.out_lta_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-T1wFS_to-T1wNativepro_xfm.reg.lta'
-            print(coreg.cmdline)
-            coreg.run()
-
-        applyreg.inputs.reg_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_from-T1wFS_to-T1wNativepro_xfm.reg.lta'
-
-    applyreg.inputs.interp = 'nearest'
-    applyreg.inputs.target_file= mri
-    applyreg.inputs.transformed_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-gtmseg.nii.gz'
-    applyreg.run()
+        resample_to_nativepro(
+            gtm,
+            f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-gtmseg.nii.gz')
     
-gtm = f'{f_surf_dir}/mri/gtmseg.mgz'
+gtm = f'{f_surf_dir}/mri/gtmseg.nii.gz'
+
+if not os.path.exists(gtm):
+    mc = MRIConvert()
+    mc.inputs.in_file = f'{f_surf_dir}/mri/gtmseg.mgz'
+    mc.inputs.out_file = gtm
+    mc.inputs.out_type = 'niigz'
+    mc.run()
 
 for space in ['T1wFS','T1wNativepro']:
     if space == 'T1wFS':
