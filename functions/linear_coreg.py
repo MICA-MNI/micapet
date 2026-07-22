@@ -146,7 +146,12 @@ if not os.path.exists(input_mri):
     mc.inputs.out_type = 'niigz'
     mc.run()
     
-resample_to_nativepro(input_mri, nativepro_mri)
+resample_to_nativepro(
+    input=input_mri, 
+    output=nativepro_mri,
+    reference=None,
+    interp='trilin'
+    )
 # os.environ['AFNI_NIFTI_TYPE_WARN'] = "NO"
 # resample = afni.Resample()
 # resample.inputs.in_file = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"

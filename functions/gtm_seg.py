@@ -175,8 +175,10 @@ def resample_gtmseg(gtm,mri,space,trc):
 
     elif space == 'T1wNativepro':
         resample_to_nativepro(
-            gtm,
-            f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-gtmseg.nii.gz')
+            input=gtm,
+            output=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-gtmseg.nii.gz',
+            reference=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz",
+            interp='nearest')
     
 gtm = f'{f_surf_dir}/mri/gtmseg.nii.gz'
 

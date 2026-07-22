@@ -123,8 +123,10 @@ for space in ['T1wFS']:
     applyreg.run()
 
 resample_to_nativepro(
-    f"{pvc_dir}/rbv.nii.gz",
-    f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wNativepro_pvc-RBV-FS_ref-none_trc-{trc}_pet.nii.gz")
+    input=f"{pvc_dir}/rbv.nii.gz",
+    output=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wNativepro_pvc-RBV-FS_ref-none_trc-{trc}_pet.nii.gz",
+    reference=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz",
+    interp='trilin')
 
 # if space is nativepro, running both nativepro and T1w space for hippunfold compatibility
     

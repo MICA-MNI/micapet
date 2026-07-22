@@ -143,7 +143,9 @@ outs = pvc.run()
 ##############
 # Resample to T1w/nativepro space
 resample_to_nativepro(
-    f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wFS_pvc-{pvc_method}_ref-none_trc-{trc}_pet.nii.gz",
-    f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wNativepro_pvc-{pvc_method}_ref-none_trc-{trc}_pet.nii.gz")
+    input=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wFS_pvc-{pvc_method}_ref-none_trc-{trc}_pet.nii.gz",
+    output=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wNativepro_pvc-{pvc_method}_ref-none_trc-{trc}_pet.nii.gz",
+    reference=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz",
+    interp='trilin')
 
 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Partial volume correction completed.")
