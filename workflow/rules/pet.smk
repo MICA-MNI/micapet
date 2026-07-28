@@ -1,5 +1,9 @@
 # PET processing rules: Linear Coreg, PVC, SUVR, Project PET, Subcortical Map
 
+from functions.MICA_PET import gtm_seg, linear_coreg, pvc, suvr, project_pet_data, nonlinear_coreg, subcortical_map
+import sys
+import os
+
 # Helper to get reference region from config
 def get_ref_region():
     return config.get("ref_region", "pons")
@@ -63,11 +67,9 @@ rule linear_coreg:
         # Reg lta files - Note: Python outputs to /xfm/ subdirectory with _from-pet_to-{space}_xfm.reg.lta naming
         reg_lta_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "xfm", LINEAR_COREG_REG_LTA_FS),
         reg_lta_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "xfm", LINEAR_COREG_REG_LTA_NATIVEPRO),
-        # reg_lta_fs_nativepro = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "xfm", "sub-{subject}_ses-{session}_from-T1wFS_to-T1wNativepro_xfm.reg.lta"),
         # Coregistered PET
         pet_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wFS_pvc-none_ref-none_trc-{trc}_pet.nii.gz"),
         pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNativepro_pvc-none_ref-none_trc-{trc}_pet.nii.gz"),
-        # nativepro_mri = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "anat", "sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"), -> throws error - not same wildcards as other outputs
     params:
         bids_dir = config["bids_dir"],
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
@@ -75,35 +77,23 @@ rule linear_coreg:
         log_dir = os.path.join(root, "logs", "linear_coreg"),
         fs_license = config.get("fs_license"),
         pvc_method = lambda wildcards: get_pvc_method(),
-        edge_reg_arg = lambda wildcards: get_edge_reg_arg() if config.get("edge_reg", False) else "",
+        edge_reg = config.get("edge_reg", False),
     log:
         os.path.join(root, "logs", "linear_coreg", "sub-{subject}_ses-{session}_trc-{trc}.log")
-    shell:
-        """
-        set +eu  # Disable strict mode completely
-        export FREESURFER_HOME=/micapet/freesurfer
-        export FS_LICENSE={params.fs_license}
-        source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
-        mkdir -p {params.log_dir}
-        echo "=== Starting linear_coreg.py at $(date) ===" > {log} 2>&1
-        echo "FREESURFER_HOME=$FREESURFER_HOME" >> {log} 2>&1
-        echo "FS_LICENSE=$FS_LICENSE" >> {log} 2>&1
-        echo "SUBJECTS_DIR=${{SUBJECTS_DIR:-not_set}}" >> {log} 2>&1
-        which mri_coreg >> {log} 2>&1 || echo "mri_coreg not found in PATH" >> {log} 2>&1
-        echo "Running python script..." >> {log} 2>&1
-        python {workflow.basedir}/../functions/linear_coreg.py \
-            -sub {wildcards.subject} \
-            -ses {wildcards.session} \
-            -bids {params.bids_dir} \
-            -subj_dir {params.subj_dir} \
-            -output_dir {params.output_dir} \
-            -pet {input.pet} \
-            -mri {input.t1} \
-            -trc {wildcards.trc} \
-            -pvc_method {params.pvc_method} \
-            {params.edge_reg_arg} \
-            >> {log} 2>&1
-        """
+    run:
+        # Create log directory if it doesn't exist
+        os.makedirs(os.path.dirname(log[0]), exist_ok=True)
+        with open(log[0], "w") as f:
+            sys.stdout = f
+            sys.stderr = f
+            linear_coreg(
+                subject=wildcards.subject,
+                session=wildcards.session,
+                trc=wildcards.trc,
+                bids_dir=params.bids_dir,
+                subj_dir=params.subj_dir,
+                edge_reg=params.edge_reg_arg
+            )
 
 def get_gtm_seg_inputs(wildcards):
     """Get GTM seg inputs - mark as ancient if using existing outputs."""
@@ -134,23 +124,20 @@ rule gtm_seg:
         trc = config.get("trc", "FDG"),
     log:
         os.path.join(root, "logs", "gtm_seg", "sub-{subject}_ses-{session}.log")
-    shell:
-        """
-        set +eu  # Disable strict mode completely
-        export FREESURFER_HOME=/micapet/freesurfer
-        export FS_LICENSE={params.fs_license}
-        source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
-        mkdir -p {params.log_dir}
-        echo "=== Starting gtm_seg.py at $(date) ===" > {log} 2>&1
-        python -u {workflow.basedir}/../functions/gtm_seg.py \
-            -sub {wildcards.subject} \
-            -ses {wildcards.session} \
-            -bids {params.bids_dir} \
-            -trc {params.trc} \
-            -subj_dir {params.subj_dir} \
-            -output_dir {params.output_dir} \
-            >> {log} 2>&1
-        """
+    run:
+        # Create log directory if it doesn't exist
+        os.makedirs(os.path.dirname(log[0]), exist_ok=True)
+        with open(log[0], "w") as f:
+            sys.stdout = f
+            sys.stderr = f
+            gtm_seg(
+                subject=wildcards.subject,
+                session=wildcards.session,
+                trc=wildcards.trc,
+                bids_dir=params.bids_dir,
+                subj_dir=params.subj_dir,
+                threads=threads
+            )
 
 rule pvc:
     input:
@@ -159,8 +146,6 @@ rule pvc:
         lta = rules.linear_coreg.output.reg_lta_fs,
         gtmseg_fs = rules.gtm_seg.output.gtmseg_fs, # gtmseg in T1wFS space
         gtmseg_nativepro = rules.gtm_seg.output.gtmseg_nativepro, # gtmseg in T1wNativepro space
-        # gtmseg = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "gtmseg.mgz"),
-        # gtmseg_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "anat", "sub-{subject}_ses-{session}_space-T1wFS_desc-gtmseg.nii.gz"),
     output:
         pvc_pet_fs = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wFS_pvc-"+get_pvc_method()+"_ref-none_trc-{trc}_pet.nii.gz"),
         pvc_pet_native = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "pet", "sub-{subject}_ses-{session}_space-T1wNativepro_pvc-"+get_pvc_method()+"_ref-none_trc-{trc}_pet.nii.gz"),
@@ -178,48 +163,23 @@ rule pvc:
     log:
         os.path.join(root, "logs", "pvc", "sub-{subject}_ses-{session}_trc-{trc}.log")
     run:
-        if params.pvc_method == "RBV-FS":
-            shell("""
-                set +eu  # Disable strict mode completely
-                export FREESURFER_HOME=/micapet/freesurfer
-                export FS_LICENSE={params.fs_license}
-                source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
-                mkdir -p {params.log_dir}
-                echo "=== Starting pvc.py at $(date) ===" > {log} 2>&1
-                python {workflow.basedir}/../functions/pvc.py \
-                    -sub {wildcards.subject} \
-                    -ses {wildcards.session} \
-                    -bids {params.bids_dir} \
-                    -subj_dir {params.subj_dir} \
-                    -output_dir {params.output_dir} \
-                    -psf {params.psf} \
-                    -trc {wildcards.trc} \
-                    -force \
-                    >> {log} 2>&1
-                """)
-            
-        else: 
-            shell("""
-                set +eu  # Disable strict mode completely
-                export FREESURFER_HOME=/micapet/freesurfer
-                export FS_LICENSE={params.fs_license}
-                source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
-                mkdir -p {params.log_dir}
-                echo "=== Starting petpvc.py at $(date) ===" > {log} 2>&1
-                python {workflow.basedir}/../functions/petpvc.py \
-                    -sub {wildcards.subject} \
-                    -ses {wildcards.session} \
-                    -bids {params.bids_dir} \
-                    -subj_dir {params.subj_dir} \
-                    -output_dir {params.output_dir} \
-                    -psf {params.psf} \
-                    -trc {wildcards.trc} \
-                    -pvc_method {params.pvc_method} \
-                    {params.pvc_mask_arg} \
-                    {params.pvc_n_iter_arg} \
-                    {params.pvc_n_deconv_arg} \
-                    >> {log} 2>&1
-                """)
+        # Create log directory if it doesn't exist
+        os.makedirs(os.path.dirname(log[0]), exist_ok=True)
+        with open(log[0], "w") as f:
+            sys.stdout = f
+            sys.stderr = f
+            pvc(
+                subject=wildcards.subject,
+                session=wildcards.session,
+                trc=wildcards.trc,
+                bids_dir=params.bids_dir,
+                subj_dir=params.subj_dir,
+                pvc_method=params.pvc_method,
+                psf=params.psf,
+                pvc_mask=params.pvc_mask_arg,
+                pvc_n_iter=params.pvc_n_iter_arg,
+                pvc_n_deconv=params.pvc_n_deconv_arg
+            ) 
 
 rule suvr:
     input:
@@ -240,26 +200,22 @@ rule suvr:
         pvc_method = lambda wildcards: get_pvc_method(),
     log:
         os.path.join(root, "logs", "suvr", "sub-{subject}_ses-{session}_trc-{trc}.log")
-    shell:
-        """
-        set +eu  # Disable strict mode completely
-        export FREESURFER_HOME=/micapet/freesurfer
-        export FS_LICENSE={params.fs_license}
-        source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
-        mkdir -p {params.log_dir}
-        echo "=== Starting suvr.py at $(date) ===" > {log} 2>&1
-        python {workflow.basedir}/../functions/suvr.py \
-            -sub {wildcards.subject} \
-            -ses {wildcards.session} \
-            -bids {params.bids_dir} \
-            -subj_dir {params.subj_dir} \
-            -output_dir {params.output_dir} \
-            -ref_region {params.ref_region} \
-            -trc {wildcards.trc} \
-            -pvc_method {params.pvc_method} \
-            >> {log} 2>&1
-        """
-
+    run:
+        # Create log directory if it doesn't exist
+        os.makedirs(os.path.dirname(log[0]), exist_ok=True)
+        with open(log[0], "w") as f:
+            sys.stdout = f
+            sys.stderr = f
+            suvr(
+                subject=wildcards.subject,
+                session=wildcards.session,
+                trc=wildcards.trc,
+                bids_dir=params.bids_dir,
+                subj_dir=params.subj_dir,
+                pvc_method=params.pvc_method,
+                ref_region=params.ref_region
+            )
+        
 if config.get("nonlinear_coreg", True):
     rule nonlinear_coreg:
         input:
@@ -285,26 +241,20 @@ if config.get("nonlinear_coreg", True):
             pvc_method = lambda wildcards: get_pvc_method(),
         log:
             os.path.join(root, "logs", "nonlinear_coreg", "sub-{subject}_ses-{session}_trc-{trc}.log")
-        shell:
-            """
-            set +eu  # Disable strict mode completely
-            export FREESURFER_HOME=/micapet/freesurfer
-            export FS_LICENSE={params.fs_license}
-            source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
-            mkdir -p {params.log_dir}
-            echo "=== Starting nonlinear_coreg.py at $(date) ===" > {log} 2>&1
-            python {workflow.basedir}/../functions/nonlinear_coreg.py \
-                -trc {wildcards.trc} \
-                -sub {wildcards.subject} \
-                -ses {wildcards.session} \
-                -bids {params.bids_dir} \
-                -subj_dir {params.subj_dir} \
-                -pvc_method {params.pvc_method} \
-                -ref_region {params.ref_region} \
-                -output_dir {params.output_dir} \
-                >> {log} 2>&1
-            """
-            
+        run:
+            # Create log directory if it doesn't exist
+            os.makedirs(os.path.dirname(log[0]), exist_ok=True)
+            with open(log[0], "w") as f:
+                sys.stdout = f
+                sys.stderr = f
+                nonlinear_coreg(
+                    subject=wildcards.subject,
+                    session=wildcards.session,
+                    trc=wildcards.trc,
+                    bids_dir=params.bids_dir,
+                    pvc_method=params.pvc_method,
+                    ref_region=params.ref_region
+                )
 
 def get_project_pet_data_inputs(wildcards):
     """Get project_pet_data inputs - mark surfaces as ancient if using existing outputs."""
@@ -340,64 +290,43 @@ if not config.get("skip_hippunfold", False):
 rule project_pet_data:
     input:
         unpack(get_project_pet_data_inputs),
-        
-        # fsLR_32k_L = rules.cortical_surface.output.fsLR_32k_L,
-        # fsLR_32k_R = rules.cortical_surface.output.fsLR_32k_R,
-        # fsnative_L = rules.cortical_surface.output.fsnative_L,
-        # fsnative_R = rules.cortical_surface.output.fsnative_R,
-        # suvr_pet_fs = rules.suvr.output.suvr_pet_fs,
-        # suvr_pet_native = rules.suvr.output.suvr_pet_native,
-        # suvr_pet_fs_pvc = rules.suvr.output.suvr_pet_fs_pvc,
-        # suvr_pet_native_pvc = rules.suvr.output.suvr_pet_native_pvc,
-        # # Hippocampal surfaces
-        # hipp_lh = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-L_space-T1w_den-2mm_label-hipp_midthickness.surf.gii"),
-        # hipp_rh = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-R_space-T1w_den-2mm_label-hipp_midthickness.surf.gii"),
     output:
         func_L = PROJECT_PET_DATA_OUTPUTS["func_L"],
         func_R = PROJECT_PET_DATA_OUTPUTS["func_R"],
-        
-        # # Cortical projection
-        # func_L = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_smooth-none_trc-{trc}_pet.func.gii"),
-        # func_R = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_smooth-none_trc-{trc}_pet.func.gii"),
-        # # Hippocampal projection
-        # hipp_func_L = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-L_surf-hipp_den-2mm_label-midthickness_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_trc-{trc}_pet.func.gii"),
-        # hipp_func_R = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-R_surf-hipp_den-2mm_label-midthickness_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_trc-{trc}_pet.func.gii"),
     params:
         bids_dir = config["bids_dir"],
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
         hippunfold_dir = os.path.join(root, HIPPUNFOLD_DIR_NAME),
         ref_region = lambda wildcards: get_ref_region(),
         output_dir = root,
+        tmpdir = "/tmp",
         log_dir = os.path.join(root, "logs", "project_pet_data"),
         fs_license = config.get("fs_license"),
         pvc_method = lambda wildcards: get_pvc_method(),
         smoothing = lambda wildcards: get_smoothing(),
-        skip_hippunfold_arg = lambda wildcards: f"-hippocampal" if not config.get("skip_hippunfold", False) else "",
+        skip_hippunfold =  config.get("skip_hippunfold", False),
     log:
         os.path.join(root, "logs", "project_pet_data", "sub-{subject}_ses-{session}_trc-{trc}.log")
-    shell:
-        """
-        set +eu  # Disable strict mode completely
-        export FREESURFER_HOME=/micapet/freesurfer
-        export FS_LICENSE={params.fs_license}
-        source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
-        mkdir -p {params.log_dir}
-        echo "=== Starting project_pet_data.py at $(date) ===" > {log} 2>&1
-        python {workflow.basedir}/../functions/project_pet_data.py \
-            -sub {wildcards.subject} \
-            -ses {wildcards.session} \
-            -bids {params.bids_dir} \
-            -subj_dir {params.subj_dir} \
-            -hippunfold_dir {params.hippunfold_dir} \
-            -output_dir {params.output_dir} \
-            -ref_region {params.ref_region} \
-            -trc {wildcards.trc} \
-            -pvc_method {params.pvc_method} \
-            -cortical \
-            {params.skip_hippunfold_arg} \
-            -smoothing {params.smoothing} \
-            >> {log} 2>&1
-        """
+    run:
+        # Create log directory if it doesn't exist
+        os.makedirs(os.path.dirname(log[0]), exist_ok=True)
+        with open(log[0], "w") as f:
+            sys.stdout = f
+            sys.stderr = f
+            project_pet_data(
+                subject=wildcards.subject,
+                session=wildcards.session,
+                trc=wildcards.trc,
+                bids_dir=params.bids_dir,
+                subj_dir=params.subj_dir,
+                pvc_method=params.pvc_method,
+                ref_region=params.ref_region,
+                tmpdir=params.tmpdir,
+                hippunfold_dir=params.hippunfold_dir,
+                cortical=True,
+                hippocampal=params.skip_hippunfold,
+                smoothing=params.smoothing
+            )
 
 def get_subcortical_map_inputs(wildcards):
     """Get subcortical_map inputs - mark aparc_aseg as ancient if using existing outputs."""
@@ -427,17 +356,18 @@ rule subcortical_map:
         pvc_method = lambda wildcards: get_pvc_method(),
     log:
         os.path.join(root, "logs", "subcortical_map", "sub-{subject}_ses-{session}_trc-{trc}.log")
-    shell:
-        """
-        mkdir -p {params.log_dir}
-        python {workflow.basedir}/../functions/subcortical_map.py \
-            -sub {wildcards.subject} \
-            -ses {wildcards.session} \
-            -bids {params.bids_dir} \
-            -subj_dir {params.subj_dir} \
-            -output_dir {params.output_dir} \
-            -ref_region {params.ref_region} \
-            -trc {wildcards.trc} \
-            -pvc_method {params.pvc_method} \
-            > {log} 2>&1
-        """
+    run:
+        # Create log directory if it doesn't exist
+        os.makedirs(os.path.dirname(log[0]), exist_ok=True)
+        with open(log[0], "w") as f:
+            sys.stdout = f
+            sys.stderr = f
+            subcortical_map(
+                subject=wildcards.subject,
+                session=wildcards.session,
+                trc=wildcards.trc,
+                bids_dir=params.bids_dir,
+                subj_dir=params.subj_dir,
+                pvc_method=params.pvc_method,
+                ref_region=params.ref_region
+            )

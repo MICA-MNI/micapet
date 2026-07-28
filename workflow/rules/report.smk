@@ -1,4 +1,8 @@
 # Report generation
+from functions.MICA_PET import report
+import sys
+import os
+
 def get_pvc_method():
     return config.get("pvc_method","RBV-FS")
 
@@ -21,25 +25,22 @@ rule report:
         log_dir = os.path.join(root, "logs", "report"),
         fs_license = config.get("fs_license"),
         pvc_method = lambda wildcards: get_pvc_method(),
-        skip_hippunfold_arg = lambda wildcards: f"-hippocampal" if not config.get("skip_hippunfold", False) else "",
+        skip_hippunfold = config.get("skip_hippunfold", False),
     log:
         os.path.join(root, "logs", "report", "sub-{subject}_ses-{session}_ref-"+get_ref_region()+"_trc-{trc}.log")
-    shell:
-        """
-        set +eu  # Disable strict mode completely
-        export FREESURFER_HOME=/micapet/freesurfer
-        export FS_LICENSE={params.fs_license}
-        source $FREESURFER_HOME/SetUpFreeSurfer.sh || true
-        mkdir -p {params.log_dir}
-        python {workflow.basedir}/../functions/report.py \
-            -sub {wildcards.subject} \
-            -ses {wildcards.session} \
-            -bids {params.bids_dir} \
-            -subj_dir {params.subj_dir} \
-            -output_dir {params.output_dir} \
-            -ref_region {params.ref_region} \
-            -pvc_method {params.pvc_method} \
-            -trc {wildcards.trc} \
-            {params.skip_hippunfold_arg} \
-            > {log} 2>&1
-        """
+    run:
+        # Create log directory if it doesn't exist
+        os.makedirs(os.path.dirname(log[0]), exist_ok=True)
+        with open(log[0], "w") as f:
+            sys.stdout = f
+            sys.stderr = f
+            report(
+                subject=wildcards.subject,
+                session=wildcards.session,
+                trc=wildcards.trc,
+                bids_dir=params.bids_dir,
+                subj_dir=params.subj_dir,
+                pvc_method=params.pvc_method,
+                ref_region=params.ref_region,
+                hippocampal=params.skip_hippunfold
+            )

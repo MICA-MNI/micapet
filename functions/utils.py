@@ -1,14 +1,15 @@
 # utils.py - Python Utilities
 
 import os
+import sys
 import json
 import subprocess
 from nilearn.image import load_img, mean_img
 from nilearn.surface import load_surf_data
 import nibabel as nib
 
-mica_pet_version = 'v.alpha.0.6'
-os.environ['MICA_PET_VERSION'] = mica_pet_version
+MICA_PET_VERSION = 'v.alpha.0.6'
+os.environ['MICA_PET_VERSION'] = MICA_PET_VERSION
 
 class bcolors:
     RED = '\033[91m'
@@ -114,114 +115,107 @@ class BIDSName:
         
         return "_".join(parts)
 
-# def merge_json_files(json_pet, json_subject):
-#     """
-#     Merge the newly created JSON file with an existing JSON file,
-#     overwriting the existing file with the merged content. If the 
-#     `json_subject` file does not exist, an empty dictionary is used.
-
-#     Args:
-#         json_pet (str): Path to the newly created JSON file.
-#         json_subject (str): Path to the subject's JSON file.
-#     """
-#     # Load existing JSON if it exists
-#     if os.path.exists(json_subject):
-#         with open(json_subject, 'r') as f:
-#             existing_data = json.load(f)
-#     else:
-#         existing_data = {}
-
-#     # Load new JSON
-#     if os.path.exists(json_pet):
-#         with open(json_pet, 'r') as f:
-#             new_data = json.load(f)
-#     else:
-#         raise FileNotFoundError(f"New JSON file not found: {json_pet}")
-
-#     # Merge JSONs (existing data takes priority in case of conflicts)
-#     merged_data = {**new_data, **existing_data}
-
-#     # Overwrite the existing JSON file
-#     with open(json_pet, 'w') as f:
-#         json.dump(merged_data, f, indent=4)
-
-#     print(f"Updated JSON saved to: {json_pet}")
-
-# def convert_ecat_to_bids(in_file, out_file, output_dir, json=None):
-#     """
-#     Convert ECAT files to BIDS format using dcm2niix.
+def check_bids_dir(bids_dir, subject, session):
+    """
+    Check if the provided directory is a valid BIDS dataset.
     
-#     Args:
-#         in_file (str): Input ECAT file path.
-#         out_file (str): Output BIDS file path.
-#         output_dir (str): Output directory for converted files.
-#         json (str, optional): Path to an existing JSON file to merge with the generated JSON sidecar.
-#     """
+    Parameters
+    ----------
+    bids_dir : str
+        Path to the BIDS dataset directory.
     
-#     command = f'dcm2niix -b y -v n -z y -o {output_dir} -f {out_file} {in_file}'
-#     print(command)
-#     try:
-#         result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
-#         print(result.stdout)
-        
-#         # Check if the output file was generated
-#         nifti_file = os.path.join(output_dir, f"{out_file}.nii.gz")
-#         if not os.path.isfile(nifti_file):
-#             raise RuntimeError(f"Conversion failed, NIfTI file not generated: {nifti_file}")
-#     except subprocess.CalledProcessError as e:
-#         raise RuntimeError(f"Error running dcm2niix: {e.stderr}")
-#     if json is not None:
-#         # Update JSON sidecar
-#         merge_json_files(os.path.join(output_dir, f"{out_file}.json"), json)
+    subject : str
+        Subject identification.
+    session : str
+        Session identification.
+    """
 
-# def compute_average_4D_image(pet_trc, threads=1):
-#     """
-#     Compute the average across the 4th dimension of a 4D NIfTI image or a list of such images.
+    if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
+        print(f"Error: BIDS rawdata directory for subject {subject}, session {session} does not exist.")
+        sys.exit(1)
+
+def print_time_stamp(message,colour="blue"):
+    from datetime import datetime
+    if colour == "blue":
+        print(f"\n{bcolors.WARNING}[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {bcolors.BLUE}{message}\n{bcolors.RESET}")
+    elif colour == "green":
+        print(f"\n{bcolors.WARNING}[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {bcolors.GREEN}{message}\n{bcolors.RESET}")
+    elif colour == "red":
+        print(f"\n{bcolors.WARNING}[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {bcolors.RED}{message}\n{bcolors.RESET}")
+    elif colour == "purple":
+        print(f"\n{bcolors.WARNING}[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {bcolors.PURPLE}{message}\n{bcolors.RESET}")
+    else:
+        print(f"\n{bcolors.WARNING}[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {bcolors.RESET}{message}\n")
+
+def resample_to_nativepro(input, output, reference=None,interp='trilin'):
+
+    """Resample raw T1w MRI to LPI orientation (nativepro space) using AFNI.
     
-#     Parameters:
-#     - pet_trc: str or list of str, path(s) to the NIfTI image(s)
-#     - threads: int, number of threads for parallel processing (default: 1)
+    Parameters:
+    -----------
+    input : str
+        Path to the input T1w MRI file (NIfTI format).
+    output : str
+        Path to the output resampled T1w MRI file (NIfTI format).
+    reference : str, optional
+        Path to a reference image for resampling. If provided, the output will be resampled to match the reference image's space.
+    interp : str, optional
+        Interpolation method for resampling. Default is 'trilin'. Other options include 'nearest', 'cubic'
+    """
 
-#     Returns:
-#     - List of averaged 3D images if input is a list, otherwise a single 3D image.
-#     """
+    import os
+    import nipype.interfaces.afni as afni
+    from nipype.interfaces.freesurfer import ApplyVolTransform
+
+    # Disable AFNI warning about NIFTI datatypes
+    os.environ['AFNI_NIFTI_TYPE_WARN'] = "NO"
+
+    # Define output file path
+    output = os.path.abspath(output)
     
-#     # Ensure input is a list
-#     if isinstance(pet_trc, str):
-#         pet_trc = [pet_trc]
+    # Verify input exists before running
+    if not os.path.exists(input):
+        raise FileNotFoundError(f"Input image not found: {input}")
 
-#     pet_mean_images = []
+    # Configure AFNI Resample interface (3dresample)
+    resample = afni.Resample()
+    resample.inputs.in_file = input
+    resample.inputs.orientation = 'LPI'
+    resample.inputs.outputtype = 'NIFTI_GZ'
+    resample.inputs.out_file = output
 
-#     for pet_path in pet_trc:
-#         # Load the PET image
-#         pet_img = nib.load(pet_path)
+    # Print command execution details
+    print(f"Resampling T1w MRI to nativepro space (LPI orientation)...")
+    print(f"Command: {resample.cmdline}")
 
-#         # Check if the image is 4D
-#         if len(pet_img.shape) == 4:
-#             # Compute the average across the 4th dimension
-#             pet_mean = mean_img(pet_img, target_affine=None, target_shape=None, verbose=0, n_jobs=threads, copy_header=True)
-#             info(f"Average of the 4D image computed for {pet_path}.")
-#             pet_mean_images.append(pet_mean)
-#         else:
-#             info(f"The image at {pet_path} is not 4D, no average computed.")
+    # Execute interface
+    resample.run()
 
-#     # Return a list if multiple images, otherwise return a single image
-#     return pet_mean_images if len(pet_mean_images) > 1 else pet_mean_images[0]
+    # Resample to reference if provided 
+    if reference is not None:
+        applyreg = ApplyVolTransform()
+        applyreg.inputs.source_file= output
+        applyreg.inputs.reg_header=True
+        applyreg.inputs.interp = interp
+        applyreg.inputs.target_file= reference
+        applyreg.inputs.transformed_file=output
+        applyreg.run()
 
-# def convert_freesurfer_to_gifti(input_path, output_path):
-    # """
-    # Load a FreeSurfer lh.thickness file, convert it to GIfTI format, and save it.
+    print(f"✓ Saved resampled image to: {output}\n")
 
-    # Parameters:
-    # - input_path: str, path to the lh.thickness file.
-    # - output_path: str, path to save the converted GIfTI file.
-    # """
-    # # Load cortical thickness data using nilearn
-    # thickness_data = load_surf_data(input_path)  # Returns a NumPy array
+    return output
 
-    # # Convert to GIfTI format
-    # gifti_image = nib.GiftiImage(darrays=[nib.GiftiDataArray(thickness_data)])
-
-    # # Save as GIfTI
-    # nib.save(gifti_image, output_path)
-    # print(f"Saved GIfTI file to {output_path}")
+subcortical_dict = {'Left-Accumbens-area': 26,
+'Left-Amygdala': 18,
+'Left-Caudate': 11,
+'Left-Hippocampus': 17,
+'Left-Pallidum': 13,
+'Left-Putamen': 12,
+'Left-Thalamus': 10,
+'Right-Accumbens-area': 58,
+'Right-Amygdala': 54,
+'Right-Caudate': 50,
+'Right-Hippocampus': 53,
+'Right-Pallidum': 52,
+'Right-Putamen': 51,
+'Right-Thalamus': 49}

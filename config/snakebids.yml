@@ -200,3 +200,9 @@ parse_args:
     dest: edge_reg
     action: 'store_true'
     default: false
+
+  --force:
+    help: "Flag to force reprocessing of all steps, even if outputs already exist."
+    dest: force
+    action: 'store_true'
+    default: false
