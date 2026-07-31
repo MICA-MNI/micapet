@@ -1,11 +1,16 @@
 # ---- snakebids boilerplate ----
 import os
+import sys
+from pathlib import Path  # 1. Added missing Path import
 import snakebids
 from snakebids import bids, generate_inputs
-import functions.utils as utils
+import utils
+import warnings 
+warnings.filterwarnings("ignore", category=FutureWarning, module="google.api_core")
+warnings.filterwarnings("ignore", category=UserWarning, module="pkg_resources")
+warnings.filterwarnings("ignore", category=UserWarning, module="stopit")
 
 configfile: "config/snakebids.yml"
-
 
 # --- Generate inputs from BIDS dataset ---
 # This parses the BIDS directory and creates the 'inputs' object
@@ -157,10 +162,10 @@ wildcard_constraints:
 
 
 # --- Include rule files ---
-include: "rules/anatomy.smk"
-include: "rules/pet.smk"
-include: "rules/report.smk"
-
+# include: "rules/anatomy.smk"
+# include: "rules/pet.smk"
+# include: "rules/report.smk"
+include: "rules/all.smk"
 
 # --- Target rule ---
 

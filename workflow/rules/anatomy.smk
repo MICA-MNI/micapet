@@ -1,13 +1,19 @@
 # Anatomy processing rules: FastSurfer, HippUnfold, Cortical Surface mappings
-
-from functions.MICA_PET import fastsurfer, hippunfold, cortical_surface
 import sys
 import os
+from MICA_PET import fastsurfer, hippunfold, cortical_surface
+from utils import *
+import logging
+import contextlib
+import warnings 
+warnings.filterwarnings("ignore", category=FutureWarning, module="google.api_core")
+warnings.filterwarnings("ignore", category=UserWarning, module="pkg_resources")
+warnings.filterwarnings("ignore", category=UserWarning, module="stopit")
 
 if not config.get("existing_freesurfer_dir", ""): 
     rule fastsurfer:
         input:
-            t1 = inputs['T1w'].path
+            t1 = ancient(inputs['T1w'].path)
         output:
             pial_lh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "lh.pial"),
             pial_rh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "rh.pial"),
@@ -36,24 +42,34 @@ if not config.get("existing_freesurfer_dir", ""):
             # Create log directory if it doesn't exist
             os.makedirs(os.path.dirname(log[0]), exist_ok=True)
             with open(log[0], "w") as f:
-                sys.stdout = f
-                sys.stderr = f
-                fastsurfer(
-                    subject=wildcards.subject,
-                    session=wildcards.session,
-                    bids_dir=params.bids_dir,
-                    subj_dir=params.subj_dir,
-                    fastsurfer_img=params.img,
-                    fs_license=params.fs_license,
-                    threads=threads,
-                    tmpdir=params.tmpdir,
-                    force=params.force
-                )
+                # Redirect both standard output and stderr to the log file
+                with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
+                    # Also attach logging handler for explicit logging calls
+                    handler = logging.StreamHandler(f)
+                    handler.setLevel(logging.DEBUG)
+                    root_logger = logging.getLogger()
+                    root_logger.addHandler(handler)
+                    
+                    try:
+                        fastsurfer(
+                            subject=wildcards.subject,
+                            session=wildcards.session,
+                            bids_dir=params.bids_dir,
+                            subj_dir=params.subj_dir,
+                            fastsurfer_img=params.img,
+                            fs_license=params.fs_license,
+                            threads=threads,
+                            tmpdir=params.tmpdir,
+                            force=params.force
+                        )
+                    finally:
+                        f.flush()  # Ensure all output is written to disk
+                        root_logger.removeHandler(handler)
 
 if not config.get("skip_hippunfold", False) and not config.get("existing_hippunfold_dir", ""): #runs hippunfold if flag not set and existing dir not specified, skip hippunfold if flag set or if existing dir specified
     rule hippunfold:
         input:
-            t1 = inputs['T1w'].path
+            t1 = ancient(inputs['T1w'].path)
         output:
             hipp_lh = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-L_space-T1w_den-2mm_label-hipp_midthickness.surf.gii"),
             hipp_rh = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-R_space-T1w_den-2mm_label-hipp_midthickness.surf.gii"),
@@ -62,7 +78,7 @@ if not config.get("skip_hippunfold", False) and not config.get("existing_hippunf
             img = config.get("hippunfold_img"),
             # hippunfold.py uses -hippunfold_dir NOT -output_dir
             hippunfold_dir = os.path.join(root, HIPPUNFOLD_DIR_NAME),
-            cachedir_arg = lambda wildcards: f"-cachedir {config['hippunfold_cache_dir']}" if config.get("hippunfold_cache_dir") else "",
+            cachedir_arg = config['hippunfold_cache_dir'] if config.get("hippunfold_cache_dir") else None,
             log_dir = os.path.join(root, "logs", "hippunfold"),
             tmpdir = "/tmp",
             force = config.get("force", False),
@@ -73,19 +89,27 @@ if not config.get("skip_hippunfold", False) and not config.get("existing_hippunf
             # Create log directory if it doesn't exist
             os.makedirs(os.path.dirname(log[0]), exist_ok=True)
             with open(log[0], "w") as f:
-                sys.stdout = f
-                sys.stderr = f
-                hippunfold(
-                    subject=wildcards.subject,
-                    session=wildcards.session,
-                    bids_dir=params.bids_dir,
-                    hippunfold_img=params.img,
-                    hippunfold_dir=params.hippunfold_dir,
-                    tmpdir=params.tmpdir,
-                    cachedir=params.cachedir_arg,
-                    threads=threads,
-                    force=params.force
-                )
+                # Redirect both standard output and stderr to the log file
+                with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
+                    handler = logging.StreamHandler(f)
+                    handler.setLevel(logging.DEBUG)
+                    root_logger = logging.getLogger()  # or logging.getLogger("snakebids") if it uses a named logger
+                    root_logger.addHandler(handler)
+                    try:
+                        hippunfold(
+                            subject=wildcards.subject,
+                            session=wildcards.session,
+                            bids_dir=params.bids_dir,
+                            hippunfold_img=params.img,
+                            hippunfold_dir=params.hippunfold_dir,
+                            tmpdir=params.tmpdir,
+                            cachedir=params.cachedir_arg,
+                            threads=threads,
+                            force=params.force
+                        )
+                    finally:
+                        f.flush()  # Ensure all output is written to disk
+                        root_logger.removeHandler(handler)
 
 def get_cortical_surface_inputs(wildcards):
     """Get cortical surface inputs - mark as ancient if using existing outputs."""
@@ -129,11 +153,16 @@ rule cortical_surface:
         # Create log directory if it doesn't exist
         os.makedirs(os.path.dirname(log[0]), exist_ok=True)
         with open(log[0], "w") as f:
-            sys.stdout = f
-            sys.stderr = f
-            cortical_surface(
-                subject=wildcards.subject,
-                session=wildcards.session,
-                bids_dir=params.bids_dir,
-                subj_dir=params.subj_dir
-            )
+            handler = logging.StreamHandler(f)
+            handler.setLevel(logging.DEBUG)
+            root_logger = logging.getLogger()  # or logging.getLogger("snakebids") if it uses a named logger
+            root_logger.addHandler(handler)
+            try:
+                cortical_surface(
+                    subject=wildcards.subject,
+                    session=wildcards.session,
+                    bids_dir=params.bids_dir,
+                    subj_dir=params.subj_dir
+                )
+            finally:
+                root_logger.removeHandler(handler)

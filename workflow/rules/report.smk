@@ -1,5 +1,5 @@
 # Report generation
-from functions.MICA_PET import report
+from MICA_PET import report
 import sys
 import os
 

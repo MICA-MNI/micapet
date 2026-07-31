@@ -19,9 +19,15 @@ from pathlib import Path
 from snakebids import bidsapp, plugins
 import warnings
 import os
-warnings.filterwarnings("ignore", category=FutureWarning)
-warnings.filterwarnings("ignore", category=UserWarning)
-os.environ["PYTHONWARNINGS"] = "ignore::FutureWarning:google.api_core"  # Suppress specific FutureWarnings from google.api_core
+import sys
+scripts_dir = os.path.dirname(os.path.abspath(__file__))
+functions_dir = os.path.abspath(os.path.join(scripts_dir,"functions"))
+if functions_dir not in sys.path:
+    sys.path.insert(0, functions_dir)
+
+from functions import utils
+
+warnings.filterwarnings("ignore", category=FutureWarning, module="google.api_core")
 
 def main():
     """Main entry point for the MICA-PET pipeline."""

@@ -3,21 +3,11 @@
 # This configuration file defines the BIDS inputs and CLI arguments
 # for the MICA-PET neuroimaging pipeline.
 
-# Print command output to console as it happens (for debugging)
-output_mode: "stream"
-print_command: true
-
-# --- BIDS Input Configuration ----PET Pipeline Configuration
-# ================================
-# This configuration file defines the BIDS inputs and CLI arguments
-# for the MICA-PET neuroimaging pipeline.
-
 # --- Debug Configuration ---
-# Enable output streaming and command printing for debugging
-
+# Keep console output quiet by default to avoid duplicated log lines.
 debug:
-  print_commands: true
-  stream_output: true
+  print_commands: false
+  stream_output: false
 
 
 # --- BIDS Input Configuration ---

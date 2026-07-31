@@ -7,6 +7,10 @@ import subprocess
 from nilearn.image import load_img, mean_img
 from nilearn.surface import load_surf_data
 import nibabel as nib
+import warnings 
+warnings.filterwarnings("ignore", category=FutureWarning, module="google.api_core")
+warnings.filterwarnings("ignore", category=UserWarning, module="pkg_resources")
+warnings.filterwarnings("ignore", category=UserWarning, module="stopit")
 
 MICA_PET_VERSION = 'v.alpha.0.6'
 os.environ['MICA_PET_VERSION'] = MICA_PET_VERSION
@@ -166,6 +170,12 @@ def resample_to_nativepro(input, output, reference=None,interp='trilin'):
     import os
     import nipype.interfaces.afni as afni
     from nipype.interfaces.freesurfer import ApplyVolTransform
+    from pathlib import Path
+
+    AFNI_dir = (Path(__file__).resolve().parent.parent / "resources" / "AFNI").resolve()
+
+    if AFNI_dir not in os.environ["PATH"].split(os.pathsep):
+        os.environ["PATH"] = f"{AFNI_dir}:{os.environ['PATH']}"
 
     # Disable AFNI warning about NIFTI datatypes
     os.environ['AFNI_NIFTI_TYPE_WARN'] = "NO"

@@ -1,8 +1,13 @@
 # PET processing rules: Linear Coreg, PVC, SUVR, Project PET, Subcortical Map
 
-from functions.MICA_PET import gtm_seg, linear_coreg, pvc, suvr, project_pet_data, nonlinear_coreg, subcortical_map
+from MICA_PET import gtm_seg, linear_coreg, pvc, suvr, project_pet_data, nonlinear_coreg, subcortical_map
 import sys
 import os
+import logging
+import warnings 
+warnings.filterwarnings("ignore", category=FutureWarning, module="google.api_core")
+warnings.filterwarnings("ignore", category=UserWarning, module="pkg_resources")
+warnings.filterwarnings("ignore", category=UserWarning, module="stopit")
 
 # Helper to get reference region from config
 def get_ref_region():
@@ -21,10 +26,16 @@ def get_pvc_n_deconv():
     return config.get("pvc_n_deconv", 10)
 
 def get_smoothing():
-    if config.get("smoothing", 0) != 0:
-        return " ".join(str(s) for s in config.get("smoothing"))
-    else:
-        return 0
+    val = config.get("smoothing", 0)
+    if isinstance(val, list):
+        return [float(s) for s in val]
+    elif val is not None:
+        return float(val)
+    return 0.0
+    # if config.get("smoothing", 0) != 0:
+    #     return " ".join(str(s) for s in config.get("smoothing"))
+    # else:
+    #     return 0
 
 def get_skip_hippunfold_arg():
     if config.get("skip_hippunfold", False):
@@ -84,16 +95,26 @@ rule linear_coreg:
         # Create log directory if it doesn't exist
         os.makedirs(os.path.dirname(log[0]), exist_ok=True)
         with open(log[0], "w") as f:
-            sys.stdout = f
-            sys.stderr = f
-            linear_coreg(
-                subject=wildcards.subject,
-                session=wildcards.session,
-                trc=wildcards.trc,
-                bids_dir=params.bids_dir,
-                subj_dir=params.subj_dir,
-                edge_reg=params.edge_reg_arg
-            )
+            # Redirect both standard output and stderr to the log file
+            with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
+                # Also attach logging handler for explicit logging calls
+                handler = logging.StreamHandler(f)
+                handler.setLevel(logging.DEBUG)
+                root_logger = logging.getLogger()
+                root_logger.addHandler(handler)
+                
+                try:
+                    linear_coreg(
+                        subject=wildcards.subject,
+                        session=wildcards.session,
+                        trc=wildcards.trc,
+                        bids_dir=params.bids_dir,
+                        subj_dir=params.subj_dir,
+                        edge_reg=params.edge_reg
+                    )
+                finally:
+                    f.flush()  # Ensure all output is written to disk
+                    root_logger.removeHandler(handler)
 
 def get_gtm_seg_inputs(wildcards):
     """Get GTM seg inputs - mark as ancient if using existing outputs."""
@@ -121,23 +142,32 @@ rule gtm_seg:
         output_dir = root,
         log_dir = os.path.join(root, "logs", "gtm_seg"),
         fs_license = config.get("fs_license"),
-        trc = config.get("trc", "FDG"),
+        # trc = config.get("trc", "FDG"),
     log:
         os.path.join(root, "logs", "gtm_seg", "sub-{subject}_ses-{session}.log")
     run:
         # Create log directory if it doesn't exist
         os.makedirs(os.path.dirname(log[0]), exist_ok=True)
         with open(log[0], "w") as f:
-            sys.stdout = f
-            sys.stderr = f
-            gtm_seg(
-                subject=wildcards.subject,
-                session=wildcards.session,
-                trc=wildcards.trc,
-                bids_dir=params.bids_dir,
-                subj_dir=params.subj_dir,
-                threads=threads
-            )
+            # Redirect both standard output and stderr to the log file
+            with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
+                # Also attach logging handler for explicit logging calls
+                handler = logging.StreamHandler(f)
+                handler.setLevel(logging.DEBUG)
+                root_logger = logging.getLogger()
+                root_logger.addHandler(handler)
+                
+                try:
+                    gtm_seg(
+                        subject=wildcards.subject,
+                        session=wildcards.session,
+                        bids_dir=params.bids_dir,
+                        subj_dir=params.subj_dir,
+                        threads=threads
+                    )
+                finally:
+                    f.flush()  # Ensure all output is written to disk
+                    root_logger.removeHandler(handler)
 
 rule pvc:
     input:
@@ -157,29 +187,39 @@ rule pvc:
         log_dir = os.path.join(root, "logs", "pvc"),
         fs_license = config.get("fs_license"),
         pvc_method = lambda wildcards: get_pvc_method(),
-        pvc_mask_arg = lambda wildcards: f"-pvc_mask {config['pvc_mask']}" if config.get("pvc_mask") else "",
-        pvc_n_iter_arg = lambda wildcards: f"-pvc_n_iter {config['pvc_n_iter']}" if config.get("pvc_n_iter") else "",
-        pvc_n_deconv_arg = lambda wildcards: f"-pvc_n_deconv {config['pvc_n_deconv']}" if config.get("pvc_n_deconv") else "",
+        pvc_mask_arg = config['pvc_mask'] if config.get("pvc_mask") else None,
+        pvc_n_iter_arg = config['pvc_n_iter'] if config.get("pvc_n_iter") else None,
+        pvc_n_deconv_arg = config['pvc_n_deconv'] if config.get("pvc_n_deconv") else None,
     log:
         os.path.join(root, "logs", "pvc", "sub-{subject}_ses-{session}_trc-{trc}.log")
     run:
         # Create log directory if it doesn't exist
         os.makedirs(os.path.dirname(log[0]), exist_ok=True)
         with open(log[0], "w") as f:
-            sys.stdout = f
-            sys.stderr = f
-            pvc(
-                subject=wildcards.subject,
-                session=wildcards.session,
-                trc=wildcards.trc,
-                bids_dir=params.bids_dir,
-                subj_dir=params.subj_dir,
-                pvc_method=params.pvc_method,
-                psf=params.psf,
-                pvc_mask=params.pvc_mask_arg,
-                pvc_n_iter=params.pvc_n_iter_arg,
-                pvc_n_deconv=params.pvc_n_deconv_arg
-            ) 
+            # Redirect both standard output and stderr to the log file
+            with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
+                # Also attach logging handler for explicit logging calls
+                handler = logging.StreamHandler(f)
+                handler.setLevel(logging.DEBUG)
+                root_logger = logging.getLogger()
+                root_logger.addHandler(handler)
+                
+                try:
+                    pvc(
+                        subject=wildcards.subject,
+                        session=wildcards.session,
+                        trc=wildcards.trc,
+                        bids_dir=params.bids_dir,
+                        subj_dir=params.subj_dir,
+                        pvc_method=params.pvc_method,
+                        psf=params.psf,
+                        pvc_mask=params.pvc_mask_arg,
+                        pvc_n_iter=params.pvc_n_iter_arg,
+                        pvc_n_deconv=params.pvc_n_deconv_arg
+                    ) 
+                finally:
+                    f.flush()  # Ensure all output is written to disk
+                    root_logger.removeHandler(handler)
 
 rule suvr:
     input:
@@ -204,17 +244,27 @@ rule suvr:
         # Create log directory if it doesn't exist
         os.makedirs(os.path.dirname(log[0]), exist_ok=True)
         with open(log[0], "w") as f:
-            sys.stdout = f
-            sys.stderr = f
-            suvr(
-                subject=wildcards.subject,
-                session=wildcards.session,
-                trc=wildcards.trc,
-                bids_dir=params.bids_dir,
-                subj_dir=params.subj_dir,
-                pvc_method=params.pvc_method,
-                ref_region=params.ref_region
-            )
+            # Redirect both standard output and stderr to the log file
+            with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
+                # Also attach logging handler for explicit logging calls
+                handler = logging.StreamHandler(f)
+                handler.setLevel(logging.DEBUG)
+                root_logger = logging.getLogger()
+                root_logger.addHandler(handler)
+                
+                try:
+                    suvr(
+                        subject=wildcards.subject,
+                        session=wildcards.session,
+                        trc=wildcards.trc,
+                        bids_dir=params.bids_dir,
+                        subj_dir=params.subj_dir,
+                        pvc_method=params.pvc_method,
+                        ref_region=params.ref_region
+                    )
+                finally:
+                    f.flush()  # Ensure all output is written to disk
+                    root_logger.removeHandler(handler)
         
 if config.get("nonlinear_coreg", True):
     rule nonlinear_coreg:
@@ -245,16 +295,25 @@ if config.get("nonlinear_coreg", True):
             # Create log directory if it doesn't exist
             os.makedirs(os.path.dirname(log[0]), exist_ok=True)
             with open(log[0], "w") as f:
-                sys.stdout = f
-                sys.stderr = f
-                nonlinear_coreg(
-                    subject=wildcards.subject,
-                    session=wildcards.session,
-                    trc=wildcards.trc,
-                    bids_dir=params.bids_dir,
-                    pvc_method=params.pvc_method,
-                    ref_region=params.ref_region
-                )
+                # Redirect both standard output and stderr to the log file
+                with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
+                    # Also attach logging handler for explicit logging calls
+                    handler = logging.StreamHandler(f)
+                    handler.setLevel(logging.DEBUG)
+                    root_logger = logging.getLogger()
+                    root_logger.addHandler(handler)
+                    try:
+                        nonlinear_coreg(
+                            subject=wildcards.subject,
+                            session=wildcards.session,
+                            trc=wildcards.trc,
+                            bids_dir=params.bids_dir,
+                            pvc_method=params.pvc_method,
+                            ref_region=params.ref_region
+                        )
+                    finally:
+                        f.flush()  # Ensure all output is written to disk
+                        root_logger.removeHandler(handler)
 
 def get_project_pet_data_inputs(wildcards):
     """Get project_pet_data inputs - mark surfaces as ancient if using existing outputs."""
@@ -311,22 +370,32 @@ rule project_pet_data:
         # Create log directory if it doesn't exist
         os.makedirs(os.path.dirname(log[0]), exist_ok=True)
         with open(log[0], "w") as f:
-            sys.stdout = f
-            sys.stderr = f
-            project_pet_data(
-                subject=wildcards.subject,
-                session=wildcards.session,
-                trc=wildcards.trc,
-                bids_dir=params.bids_dir,
-                subj_dir=params.subj_dir,
-                pvc_method=params.pvc_method,
-                ref_region=params.ref_region,
-                tmpdir=params.tmpdir,
-                hippunfold_dir=params.hippunfold_dir,
-                cortical=True,
-                hippocampal=params.skip_hippunfold,
-                smoothing=params.smoothing
-            )
+            # Redirect both standard output and stderr to the log file
+            with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
+                # Also attach logging handler for explicit logging calls
+                handler = logging.StreamHandler(f)
+                handler.setLevel(logging.DEBUG)
+                root_logger = logging.getLogger()
+                root_logger.addHandler(handler)
+                
+                try:
+                    project_pet_data(
+                        subject=wildcards.subject,
+                        session=wildcards.session,
+                        trc=wildcards.trc,
+                        bids_dir=params.bids_dir,
+                        subj_dir=params.subj_dir,
+                        pvc_method=params.pvc_method,
+                        ref_region=params.ref_region,
+                        tmpdir=params.tmpdir,
+                        hippunfold_dir=params.hippunfold_dir,
+                        cortical=True,
+                        hippocampal=params.skip_hippunfold,
+                        smoothing=params.smoothing
+                    )
+                finally:
+                    f.flush()  # Ensure all output is written to disk
+                    root_logger.removeHandler(handler)
 
 def get_subcortical_map_inputs(wildcards):
     """Get subcortical_map inputs - mark aparc_aseg as ancient if using existing outputs."""
@@ -360,14 +429,24 @@ rule subcortical_map:
         # Create log directory if it doesn't exist
         os.makedirs(os.path.dirname(log[0]), exist_ok=True)
         with open(log[0], "w") as f:
-            sys.stdout = f
-            sys.stderr = f
-            subcortical_map(
-                subject=wildcards.subject,
-                session=wildcards.session,
-                trc=wildcards.trc,
-                bids_dir=params.bids_dir,
-                subj_dir=params.subj_dir,
-                pvc_method=params.pvc_method,
-                ref_region=params.ref_region
-            )
+            # Redirect both standard output and stderr to the log file
+            with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
+                # Also attach logging handler for explicit logging calls
+                handler = logging.StreamHandler(f)
+                handler.setLevel(logging.DEBUG)
+                root_logger = logging.getLogger()
+                root_logger.addHandler(handler)
+                
+                try:
+                    subcortical_map(
+                        subject=wildcards.subject,
+                        session=wildcards.session,
+                        trc=wildcards.trc,
+                        bids_dir=params.bids_dir,
+                        subj_dir=params.subj_dir,
+                        pvc_method=params.pvc_method,
+                        ref_region=params.ref_region
+                    )
+                finally:
+                    f.flush()  # Ensure all output is written to disk
+                    root_logger.removeHandler(handler)

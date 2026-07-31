@@ -9,11 +9,79 @@ from datetime import datetime
 import shutil
 import numpy as np
 import nibabel as nib
-import utils
 from typing import Union, List
-
 script_dir = os.path.dirname(os.path.abspath(__file__))
+if script_dir not in sys.path:
+    sys.path.insert(0, script_dir)
+
+AFNI_dir = os.path.join(script_dir, "resources","AFNI")
+if AFNI_dir not in sys.path:
+    sys.path.insert(0, AFNI_dir)
+
+import utils
+import warnings 
+warnings.filterwarnings("ignore", category=FutureWarning, module="google.api_core")
+warnings.filterwarnings("ignore", category=UserWarning, module="pkg_resources")
+warnings.filterwarnings("ignore", category=UserWarning, module="stopit")
+
 repo_dir = os.path.dirname(script_dir)
+
+def dicom_convert(
+    subject: str,
+    session: str,
+    bids_dir: str,
+    dicom_dir: str,
+    trc: str,
+    image_type: str = "pet",
+    series: int = 12
+):
+    """
+    This script is part of MICA-PET pipeline for converting DICOM to NIfTI format.
+
+    The script requires the following arguments:
+        -subject        : Subject identification. (eg. PX001)
+        -session        : Session. (eg. 01)
+        -bids_dir       : Path to BIDS directory ( . or FULL PATH)
+        -dicom_dir      : Path to DICOM directory.
+        -trc            : Tracer used (eg. FDG)
+        -image_type     : Type of image ("pet" or "mri", default "pet")
+        -series         : Series number (default 12)
+    """
+    import dcm2niixpy
+
+    # Check if DICOM directory exists
+    if not os.path.exists(dicom_dir):
+        print(f"Error: DICOM directory not found at {dicom_dir}")
+        sys.exit(1)
+
+    if image_type == "mri":
+        image_type = "anat"
+
+    utils.print_time_stamp(f"Starting FastSurfer for subject: {subject}, session: {session}.")
+
+    # Create BIDS directory structure if it doesn't exist
+    if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
+        os.makedirs(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}")
+        os.makedirs(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat")
+        os.makedirs(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet")
+
+    # DICOM to NIfTI conversion using dcm2niixpy
+    dcm2niix = dcm2niixpy.DCM2NIIX(version="1.0.20241211")
+    dcm2niix.bids_sidecar = 'y'
+    dcm2niix.anonymize_bids_sidecar = 'y'
+    dcm2niix.compress = 'y'
+    dcm2niix.convert_only_this_crc = str(series)
+    dcm2niix.conflict_write_behavior = 2
+
+    if image_type == "pet":
+        dcm2niix.filename = f"sub-{subject}_ses-{session}_trc-{trc}_pet"
+    elif image_type == "anat":
+        dcm2niix.filename = f"sub-{subject}_ses-{session}_T1w"
+
+    dcm2niix.convert(dicom_dir,output_path=f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/{image_type}")
+
+    utils.print_time_stamp("DICOM to NIfTI conversion completed.")
+
 
 def fastsurfer(
     subject: str,
@@ -44,6 +112,8 @@ def fastsurfer(
     from utils import bcolors
     import subprocess
 
+    utils.print_time_stamp(f"Starting FastSurfer for subject: {subject}, session: {session}.")
+
     # Check if FastSurfer image exists
     if os.path.exists(fastsurfer_img):
             print(f"Using FastSurfer image at {fastsurfer_img}")
@@ -52,8 +122,8 @@ def fastsurfer(
         sys.exit(1)
 
     # Check if FastSurfer output already exists
-    if os.path.exists(f"{subj_dir}/sub-{subject}_ses-{session}") and force==False:
-        print("FastSurfer already run. Please rerun with -force flag to overwrite.")
+    if os.path.exists(f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.mgz") and force==False:
+        utils.print_time_stamp("FastSurfer already run. Please rerun with -force flag to overwrite.","red")
         return
     elif os.path.exists(f"{subj_dir}/sub-{subject}_ses-{session}") and force==True:
         shutil.rmtree(f"{subj_dir}/sub-{subject}_ses-{session}", ignore_errors=True)
@@ -63,8 +133,6 @@ def fastsurfer(
     if not os.path.exists(T1_path):
         print(f"Error: T1w image not found at {T1_path}")
         sys.exit(1)
-    
-    utils.print_time_stamp(f"Starting FastSurfer for subject: {subject}, session: {session}.")
 
     command = [
         "/fastsurfer/run_fastsurfer.sh",
@@ -592,7 +660,8 @@ def linear_coreg(
                 subj_dir=subj_dir,
                 mica_pet_derivatives=mica_pet_derivatives,
                 space=space,
-                trc=trc)
+                trc=trc,
+                interpolator = "linear")
         else:
             mricoreg(transmission,
                     pet,
@@ -684,7 +753,6 @@ def nonlinear_coreg(
 def gtm_seg(
     subject: str,
     session: str,
-    trc: str,
     bids_dir: str,
     subj_dir: str,
     threads: int = 1,
@@ -696,7 +764,6 @@ def gtm_seg(
     The script requires the following arguments:
         -subject        : Subject identification. (eg. PX001)
         -session        : Session. (eg. 01)
-        -trc            : Tracer (eg. FDG, MK6240)
         -bids_dir       : Path to BIDS directory ( . or FULL PATH)
         -subj_dir       : Specify path to FreeSurfer/FastSurfer subjects directory.
         -threads        : (Optional) Number of threads to use for FreeSurfer tools.
@@ -718,7 +785,7 @@ def gtm_seg(
     # Set OpenMP threads for FreeSurfer tools
     os.environ['OMP_NUM_THREADS'] = str(threads)
 
-    utils.print_time_stamp(f"Starting GTM segmentation for subject: {subject}, session: {session}, tracer: {trc}.")
+    utils.print_time_stamp(f"Starting GTM segmentation for subject: {subject}, session: {session}.")
 
     # check seg type
     gtmseg = GTMSeg()
@@ -786,7 +853,7 @@ def gtm_seg(
                 gtmseg.run()
 
     # Resample GTMseg to T1w/nativepro space
-    def resample_gtmseg(gtm,mri,space,trc):
+    def resample_gtmseg(gtm,mri,space):
         print(f"Resampling GTMseg to {space} space...")
         applyreg = ApplyVolTransform()
         applyreg.inputs.source_file= gtm
@@ -818,7 +885,7 @@ def gtm_seg(
             mri = f"{f_surf_dir}/mri/orig.mgz"
         else: 
             mri = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
-        resample_gtmseg(gtm,mri,space,trc)
+        resample_gtmseg(gtm,mri,space)
 
     utils.print_time_stamp(f"GTM segmentation completed for subject: {subject}, session: {session}.","green")
 
@@ -1016,6 +1083,8 @@ def project_pet_data(
         smoothing_list = [float(smoothing)]
     elif isinstance(smoothing, list):
         smoothing_list = [float(s) for s in smoothing]
+    elif isinstance(smoothing, str):
+        smoothing_list = [float(x) for x in smoothing.split()]
     else:
         raise TypeError(f"smoothing must be a float or list of floats, got {type(smoothing)}")
 
@@ -1074,7 +1143,7 @@ def project_pet_data(
                         
                         WBCommand(f'wb_command -metric-resample {SUVR_on_surf} {sphere_surf} {reg_surf_gii} BARYCENTRIC {SUVR_resampled_out}').run()
                         
-                        if np.max(smoothing) > 0: # only do smoothing if user specified smoothing values > 0
+                        if np.max(smoothing_list_int) > 0: # only do smoothing if user specified smoothing values > 0
                             for smooth in smoothing_list_int:
                                 print(f"Smoothing with {smooth}mm kernel...")
                                 midthick_surf=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf/sub-{subject}_ses-{session}_hemi-{hemi}_space-{space}_surf-{surf}_label-midthickness.surf.gii'
@@ -2259,59 +2328,59 @@ if __name__ == "__main__":
                 force=args.force
             )
     
-    # # LINEAR COREG
-    # linear_coreg(
-    #     subject=args.subject,
-    #     session=args.session,
-    #     trc=args.trc,
-    #     bids_dir=args.bids_dir,
-    #     subj_dir=subj_dir,
-    #     edge_reg=args.edge_reg
-    # )
+    # LINEAR COREG
+    linear_coreg(
+        subject=args.subject,
+        session=args.session,
+        trc=args.trc,
+        bids_dir=args.bids_dir,
+        subj_dir=subj_dir,
+        edge_reg=args.edge_reg
+    )
 
-    # # CORTICAL SURFACE
-    # cortical_surface(
-    #     subject=args.subject,
-    #     session=args.session,
-    #     bids_dir=args.bids_dir,
-    #     subj_dir=subj_dir
-    # )
+    # CORTICAL SURFACE
+    cortical_surface(
+        subject=args.subject,
+        session=args.session,
+        bids_dir=args.bids_dir,
+        subj_dir=subj_dir
+    )
 
-    # # NONLINEAR COREG
-    # if args.nonlinear_coreg:
-    #     nonlinear_coreg(
-    #         subject=args.subject,
-    #         session=args.session,
-    #         trc=args.trc,
-    #         bids_dir=args.bids_dir,
-    #         pvc_method=args.pvc_method,
-    #         ref_region=args.ref_region
-    #     )
+    # NONLINEAR COREG
+    if args.nonlinear_coreg:
+        nonlinear_coreg(
+            subject=args.subject,
+            session=args.session,
+            trc=args.trc,
+            bids_dir=args.bids_dir,
+            pvc_method=args.pvc_method,
+            ref_region=args.ref_region
+        )
 
-    # # GTMSEG
-    # gtm_seg(
-    #     subject=args.subject,
-    #     session=args.session,
-    #     trc=args.trc,
-    #     bids_dir=args.bids_dir,
-    #     subj_dir=subj_dir,
-    #     threads=args.threads
-    # )
+    # GTMSEG
+    gtm_seg(
+        subject=args.subject,
+        session=args.session,
+        trc=args.trc,
+        bids_dir=args.bids_dir,
+        subj_dir=subj_dir,
+        threads=args.threads
+    )
 
-    # # PVC
-    # pvc(
-    #     subject=args.subject,
-    #     session=args.session,
-    #     trc=args.trc,
-    #     bids_dir=args.bids_dir,
-    #     subj_dir=subj_dir,
-    #     pvc_method=args.pvc_method,
-    #     psf=args.psf,
-    #     pvc_mask=args.pvc_mask,
-    #     pvc_dir=args.pvc_dir,
-    #     pvc_n_iter=args.pvc_n_iter,
-    #     pvc_n_deconv=args.pvc_n_deconv
-    # )
+    # PVC
+    pvc(
+        subject=args.subject,
+        session=args.session,
+        trc=args.trc,
+        bids_dir=args.bids_dir,
+        subj_dir=subj_dir,
+        pvc_method=args.pvc_method,
+        psf=args.psf,
+        pvc_mask=args.pvc_mask,
+        pvc_dir=args.pvc_dir,
+        pvc_n_iter=args.pvc_n_iter,
+        pvc_n_deconv=args.pvc_n_deconv
+    )
 
     # SUVR
     suvr(
