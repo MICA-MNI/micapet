@@ -3,21 +3,11 @@
 # This configuration file defines the BIDS inputs and CLI arguments
 # for the MICA-PET neuroimaging pipeline.
 
-# Print command output to console as it happens (for debugging)
-output_mode: "stream"
-print_command: true
-
-# --- BIDS Input Configuration ----PET Pipeline Configuration
-# ================================
-# This configuration file defines the BIDS inputs and CLI arguments
-# for the MICA-PET neuroimaging pipeline.
-
 # --- Debug Configuration ---
-# Enable output streaming and command printing for debugging
-
+# Keep console output quiet by default to avoid duplicated log lines.
 debug:
-  print_commands: true
-  stream_output: true
+  print_commands: false
+  stream_output: false
 
 
 # --- BIDS Input Configuration ---
@@ -192,5 +182,17 @@ parse_args:
   --nonlinear-coreg:
     help: "Flag to perform nonlinear co-registration to MNI space (optional). If set, will run lamareg nonlinear registration."
     dest: nonlinear_coreg
+    action: 'store_true'
+    default: false
+
+  --edge-reg: 
+    help: "Flag to use edge-based registration method for PET to T1w registration rather than FreeSurfer mri_coreg."
+    dest: edge_reg
+    action: 'store_true'
+    default: false
+
+  --force:
+    help: "Flag to force reprocessing of all steps, even if outputs already exist."
+    dest: force
     action: 'store_true'
     default: false

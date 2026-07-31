@@ -25,6 +25,7 @@ import sys
 from datetime import datetime
 from nipype.interfaces import freesurfer
 from nipype.interfaces.freesurfer import FSCommand, ApplyVolTransform
+from resample_to_nativepro import resample_to_nativepro
 import shutil
 
 # Load utilities functions from utils.py
@@ -110,8 +111,10 @@ print(gtmpvc.cmdline)
 gtmpvc.run()
 
 # Resample RBV to T1w/nativepro space
-def resample_RBV(rbv,mri,mica_pet_derivatives,subject,session,space):
+for space in ['T1wFS']:
     print(f"Resampling RBV to {space} space...")
+    rbv = f"{pvc_dir}/rbv.nii.gz"
+    mri = f"{f_surf_dir}/mri/orig.mgz"
     applyreg = ApplyVolTransform()
     applyreg.inputs.source_file= rbv
     applyreg.inputs.reg_header=True
@@ -119,14 +122,11 @@ def resample_RBV(rbv,mri,mica_pet_derivatives,subject,session,space):
     applyreg.inputs.transformed_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-RBV-FS_ref-none_trc-{trc}_pet.nii.gz"
     applyreg.run()
 
-rbv = f"{pvc_dir}/rbv.nii.gz"
-
-for space in ['T1wFS','T1wNativepro']:
-    if space == 'T1wFS':
-        mri = f"{f_surf_dir}/mri/orig.mgz"
-    else: 
-        mri = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
-    resample_RBV(rbv,mri,mica_pet_derivatives,subject,session,space)
+resample_to_nativepro(
+    input=f"{pvc_dir}/rbv.nii.gz",
+    output=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wNativepro_pvc-RBV-FS_ref-none_trc-{trc}_pet.nii.gz",
+    reference=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz",
+    interp='trilin')
 
 # if space is nativepro, running both nativepro and T1w space for hippunfold compatibility
     

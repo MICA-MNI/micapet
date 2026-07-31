@@ -7,6 +7,7 @@ The script requires the following arguments:
     -sub        : Subject identification. (eg. PX001)
     -ses        : Session. (eg. 01)
     -bids       : Path to BIDS directory ( . or FULL PATH)
+    -trc        : Tracer (eg. FDG, MK6240)
     -subj_dir   : Specify path to FreeSurfer/FastSurfer subjects directory.
     -force      : (Optional) Force gtmseg even if output exists.
 
@@ -21,7 +22,8 @@ import sys
 from datetime import datetime
 # from nipype.interfaces.freesurfer.petsurfer import GTMSeg
 from nipype.interfaces import freesurfer
-from nipype.interfaces.freesurfer import ApplyVolTransform
+from nipype.interfaces.freesurfer import MRICoreg, ApplyVolTransform, MRIConvert
+from resample_to_nativepro import resample_to_nativepro
 
 # Load utilities functions from utils.py
 import utils
@@ -39,7 +41,7 @@ parser.add_argument("-subj_dir", dest="subj_dir", type=str, required=True, help=
 parser.add_argument("-output_dir", dest="output_dir", type=str, default=None, help="(Str) Output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives.")
 parser.add_argument("-force", action='store_true', help="Force gtmseg even if output exists.")
 parser.add_argument("-threads", dest="threads", type=int, default=1, help="(Int) Number of threads to use. Default: 1")
-
+parser.add_argument("-trc", type=str, dest='trc', default='FDG',help="(Str) Select tracer for analysis ('FDG','MK6240'). (Default 'FDG').")
 args = parser.parse_args()
 
 # Validate mandatory arguments
@@ -53,6 +55,7 @@ session = f"{args.ses.replace('ses-', '')}"
 subject = f"{args.sub.replace('sub-', '')}"
 bids_dir = os.path.realpath(args.bids_dir)
 f_surf_dir = f"{os.path.realpath(args.subj_dir)}/sub-{subject}_ses-{session}"
+trc = args.trc
 force = args.force
 
 # Determine segmentation type   
@@ -159,24 +162,39 @@ elif seg_type == 'fastsurfer':
 
 
 # Resample GTMseg to T1w/nativepro space
-def resample_gtmseg(gtm,mri,space):
+def resample_gtmseg(gtm,mri,space,trc):
     print(f"Resampling GTMseg to {space} space...")
     applyreg = ApplyVolTransform()
     applyreg.inputs.source_file= gtm
-    applyreg.inputs.reg_header=True
-    applyreg.inputs.interp = 'nearest'
-    applyreg.inputs.target_file= mri
-    applyreg.inputs.transformed_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-gtmseg.nii.gz'
-    applyreg.run()
+    if space == 'T1wFS':
+        applyreg.inputs.reg_header=True
+        applyreg.inputs.interp = 'nearest'
+        applyreg.inputs.target_file= mri
+        applyreg.inputs.transformed_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-gtmseg.nii.gz'
+        applyreg.run()
+
+    elif space == 'T1wNativepro':
+        resample_to_nativepro(
+            input=gtm,
+            output=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-gtmseg.nii.gz',
+            reference=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz",
+            interp='nearest')
     
-gtm = f'{f_surf_dir}/mri/gtmseg.mgz'
+gtm = f'{f_surf_dir}/mri/gtmseg.nii.gz'
+
+if not os.path.exists(gtm):
+    mc = MRIConvert()
+    mc.inputs.in_file = f'{f_surf_dir}/mri/gtmseg.mgz'
+    mc.inputs.out_file = gtm
+    mc.inputs.out_type = 'niigz'
+    mc.run()
 
 for space in ['T1wFS','T1wNativepro']:
     if space == 'T1wFS':
         mri = f"{f_surf_dir}/mri/orig.mgz"
     else: 
         mri = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
-    resample_gtmseg(gtm,mri,space)
+    resample_gtmseg(gtm,mri,space,trc)
 
 
 # resample_gtmseg(gtm,mri,'T1w')

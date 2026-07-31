@@ -373,7 +373,7 @@ def plot_hippunfold_AI(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_
 
     img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_AI_hippunfold_clin_report.png"
 
-    hm.plotting.surfplot_canonical_foldunfold(to_plot,hemis=['L'],den='2mm',labels=['hipp'],embed_nb=False,color_bar='bottom',transparent_bg=True,tighten_cwindow=True,screenshot=True,cmap='bwr',color_range=(-0.5,0.5), size=[350,350],filename=img_stream)
+    hm.plotting.surfplot_canonical_foldunfold(to_plot,hemis=['L'],den='2mm',labels=['hipp'],embed_nb=False,color_bar='bottom',transparent_bg=True,tighten_cwindow=True,screenshot=True,cmap='bwr',color_range=(-0.25,0.25), size=[350,350],filename=img_stream)
 
     return img_stream
 
@@ -392,7 +392,7 @@ def plot_AI(subject,session,bids_dir,qc_dir,pial_left,pial_right,mica_pet_deriva
 
     img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_AI_surface_clin_report.png"
     
-    plot_hemispheres(pial_left, pial_right,to_plot,color_bar='left',cmap="bwr",color_range=(-0.5,0.5),embed_nb=False,transparent_bg=True,size=(900,200),nan_color=(1,1,1,1),screenshot=True,filename=img_stream)
+    plot_hemispheres(pial_left, pial_right,to_plot,color_bar='left',cmap="bwr",color_range=(-0.25,0.25),embed_nb=False,transparent_bg=True,size=(900,200),nan_color=(1,1,1,1),screenshot=True,filename=img_stream)
     
     # Crop the image in half lengthwise and keep the left side
     original_image_path = f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_AI_surface_clin_report.png"
@@ -417,7 +417,7 @@ def plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,tr
     img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_AI_subcortical_clin_report.png"
 
     plot_hemispheres(sctx_left,sctx_right,to_plot,color_bar='left', 
-        cmap="bwr",color_range=(-0.5,0.5), embed_nb=False,transparent_bg=True,size=(900,200),nan_color=(1,1,1, 0),screenshot=True,filename=img_stream)
+        cmap="bwr",color_range=(-0.25,0.25), embed_nb=False,transparent_bg=True,size=(900,200),nan_color=(1,1,1, 0),screenshot=True,filename=img_stream)
         
     cropped_image_path = f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_AI_subcortical_clin_report_cropped.png"
 
@@ -620,11 +620,11 @@ if trc == "FDG":
                         label=f"Cortical {trc} SUVR",
                         extra_css="width: 900px; height: auto;",
                     ),
-                    rc.Image(
-                        plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
-                        label=f"Subcortical {trc} SUVR",
-                        extra_css="width: 900px; height: auto;",
-                    ),
+                    # rc.Image(
+                    #     plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
+                    #     label=f"Subcortical {trc} SUVR",
+                    #     extra_css="width: 900px; height: auto;",
+                    # ),
                     rc.Image(
                         plot_hippunfold(subject,session,bids_dir,qc_dir,max_value,mica_pet_derivatives,ref_region,trc,pvc_method),
                         label=f"Hippocampal {trc} SUVR",

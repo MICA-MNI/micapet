@@ -1,4 +1,4 @@
-name: micapet
+name: mica-pet
 channels:
   - conda-forge
   - bioconda

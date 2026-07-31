@@ -70,9 +70,9 @@ else:
 
 mica_pet_version = os.environ['MICA_PET_VERSION']
 
-# MNI_path = "/app/resources/mni_icbm152_t1_tal_nlin_sym_09a.nii.gz"
-
-MNI_path = "/host/fladgate/local_raid/jack/FDG/MICA-PET/scripts/resources/"
+resources_dir = os.path.join(script_dir, "resources")
+if resources_dir not in sys.path:
+    sys.path.insert(0, resources_dir)
 
 # Support custom output_dir or default to bids_dir/derivatives
 if args.output_dir is not None:
@@ -89,11 +89,11 @@ for pvc in ['none']:
         "--moving",
         f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz",
         "--fixed",
-        f"{MNI_path}/mni_icbm152_t1_tal_nlin_sym_09a.nii.gz",
+        f"{resources_dir}/mni_icbm152_t1_tal_nlin_sym_09a.nii.gz",
         "--output",
         f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-MNI_T1w.nii.gz",
         "--fixed-parc",
-        f"{MNI_path}/mni_icbm152_t1_tal_nlin_sym_09a_parc.nii.gz",
+        f"{resources_dir}/mni_icbm152_t1_tal_nlin_sym_09a_parc.nii.gz",
         "--skip-fixed-parc",
         "--affine",
         f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wNativepro_to-MNI_lamaregAffine.mat",
@@ -114,7 +114,7 @@ for pvc in ['none',pvc_method]:
             "--moving",
             f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wNativepro_pvc-{pvc}_ref-{ref}_trc-{trc}_pet.nii.gz",
             "--fixed",
-            f"{MNI_path}/mni_icbm152_t1_tal_nlin_sym_09a.nii.gz",
+            f"{resources_dir}/mni_icbm152_t1_tal_nlin_sym_09a.nii.gz",
             "--output",
             f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-MNI_pvc-{pvc}_ref-{ref}_trc-{trc}_pet.nii.gz",
             "--affine",
