@@ -1687,6 +1687,7 @@ def report(
     # Plotting asymmetry -------------------------------------------------------------
         
     def plot_AI(subject,session,bids_dir,qc_dir,pial_left,pial_right,mica_pet_derivatives,ref_region,trc,pvc_method):
+        from utils import convert_array_to_gifti
         
         tmp_pt_FDG_surf_L = nilearn.surface.load_surf_data(get_surf_path(mica_pet_derivatives, subject, session, "L", pvc_method, ref_region, trc))
         tmp_pt_FDG_surf_R = nilearn.surface.load_surf_data(get_surf_path(mica_pet_derivatives, subject, session, "R", pvc_method, ref_region, trc))
@@ -1700,6 +1701,9 @@ def report(
         img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_AI_surface_clin_report.png"
         
         plot_hemispheres(pial_left, pial_right,to_plot,color_bar='left',cmap="bwr",color_range=(-0.25,0.25),embed_nb=False,transparent_bg=True,size=(900,200),nan_color=(1,1,1,1),screenshot=True,filename=img_stream)
+
+        convert_array_to_gifti(to_plot[: len(to_plot) // 2], f"{qc_dir}/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-{pvc}_ref-{ref_region}_trc-{trc}_desc-SUVRAI_pet.func.gii")
+        convert_array_to_gifti(to_plot[len(to_plot) // 2 :], f"{qc_dir}/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-{pvc}_ref-{ref_region}_trc-{trc}_desc-SUVRAI_pet.func.gii")
         
         # Crop the image in half lengthwise and keep the left side
         original_image_path = f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_AI_surface_clin_report.png"
@@ -1755,6 +1759,8 @@ def report(
         return max_value
 
     def plot_Zscore(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc):
+        from utils import convert_array_to_gifti
+
         pet_derivatives=f'{mica_pet_derivatives}'
         mri_derivatives=f'{bids_dir}/derivatives/fastsurfer'
         pvc = 'none'
@@ -1779,6 +1785,10 @@ def report(
         to_plot[(to_plot >= -Z_score_threhold) & (to_plot <= Z_score_threhold)] = 0 # Filter out values outside the range
 
         img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_SUVR_plot_Zscore_clin_report.png"
+
+        # save gifti
+        convert_array_to_gifti(to_plot[: len(to_plot) // 2], f"{qc_dir}/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-{pvc}_ref-{ref_region}_trc-{trc}_desc-SUVRZscore_pet.func.gii")
+        convert_array_to_gifti(to_plot[len(to_plot) // 2 :], f"{qc_dir}/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-{pvc}_ref-{ref_region}_trc-{trc}_desc-SUVRZscore_pet.func.gii")
 
         plot_hemispheres(pial_left, pial_right,to_plot,color_bar=True,embed_nb=False,transparent_bg=True,cmap=["bwr"],color_range=(-5,5),size=(900,200),nan_color=(0.7, 0.7, 0.7, 1),screenshot=True,filename=img_stream)
 
@@ -1904,7 +1914,11 @@ def report(
             
             regions = list(dict['L'].keys())
             
-        df = df.sort_values(by='Asymmetry_Index', ascending=True).reset_index(drop=True)    
+        df = df.sort_values(by='Asymmetry_Index', ascending=True).reset_index(drop=True) 
+
+        output_file = f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_AI_parcelstats.csv"
+
+        df.to_csv(output_file, index=False)
         return df
 
 
