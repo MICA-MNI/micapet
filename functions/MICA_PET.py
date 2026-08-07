@@ -1702,8 +1702,8 @@ def report(
         
         plot_hemispheres(pial_left, pial_right,to_plot,color_bar='left',cmap="bwr",color_range=(-0.25,0.25),embed_nb=False,transparent_bg=True,size=(900,200),nan_color=(1,1,1,1),screenshot=True,filename=img_stream)
 
-        convert_array_to_gifti(to_plot[: len(to_plot) // 2], f"{qc_dir}/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-{pvc}_ref-{ref_region}_trc-{trc}_desc-SUVRAI_pet.func.gii")
-        convert_array_to_gifti(to_plot[len(to_plot) // 2 :], f"{qc_dir}/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-{pvc}_ref-{ref_region}_trc-{trc}_desc-SUVRAI_pet.func.gii")
+        convert_array_to_gifti(to_plot[: len(to_plot) // 2], f"{qc_dir}/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_desc-SUVRAI_pet.func.gii")
+        convert_array_to_gifti(to_plot[len(to_plot) // 2 :], f"{qc_dir}/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_desc-SUVRAI_pet.func.gii")
         
         # Crop the image in half lengthwise and keep the left side
         original_image_path = f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_AI_surface_clin_report.png"
@@ -1763,14 +1763,14 @@ def report(
 
         pet_derivatives=f'{mica_pet_derivatives}'
         mri_derivatives=f'{bids_dir}/derivatives/fastsurfer'
-        pvc = 'none'
+        pvc_method = 'none'
         Z_score_threhold = 1.96
 
         FDG_surf_ctrl_hist_norm_mean = np.genfromtxt(f'{parent_dir}/surfaces/FDG_surf_ctrl_hist_norm_mean.csv', delimiter=',', missing_values='""', filling_values=np.nan)
         FDG_surf_ctrl_hist_norm_std = np.genfromtxt(f'{parent_dir}/surfaces/FDG_surf_ctrl_hist_norm_std.csv', delimiter=',', missing_values='""', filling_values=np.nan)
         
-        tmp_L = nilearn.surface.load_surf_data(get_surf_path(pet_derivatives, subject, session, "L", pvc, ref_region, trc))
-        tmp_R = nilearn.surface.load_surf_data(get_surf_path(pet_derivatives, subject, session, "R", pvc, ref_region, trc))
+        tmp_L = nilearn.surface.load_surf_data(get_surf_path(pet_derivatives, subject, session, "L", pvc_method, ref_region, trc))
+        tmp_R = nilearn.surface.load_surf_data(get_surf_path(pet_derivatives, subject, session, "R", pvc_method, ref_region, trc))
 
         tmp = np.hstack((tmp_L,tmp_R))
         tmp[~mask] = np.nan
@@ -1787,8 +1787,8 @@ def report(
         img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_SUVR_plot_Zscore_clin_report.png"
 
         # save gifti
-        convert_array_to_gifti(to_plot[: len(to_plot) // 2], f"{qc_dir}/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-{pvc}_ref-{ref_region}_trc-{trc}_desc-SUVRZscore_pet.func.gii")
-        convert_array_to_gifti(to_plot[len(to_plot) // 2 :], f"{qc_dir}/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-{pvc}_ref-{ref_region}_trc-{trc}_desc-SUVRZscore_pet.func.gii")
+        convert_array_to_gifti(to_plot[: len(to_plot) // 2], f"{qc_dir}/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_desc-SUVRZscore_pet.func.gii")
+        convert_array_to_gifti(to_plot[len(to_plot) // 2 :], f"{qc_dir}/sub-{subject}_ses-{session}_hemi-R_surf-fsLR-32k_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_desc-SUVRZscore_pet.func.gii")
 
         plot_hemispheres(pial_left, pial_right,to_plot,color_bar=True,embed_nb=False,transparent_bg=True,cmap=["bwr"],color_range=(-5,5),size=(900,200),nan_color=(0.7, 0.7, 0.7, 1),screenshot=True,filename=img_stream)
 
@@ -2196,7 +2196,7 @@ if __name__ == "__main__":
         ----------------------------
             -subj_dir       : Specify path to FreeSurfer/FastSurfer subjects directory.
             -existing-freesurfer-dir : Path to existing FreeSurfer subject outputs directory (ex. /path/to/freesurfer/sub-01_ses-01). If provided, will create symlinks instead of running FastSurfer.
-            -existing-hippunfold-dir : Path to existing HippUnfold subject outputs directory (ex. /path/to/hippunfold_v1.4.1/hippunfold/sub-01/ses-01). If provided, will create symlinks instead of running FastSurfer.
+            -existing-hippunfold-dir : Path to existing HippUnfold subject outputs directory (ex. /path/to/hippunfold_v1.4.1/hippunfold/sub-01/ses-01). If provided, will create symlinks instead of running HippUnfold.
             -hippunfold-cache-dir : Path to hippunfold cache directory.
             -skip-hippunfold : Flag to skip HippUnfold processing. If set, will not run HippUnfold and will not require HippUnfold outputs.
             -edge-reg       : Flag to use edge-based registration method for PET to T1w registration rather than FreeSurfer mri_coreg.
@@ -2212,7 +2212,6 @@ if __name__ == "__main__":
             -pvc-iterations : Number of iterations for iterative PVC methods (default 50).
             -pvc-n_iter     : Number of iterations for iterative PVC methods (IY) (default: 10).
             -pvc-n_deconv   : Number of iterations for deconvolution PVC methods (RL, VC) (default: 10).
-            -smoothing      : List of smoothing FWHM in mm for surface projection. eg. --smoothing 5 10 (default: 0, no smoothing).
 
         The script is intended for use by researchers and developers working with PET imaging data, particularly in the context of the MICA lab at McGill University.
         It is part of a larger pipeline for processing and analyzing neuroimaging data.

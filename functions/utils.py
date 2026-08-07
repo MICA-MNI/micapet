@@ -217,6 +217,7 @@ def resample_to_nativepro(input, output, reference=None,interp='trilin'):
 
 def convert_array_to_gifti(input_array, output_path):
     import nibabel as nib
+    import numpy as np
     """
     Convert a NumPy array to GIfTI format and save it.
 
@@ -225,7 +226,8 @@ def convert_array_to_gifti(input_array, output_path):
     - output_path: str, path to save the converted GIfTI file.
     """
     # Convert the NumPy array to GIfTI format
-    gifti_image = nib.GiftiImage(darrays=[nib.GiftiDataArray(input_array)])
+    data_32 = input_array.astype(np.float32)
+    gifti_image = nib.gifti.GiftiImage(darrays=[nib.gifti.GiftiDataArray(data_32)])
 
     # Save as GIfTI
     nib.save(gifti_image, output_path)
