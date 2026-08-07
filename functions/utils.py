@@ -215,6 +215,24 @@ def resample_to_nativepro(input, output, reference=None,interp='trilin'):
 
     return output
 
+def convert_array_to_gifti(input_array, output_path):
+    import nibabel as nib
+    import numpy as np
+    """
+    Convert a NumPy array to GIfTI format and save it.
+
+    Parameters:
+    - input_array: numpy.ndarray, the array to convert.
+    - output_path: str, path to save the converted GIfTI file.
+    """
+    # Convert the NumPy array to GIfTI format
+    data_32 = input_array.astype(np.float32)
+    gifti_image = nib.gifti.GiftiImage(darrays=[nib.gifti.GiftiDataArray(data_32)])
+
+    # Save as GIfTI
+    nib.save(gifti_image, output_path)
+    print(f"Saved GIfTI file to {output_path}")
+
 subcortical_dict = {'Left-Accumbens-area': 26,
 'Left-Amygdala': 18,
 'Left-Caudate': 11,
