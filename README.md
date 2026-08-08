@@ -63,7 +63,7 @@ Run the workflow for one participant with:
 
 - `--psf`: PET PSF in mm
 - `--ref-region`: SUVR reference region (`pons`, `cerebellarGM`, or `composite`)
-- `--pvc-method`: PVC method such as: `RBV-FS`, `MG`, `IY`, `LABBE`, `RL`, `VC`, `RBV`, `LABBE+RBV`, `RBV+VC`, `RBV+RL`, `LABBE+RBV+VC`, `LABBE+RBV+RL`, `MTC`, `LABBE+MTC`, `MTC+VC`, `MTC+RL`, `LABBE+MTC+VC`, `LABBE+MTC+RL`, `IY+VC`, `IY+RL`, `MG+VC`, `MG+RL`.
+- `--pvc-method`: FreeSurfer PETSurfer methods such as: `RBV-FS`, or PETPVC methods such as: `MG`, `IY`, `LABBE`, `RL`, `VC`, `RBV`, `LABBE+RBV`, `RBV+VC`, `RBV+RL`, `LABBE+RBV+VC`, `LABBE+RBV+RL`, `MTC`, `LABBE+MTC`, `MTC+VC`, `MTC+RL`, `LABBE+MTC+VC`, `LABBE+MTC+RL`, `IY+VC`, `IY+RL`, `MG+VC`, `MG+RL`.
 - `--fs-license`: path to the FreeSurfer license file, which can be obtained [here](https://surfer.nmr.mgh.harvard.edu/registration.html)
 - `--fastsurfer-img`: (if FastSurfer to be run) path to the FastSurfer Singularity image
 - `--hippunfold-img`: (if HippUnfold to be run) path to the HippUnfold Singularity image
