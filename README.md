@@ -18,9 +18,15 @@ Before running the pipeline, make sure you have:
 
 - Python
 - Conda
-- Apptainer or Singularity installed on the host (if using containerized version)
+- Apptainer or Singularity installed on the host (if running Singularity version of MICA-PET or running FastSurfer and/or HippUnfold as part of the MICA-PET pipeline)
 - A valid [FreeSurfer license file](https://surfer.nmr.mgh.harvard.edu/registration.html)
-- Container images for FastSurfer and HippUnfold 
+- [FreeSurfer](https://surfer.nmr.mgh.harvard.edu/fswiki/rel6downloads) installed (tested with v6.0)
+
+If not running the Singularity version of MICA-PET, also have:
+- [Connectome Workbench](https://www.humanconnectome.org/software/workbench-command) installed (tested with v2.2.1)
+
+Optional:
+- Singularity container images of [FastSurfer](https://github.com/Deep-MI/FastSurfer/releases/tag/v2.4.2) (tested with v2.4.2) and/or [HippUnfold](https://hippunfold.khanlab.ca/en/latest/index.html) (tested with v1.4.1), if using
 
 ## Installation
 
@@ -28,9 +34,11 @@ Before running the pipeline, make sure you have:
 git clone <repo-url>
 cd MICA-PET/scripts
 conda env create -f environment.yml
-conda activate micapet
+conda activate mica-pet
 chmod +x run.py
 ```
+
+- For nonlinear co-registration to MNI152, please also download the lamareg model weights into the [resources subdirectory](resources)
 
 ## Quick start
 
@@ -45,6 +53,7 @@ Run the workflow for one participant with:
   --ref_region {reference region} \
   --pvc_method {PVC method} \
   --smoothing {FWHM} \
+  {other parameters here} \
   /path/to/bids /path/to/derivatives participant \
   --cores {# of cores or 'all'} \
   --participant-label {participant ID}
@@ -55,7 +64,7 @@ Run the workflow for one participant with:
 - `--psf`: PET PSF in mm
 - `--ref-region`: SUVR reference region (`pons`, `cerebellarGM`, or `composite`)
 - `--pvc-method`: PVC method such as: `RBV-FS`, `MG`, `IY`, `LABBE`, `RL`, `VC`, `RBV`, `LABBE+RBV`, `RBV+VC`, `RBV+RL`, `LABBE+RBV+VC`, `LABBE+RBV+RL`, `MTC`, `LABBE+MTC`, `MTC+VC`, `MTC+RL`, `LABBE+MTC+VC`, `LABBE+MTC+RL`, `IY+VC`, `IY+RL`, `MG+VC`, `MG+RL`.
-- `--fs-license`: path to the FreeSurfer license file
+- `--fs-license`: path to the FreeSurfer license file, which can be obtained [here](https://surfer.nmr.mgh.harvard.edu/registration.html)
 - `--fastsurfer-img`: (if FastSurfer to be run) path to the FastSurfer Singularity image
 - `--hippunfold-img`: (if HippUnfold to be run) path to the HippUnfold Singularity image
 - `--existing-freesurfer-dir` : (if FastSurfer/FreeSurfer already run) Path to existing FreeSurfer subject outputs directory (ex. /path/to/freesurfer/sub-01_ses-01). If provided, will create symlinks instead of running FastSurfer.
@@ -75,6 +84,44 @@ Run the workflow for one participant with:
 - `--pvc-n_iter`     : Number of iterations for iterative PVC methods (IY) (default: 10).
 - `--pvc-n_deconv`   : Number of iterations for deconvolution PVC methods (RL, VC) (default: 10).
 
+<!-- -->
+
+## Apptainer/Singularity container
+MICA-PET may also be run from an Apptainer/Singularity format (.sif) for use in HPC environments.
+
+```bash
+# Build singularity image from Docker Hub
+singularity build micapet.sif docker://micalab/micapet:v.alpha.0.1
+
+# Run MICA-PET pipeline
+singularity run --cleanenv --env FS_LICENSE="/path/to/license.txt" \
+-B ${BIDS_DIR}:/bids -B /path/to/FREESURFER_HOME:/micapet/freesurfer \
+/path/to/micapet.sif \
+--fastsurfer_img /path/to/fastsurfer-cpu-v2.4.2.sif \
+--hippunfold_img /path/to/hippunfold_v1.4.1.sif \
+--fs_license /path/to/license.txt \
+--psf ${psf} \
+--ref_region ${ref_region} \
+--smoothing 5 10 \
+--pvc-method ${pvc_method} \
+--existing-freesurfer-dir /path/to/existing/fastsurfer \
+--existing-hippunfold-dir /path/to/existing/hippunfold_v1.4.1 \
+--nonlinear-coreg \
+/bids /bids/derivatives participant \
+--cores ${CORES} \
+--participant-label ${subject}
+```
+
+<!--### Docker
+The latest Docker image can be pulled from Docker Hub
+
+```bash
+docker pull micalab/micapet:v.alpha.0.1
+
+docker run --rm -v _____
+```
+-->
+
 ## Typical outputs
 
 The pipeline writes derivatives into the output directory, including:
@@ -82,23 +129,33 @@ The pipeline writes derivatives into the output directory, including:
 - reference region masks
 - partial volume corrected and normalized PET images
 - registration transforms
-- surface metrics in GIFTI format
-- QC report images and HTML reports
+- fsLR 32k & 5k surface metrics in GIFTI format
+- QC report images and HTML report
 
 ## Repository layout
 
 ```text
 .
 ├── config/
+|   └── snakebids.yml
 ├── functions/
-| ├── MICA_PET.py
-| └── utils.py
+|   ├── MICA_PET.py
+|   └── utils.py
 ├── resources/
-| ├── AFNI/
-| ├── lamareg/
-| ├── mni_icbm152_t1_tal_nlin_sym_09a_parc.nii.gz
-| └── mni_icbm152_t1_tal_nlin_sym_09a.nii.gz
+|   ├── AFNI/
+|   |   └── 3dresample
+|   ├── lamareg/
+|   |   ├── synthseg_parc_2.0.h5
+|   |   ├── synthseg_robust_2.0.h5
+|   |   ├── synthseg_robust_2.0.h5.000
+|   |   ├── synthseg_robust_2.0.h5.001
+|   |   └── synthseg_robust_2.0.h5.002
+|   ├── mni_icbm152_t1_tal_nlin_sym_09a_parc.nii.gz
+|   └── mni_icbm152_t1_tal_nlin_sym_09a.nii.gz
 ├── workflow/
+|   ├── rules
+|   |   └── all.smk
+|   └── Snakefile
 ├── README.md
 ├── run.py
 └── environment.yml
