@@ -62,7 +62,7 @@ Run the workflow for one participant with:
 ### Mandatory parameters
 
 - `--psf`: PET PSF in mm
-- `--ref-region`: SUVR reference region (`pons`, `cerebellarGM`, or `composite`)
+- `--ref-region`: SUVR reference region (`pons`, `cerebellarGM`, `cerebellum`, `composite`, `WM` (supratentorial white matter), or `GM` (whole brain cortex)). Alternatively, add a custom reference region by adding it to resources/ref_region_list.csv (ref_region = reference region name, ROI = ROI label # according to gtmseg.mgz, erode = TRUE/FALSE per ROI if you want to erode that label by 2 voxels)
 - `--pvc-method`: FreeSurfer PETSurfer methods such as: `RBV-FS`, `MG-FS`, or PETPVC methods such as: `MG`, `IY`, `LABBE`, `RL`, `VC`, `RBV`, `LABBE+RBV`, `RBV+VC`, `RBV+RL`, `LABBE+RBV+VC`, `LABBE+RBV+RL`, `MTC`, `LABBE+MTC`, `MTC+VC`, `MTC+RL`, `LABBE+MTC+VC`, `LABBE+MTC+RL`, `IY+VC`, `IY+RL`, `MG+VC`, `MG+RL`.
 - `--fs-license`: path to the FreeSurfer license file, which can be obtained [here](https://surfer.nmr.mgh.harvard.edu/registration.html)
 - `--fastsurfer-img`: (if FastSurfer to be run) path to the FastSurfer Singularity image
