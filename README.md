@@ -38,7 +38,7 @@ conda activate mica-pet
 chmod +x run.py
 ```
 
-- For nonlinear co-registration to MNI152, please also download the lamareg model weights into the [resources subdirectory](resources)
+- For nonlinear co-registration to MNI152, please also download the [LAMAReg](https://github.com/MICA-MNI/LAMAReg) model weights into the [resources subdirectory](resources)
 
 ## Quick start
 
