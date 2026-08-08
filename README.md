@@ -45,16 +45,16 @@ chmod +x run.py
 Run the workflow for one participant with:
 
 ```bash
-./run.py /path/to/bids /path/to/output participant \
+./run.py \
   --fastsurfer-img /path/to/fastsurfer.sif \
   --hippunfold-img /path/to/hippunfold.sif \
   --fs-license /path/to/license.txt \
   --psf {psf} \
   --ref_region {reference region} \
-  --pvc_method {PVC method} \
   --smoothing {FWHM} \
+  --pvc_method {PVC method} \
   {other parameters here} \
-  /path/to/bids /path/to/derivatives participant \
+  /path/to/bids /path/to/bids/derivatives participant \
   --cores {# of cores or 'all'} \
   --participant-label {participant ID}
 ```
