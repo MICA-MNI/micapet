@@ -691,7 +691,7 @@ def nonlinear_coreg(
         -bids_dir       : Path to BIDS directory ( . or FULL PATH)
         -subj_dir       : Specify path to FreeSurfer/FastSurfer subjects directory.
         -pvc_method     : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
-        -ref_region     : Reference regions to use. eg. ['pons','cerebellarGM','composite'].
+        -ref_region     : Reference regions to use. eg. 'pons','cerebellarGM','cerebellum','composite','WM','GM'.
     """
     from pathlib import Path
     import subprocess
@@ -1068,11 +1068,13 @@ def project_pet_data(
             -bids_dir       : Path to BIDS directory ( . or FULL PATH)
             -subj_dir       : Specify path to FreeSurfer/FastSurfer subjects directory.
             -pvc_method     : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
-            -ref_region : Reference regions to use for projection. eg. 'pons','cerebellarGM','composite'. Default: 'pons'.
+            -ref_region : Reference regions to use for projection. eg. 'pons','cerebellarGM','cerebellum','composite','WM','GM'. Default: 'pons'.
             -tmpdir        : Path to temporary directory.
     """
     from nipype.interfaces.freesurfer import FSCommand, MRICoreg, ApplyVolTransform
     from nipype.interfaces.workbench.base import WBCommand
+    import pandas as pd
+    from pathlib import Path
 
     mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}"
     f_surf_dir = f"{os.path.realpath(subj_dir)}/sub-{subject}_ses-{session}"
@@ -1092,8 +1094,12 @@ def project_pet_data(
     if not (cortical or hippocampal):
         print("Error: At least one of 'cortical' or 'hippocampal' must be specified.")
         sys.exit(1)
-    if ref_region not in ['pons', 'cerebellarGM', 'composite']:
-        print(f"Error: Inputted: {ref_region}. None of the reference regions are valid ('pons', 'cerebellarGM', or 'composite').")
+
+    parent_dir = Path(__file__).resolve().parents[1]
+    ref_region_list_df = pd.read_csv(f"{parent_dir}/resources/ref_region_list.csv")
+    ref_region_list = ref_region_list_df.ref_region.to_list()
+    if ref_region not in ref_region_list:
+        print(f"Error: Inputted: {ref_region}. None of the reference regions are valid.")
         sys.exit(1)
 
     
@@ -1208,12 +1214,18 @@ def suvr(
             -bids_dir       : Path to BIDS directory ( . or FULL PATH)
             -subj_dir       : Specify path to FreeSurfer/FastSurfer subjects directory.
             -pvc_method     : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
-            -ref_region : Reference regions to use for projection. eg. 'pons','cerebellarGM','composite'. Default: 'pons'.
+            -ref_region : Reference regions to use for projection. eg. 'pons','cerebellarGM','cerebellum','composite','WM','GM'. Default: 'pons'.
     """
     from nipype.interfaces.freesurfer import FSCommand, ApplyVolTransform
     import glob
     from scipy.ndimage import binary_erosion
+    from pathlib import Path
+    import pandas as pd
 
+    parent_dir = Path(__file__).resolve().parents[1]
+    ref_region_list_df = pd.read_csv(f"{parent_dir}/resources/ref_region_list.csv")
+    ref_region_list = ref_region_list_df.ref_region.to_list()
+    
     f_surf_dir = f"{os.path.realpath(subj_dir)}/sub-{subject}_ses-{session}"
     mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}"
     FSCommand.set_default_subjects_dir(subj_dir)
@@ -1257,21 +1269,26 @@ def suvr(
             os.remove(mask)
             
     ref_region = [ref_region]
+    if ref_region[0] not in ref_region_list:
+        print(f"Error: Inputted: {ref_region[0]}. None of the reference regions are valid. Please check resources/ref_region_list.csv for valid reference regions.")
+        sys.exit(1)
+
     ## Create ROIs and calculate SUVR       
     for space in ['T1wFS','T1wNativepro']:
         for ref in ref_region:
             print(f"Processing reference region: {ref}...")
-            if ref == 'pons':
-                for roi in [174]:
-                    ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, pvc_method, erode=True)
-            elif ref == 'cerebellarGM':
-                for roi in [8,47]:
-                    ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, pvc_method, erode=False)
-            elif ref == 'composite':
-                for roi in [7,8,16,46,47,174]: # L cerebellar WM, L cerebellar GM, brainstem, R cerebellar WM, R cerebellar GM, pons
-                    ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, pvc_method, erode=False)
-                for roi in [2,41]: # L & R WM. To be eroded
-                    ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, pvc_method, erode=True)
+
+            ROI_ids = ref_region_list_df.loc[ref_region_list_df['ref_region'] == ref].ROI
+            ROI_ids_list = [int(x) for val in ROI_ids for x in val.split(",")]
+
+            erode_ids = ref_region_list_df.loc[ref_region_list_df['ref_region'] == ref].erode
+            erode_ids_list = [x.strip().lower() == "true" for val in erode_ids for x in val.split(",")]
+
+            for i in range(len(ROI_ids_list)):
+                roi = ROI_ids_list[i]
+                erode = erode_ids_list[i]
+                ROImaker(roi,f_surf_dir,mica_pet_derivatives,subject,session,space, pvc_method, erode=erode)
+
             combineROIs(ref,mica_pet_derivatives,subject,session,space)      
                 
             for pvc in [pvc_method, 'none']:
@@ -1321,7 +1338,7 @@ def subcortical_map(
             -bids_dir       : Path to BIDS directory ( . or FULL PATH)
             -subj_dir       : Specify path to FreeSurfer/FastSurfer subjects directory.
             -pvc_method     : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
-            -ref_region : Reference regions to use for projection. eg. 'pons','cerebellarGM','composite'. Default: 'pons'.
+            -ref_region : Reference regions to use for projection. eg. 'pons','cerebellarGM','cerebellum','composite','WM','GM'. Default: 'pons'.
     """  
     from nibabel.processing import resample_from_to
     import csv
@@ -1387,7 +1404,7 @@ def report(
             -bids_dir       : Path to BIDS directory ( . or FULL PATH)
             -subj_dir       : Specify path to FreeSurfer/FastSurfer subjects directory.
             -pvc_method     : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
-            -ref_region : Reference regions to use for projection. eg. 'pons','cerebellarGM','composite'. Default: 'pons'.
+            -ref_region : Reference regions to use for projection. eg. 'pons','cerebellarGM','cerebellum','composite','WM','GM'. Default: 'pons'.
             -hippocampal    : (Optional) Whether to include hippocampal surface in report. Default: True.
             -max_value      : (Optional) Maximum SUVR value for color scale. Default: 1.5 times the 85th percentile SUVR in the data.
 
@@ -2185,7 +2202,7 @@ if __name__ == "__main__":
             -trc            : Tracer (eg. FDG, MK6240)
             -bids_dir       : Path to BIDS directory ( . or FULL PATH)
             -pvc_method     : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
-            -ref_region     : Reference regions to use for projection. eg. 'pons','cerebellarGM','composite'. Default: 'pons'.
+            -ref_region     : Reference regions to use for projection. eg. 'pons','cerebellarGM','cerebellum','composite','WM','GM'. Default: 'pons'.
             -psf            : Scanner PSF FWHM in mm (eg. 4.5).
             -fastsurfer_img : Path to FastSurfer .sif image.
             -hippunfold_img : Path to hippocampal unfold .sif image.
@@ -2230,7 +2247,7 @@ if __name__ == "__main__":
     parser.add_argument("-trc", dest="trc", type=str, required=True, help="Tracer (eg. FDG, MK6240).")
     parser.add_argument("-bids_dir", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
     parser.add_argument("-pvc_method", dest="pvc_method", required=True, type=str, default='RBV-FS', choices=['RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'], help="(Str) PVC method used for PET image. Options: 'RBV-FS', 'MG','IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL' etc. Default: 'RBV-FS'.")
-    parser.add_argument("-ref_region",dest="ref_region", type=str, choices=['pons','cerebellarGM','composite'], default='pons',help="Specify reference region. Default: pons.")
+    parser.add_argument("-ref_region",dest="ref_region", type=str, default='pons',help="Specify reference region. Default: pons.")
     parser.add_argument("-smoothing", dest="smoothing", type=float, nargs='*', default=0, help="(List of float) List of smoothing FWHM in mm for surface projection. eg. '-smoothing 5 10'. Default: 0 (no smoothing).")
     parser.add_argument("-psf", dest="psf", type=float, required=True, help="Scanner PSF in mm. Ask your PET physicist if unknown.", default=4.5)
     parser.add_argument("-fastsurfer_img", dest="fastsurfer_img", type=str, help="(Str) Specify path to FastSurfer singularity image.")

@@ -40,3 +40,4 @@ __pycache__/
 
 functions/test.py
 qsub_micapet_singularity.sh
+resources/.~lock.ref_region_list.csv#
