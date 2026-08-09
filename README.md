@@ -55,7 +55,7 @@ export SINGULARITY_TMPDIR=/path/to/tmpdir
 export SINGULARITY_CACHEDIR=/path/to/cachedir
 
 cd micapet
-docker build -t micapet:v.beta.0.1
+docker build -t micapet:v.beta.0.1 .
 singularity build micapet.sif docker-daemon://micapet:v.beta.0.1
 ```
 
