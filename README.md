@@ -85,7 +85,8 @@ Run the workflow for one participant with:
   {other parameters here} \
   /path/to/bids /path/to/bids/derivatives participant \
   --cores {# of cores or 'all'} \
-  --participant-label {participant ID}
+  --participant-label {participant ID} \
+  {snakemake options}
 ```
 
 Or via the container:
@@ -106,7 +107,8 @@ singularity run --cleanenv --env FS_LICENSE="/path/to/license.txt" \
 --nonlinear-coreg \
 /bids /bids/derivatives participant \
 --cores ${CORES} \
---participant-label ${subject}
+--participant-label ${subject} \
+{snakemake options}
 ```
 
 
@@ -134,6 +136,13 @@ singularity run --cleanenv --env FS_LICENSE="/path/to/license.txt" \
 - `--pvc-iterations` : Number of iterations for iterative PVC methods (default 50).
 - `--pvc-n_iter`     : Number of iterations for iterative PVC methods (IY) (default: 10).
 - `--pvc-n_deconv`   : Number of iterations for deconvolution PVC methods (RL, VC) (default: 10).
+
+### Snakemake options
+- `--force <rule>`    : Reruns only the specified rule. See workflow/rules/all.smk for rules
+- `--forcerun <rule>` : Reruns the specified rule and updates everything downstream
+- `--forceall`        : Forces the execution of every single rule in the entire workflow
+- `--rerun-incomplete`: Re-runs all tasks that failed or left partial files
+- `--unlock`          : If your process crashed hard, you might also have a directory lock error. Clear it using the --unlock flag before running the pipeline again
 
 <!-- -->
 
