@@ -1,4 +1,5 @@
 # MICA-PET Pipeline
+`version beta.0.1`
 
 MICA-PET is a neuroimaging workflow for processing PET data in a BIDS-compatible project. It runs anatomical reconstruction, PET-to-MRI registration, partial volume correction, surface projection, and report generation from a single entry point.
 
@@ -32,7 +33,7 @@ Optional:
 
 ```bash
 git clone <repo-url>
-cd MICA-PET/scripts
+cd micapet
 conda env create -f environment.yml
 conda activate mica-pet
 chmod +x run.py
@@ -40,30 +41,82 @@ chmod +x run.py
 
 - For nonlinear co-registration to MNI152, please also download the [LAMAReg](https://github.com/MICA-MNI/LAMAReg) model weights into the [resources subdirectory](resources)
 
+## Apptainer/Singularity container
+MICA-PET may also be run from an Apptainer/Singularity format (.sif) for use in HPC environments.
+
+```bash
+# Build singularity image from Docker Hub
+singularity build micapet.sif docker://micalab/micapet:v.beta.0.1
+
+# Build singularity image locally
+export DOCKER_BUILDKIT=1
+export DOCKER_CONTENT_TRUST=0
+export SINGULARITY_TMPDIR=/path/to/tmpdir
+export SINGULARITY_CACHEDIR=/path/to/cachedir
+
+cd micapet
+docker build -t micapet:v.beta.0.1
+singularity build micapet.sif docker-daemon://micapet:v.beta.0.1
+```
+
+<!--### Docker
+The latest Docker image can be pulled from Docker Hub
+
+```bash
+docker pull micalab/micapet:v.alpha.0.1
+
+docker run --rm -v _____
+```
+-->
+
 ## Quick start
 
 Run the workflow for one participant with:
 
 ```bash
-./run.py /path/to/bids /path/to/output participant \
+./run.py \
   --fastsurfer-img /path/to/fastsurfer.sif \
   --hippunfold-img /path/to/hippunfold.sif \
   --fs-license /path/to/license.txt \
   --psf {psf} \
   --ref_region {reference region} \
-  --pvc_method {PVC method} \
   --smoothing {FWHM} \
+  --pvc_method {PVC method} \
   {other parameters here} \
-  /path/to/bids /path/to/derivatives participant \
+  /path/to/bids /path/to/bids/derivatives participant \
   --cores {# of cores or 'all'} \
-  --participant-label {participant ID}
+  --participant-label {participant ID} \
+  {snakemake options}
 ```
+
+Or via the container:
+```bash
+# Run MICA-PET pipeline
+singularity run --cleanenv --env FS_LICENSE="/path/to/license.txt" \
+-B ${BIDS_DIR}:/bids -B /path/to/FREESURFER_HOME:/micapet/freesurfer \
+/path/to/micapet.sif \
+--fastsurfer_img /path/to/fastsurfer-cpu-v2.4.2.sif \
+--hippunfold_img /path/to/hippunfold_v1.4.1.sif \
+--fs_license /path/to/license.txt \
+--psf ${psf} \
+--ref_region ${ref_region} \
+--smoothing 5 10 \
+--pvc-method ${pvc_method} \
+--existing-freesurfer-dir /path/to/existing/fastsurfer \
+--existing-hippunfold-dir /path/to/existing/hippunfold_v1.4.1 \
+--nonlinear-coreg \
+/bids /bids/derivatives participant \
+--cores ${CORES} \
+--participant-label ${subject} \
+{snakemake options}
+```
+
 
 ### Mandatory parameters
 
 - `--psf`: PET PSF in mm
-- `--ref-region`: SUVR reference region (`pons`, `cerebellarGM`, or `composite`)
-- `--pvc-method`: FreeSurfer PETSurfer methods such as: `RBV-FS`, or PETPVC methods such as: `MG`, `IY`, `LABBE`, `RL`, `VC`, `RBV`, `LABBE+RBV`, `RBV+VC`, `RBV+RL`, `LABBE+RBV+VC`, `LABBE+RBV+RL`, `MTC`, `LABBE+MTC`, `MTC+VC`, `MTC+RL`, `LABBE+MTC+VC`, `LABBE+MTC+RL`, `IY+VC`, `IY+RL`, `MG+VC`, `MG+RL`.
+- `--ref-region`: SUVR reference region (`pons`, `cerebellarGM`, `cerebellum`, `composite`, `WM` (supratentorial white matter), or `GM` (whole brain cortex)). Alternatively, add a custom reference region by adding it to resources/ref_region_list.csv (ref_region = reference region name, ROI = ROI label # according to gtmseg.mgz, erode = TRUE/FALSE per ROI if you want to erode that label by 2 voxels)
+- `--pvc-method`: FreeSurfer PETSurfer methods such as: `RBV-FS`, `MG-FS`, or PETPVC methods such as: `MG`, `IY`, `LABBE`, `RL`, `VC`, `RBV`, `LABBE+RBV`, `RBV+VC`, `RBV+RL`, `LABBE+RBV+VC`, `LABBE+RBV+RL`, `MTC`, `LABBE+MTC`, `MTC+VC`, `MTC+RL`, `LABBE+MTC+VC`, `LABBE+MTC+RL`, `IY+VC`, `IY+RL`, `MG+VC`, `MG+RL`.
 - `--fs-license`: path to the FreeSurfer license file, which can be obtained [here](https://surfer.nmr.mgh.harvard.edu/registration.html)
 - `--fastsurfer-img`: (if FastSurfer to be run) path to the FastSurfer Singularity image
 - `--hippunfold-img`: (if HippUnfold to be run) path to the HippUnfold Singularity image
@@ -84,43 +137,14 @@ Run the workflow for one participant with:
 - `--pvc-n_iter`     : Number of iterations for iterative PVC methods (IY) (default: 10).
 - `--pvc-n_deconv`   : Number of iterations for deconvolution PVC methods (RL, VC) (default: 10).
 
+### Snakemake options
+- `--force <rule>`    : Reruns only the specified rule. See workflow/rules/all.smk for rules
+- `--forcerun <rule>` : Reruns the specified rule and updates everything downstream
+- `--forceall`        : Forces the execution of every single rule in the entire workflow
+- `--rerun-incomplete`: Re-runs all tasks that failed or left partial files
+- `--unlock`          : If your process crashed hard, you might also have a directory lock error. Clear it using the --unlock flag before running the pipeline again
+
 <!-- -->
-
-## Apptainer/Singularity container
-MICA-PET may also be run from an Apptainer/Singularity format (.sif) for use in HPC environments.
-
-```bash
-# Build singularity image from Docker Hub
-singularity build micapet.sif docker://micalab/micapet:v.alpha.0.1
-
-# Run MICA-PET pipeline
-singularity run --cleanenv --env FS_LICENSE="/path/to/license.txt" \
--B ${BIDS_DIR}:/bids -B /path/to/FREESURFER_HOME:/micapet/freesurfer \
-/path/to/micapet.sif \
---fastsurfer_img /path/to/fastsurfer-cpu-v2.4.2.sif \
---hippunfold_img /path/to/hippunfold_v1.4.1.sif \
---fs_license /path/to/license.txt \
---psf ${psf} \
---ref_region ${ref_region} \
---smoothing 5 10 \
---pvc-method ${pvc_method} \
---existing-freesurfer-dir /path/to/existing/fastsurfer \
---existing-hippunfold-dir /path/to/existing/hippunfold_v1.4.1 \
---nonlinear-coreg \
-/bids /bids/derivatives participant \
---cores ${CORES} \
---participant-label ${subject}
-```
-
-<!--### Docker
-The latest Docker image can be pulled from Docker Hub
-
-```bash
-docker pull micalab/micapet:v.alpha.0.1
-
-docker run --rm -v _____
-```
--->
 
 ## Typical outputs
 
