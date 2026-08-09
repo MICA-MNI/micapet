@@ -24,6 +24,14 @@ push_changes*
 ADNI_validation.ipynb
 resources/lamareg/*
 
+scripts/build_sif.sh
+scripts/mutual_info.ipynb
+scripts/qsub_subject.sh
+scripts/run_dry.sh
+scripts/run_wet_time.sh
+scripts/run_wet.sh
+scripts/submit_participants.sh
+
 # Python cache (all directories)
 __pycache__/
 **/__pycache__/
