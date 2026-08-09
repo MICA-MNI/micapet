@@ -1,7 +1,7 @@
 # MICA-PET Pipeline
 `version beta.0.1`
 
-MICA-PET is a neuroimaging workflow for processing static PET data in a BIDS-compatible project. It runs anatomical reconstruction, PET-to-MRI registration, partial volume correction, surface projection, and report generation from a single entry point.
+MICA-PET is a [snakemake](https://snakemake.readthedocs.io/en/stable/)/[snakebids](https://github.com/khanlab/snakebids) neuroimaging workflow for processing static PET data in a [BIDS](https://bids.neuroimaging.io/)-compatible project. It runs anatomical reconstruction, PET-to-MRI registration, partial volume correction, surface projection, and report generation from a single entry point.
 
 ![MICA-PET workflow](https://github.com/MICA-MNI/micapet/blob/25541b11aca6798030e4b70ca56ac8193358c881/workflow.png)
 
@@ -114,7 +114,7 @@ singularity run --cleanenv --env FS_LICENSE="/path/to/license.txt" \
 
 ### Mandatory parameters
 
-- `--psf`: PET PSF in mm
+- `--psf`: full-width half-max of the scanner point spread function (PSF) in mm. Consult your PET physicist if unsure. For more information, see [here](https://surfer.nmr.mgh.harvard.edu/fswiki/PetSurfer)
 - `--ref-region`: SUVR reference region (`pons`, `cerebellarGM`, `cerebellum`, `composite`, `WM` (supratentorial white matter), or `GM` (whole brain cortex)). Alternatively, add a custom reference region by adding it to resources/ref_region_list.csv (ref_region = reference region name, ROI = ROI label # according to gtmseg.mgz, erode = TRUE/FALSE per ROI if you want to erode that label by 2 voxels)
 - `--pvc-method`: FreeSurfer PETSurfer methods such as: `RBV-FS`, `MG-FS`, or PETPVC methods such as: `MG`, `IY`, `LABBE`, `RL`, `VC`, `RBV`, `LABBE+RBV`, `RBV+VC`, `RBV+RL`, `LABBE+RBV+VC`, `LABBE+RBV+RL`, `MTC`, `LABBE+MTC`, `MTC+VC`, `MTC+RL`, `LABBE+MTC+VC`, `LABBE+MTC+RL`, `IY+VC`, `IY+RL`, `MG+VC`, `MG+RL`.
 - `--fs-license`: path to the FreeSurfer license file, which can be obtained [here](https://surfer.nmr.mgh.harvard.edu/registration.html)
