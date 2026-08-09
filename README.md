@@ -1,7 +1,7 @@
 # MICA-PET Pipeline
 `version beta.0.1`
 
-MICA-PET is a neuroimaging workflow for processing PET data in a BIDS-compatible project. It runs anatomical reconstruction, PET-to-MRI registration, partial volume correction, surface projection, and report generation from a single entry point.
+MICA-PET is a neuroimaging workflow for processing static PET data in a BIDS-compatible project. It runs anatomical reconstruction, PET-to-MRI registration, partial volume correction, surface projection, and report generation from a single entry point.
 
 ![MICA-PET workflow](https://github.com/MICA-MNI/micapet/blob/25541b11aca6798030e4b70ca56ac8193358c881/workflow.png)
 
