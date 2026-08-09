@@ -23,7 +23,7 @@ inputs = generate_inputs(
 )
 
 # --- Global variables derived from config ---
-MICA_PET_VERSION = os.environ.get("MICA_PET_VERSION", "v.alpha.0.5")
+MICA_PET_VERSION = os.environ.get("MICA_PET_VERSION", "v.beta.0.1")
 MICAPET_DIR_NAME = f"MICA-PET_{MICA_PET_VERSION}"
 FASTSURFER_DIR_NAME = "fastsurfer"
 HIPPUNFOLD_DIR_NAME = "hippunfold_v1.4.1"
@@ -97,7 +97,7 @@ def setup_existing_outputs_symlinks():
         
         utils.print_time_stamp("Setting up symbolic links to existing FreeSurfer/FastSurfer outputs...","blue")
         
-        target_base = os.path.join(root, FASTSURFER_DIR_NAME)
+        target_base = os.path.join(root, FASTSURFER_DIR_NAME) # fastsurfer
         os.makedirs(target_base, exist_ok=True)
         
         for idx in range(len(subject_list)):
@@ -105,7 +105,7 @@ def setup_existing_outputs_symlinks():
             session = session_list[idx]
             print(f"Processing subject {subject}, session {session} for existing FreeSurfer/FastSurfer outputs...")
             
-            existing_subject = glob.glob(os.path.join(existing_fs, f"sub-{subject}_ses-{session}"))
+            existing_subject = glob.glob(os.path.join(existing_fs)) # fastsurfer/sub-{sub}_ses-{ses}
             
             if existing_subject:
                 print(f"Found existing FreeSurfer/FastSurfer output for subject {subject}, session {session} in {existing_fs}")
@@ -114,18 +114,19 @@ def setup_existing_outputs_symlinks():
                 target = os.path.join(target_base, subj_name)
                 
                 if not os.path.exists(target):
-                    print(f"  Creating symlink: {subj_name} -> {subj_dir}")
+                    print(f"  Creating symlink: {subj_dir} -> {target}")
                     os.symlink(subj_dir, target, target_is_directory=True)
                 else:
-                    print(f"  Subject already exists: {subj_name}")
+                    print(f"  Subject/session already exists: {subj_dir}")
             else:
                 print(f"Warning: No FreeSurfer/FastSurfer output found for subject {subject}, session {session} in {existing_fs}")
             
     
     # Handle HippUnfold outputs at subject level
     if existing_hipp and existing_hipp != "null":
-        target_base = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold")
-        os.makedirs(target_base, exist_ok=True)
+        target_base = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold") #hippunfold_v1.4.1/hippunfold
+        print(os.path.join(target_base, f"sub-{subject}",f"ses-{session}"))
+        os.makedirs(os.path.join(target_base, f"sub-{subject}"), exist_ok=True)
         
         utils.print_time_stamp("Setting up symbolic links to existing Hippunfold outputs...","blue")
         
@@ -134,19 +135,19 @@ def setup_existing_outputs_symlinks():
             session = session_list[idx]
             print(f"Processing subject {subject}, session {session} for existing Hippunfold outputs...")
             
-            existing_subject = glob.glob(os.path.join(existing_hipp, "hippunfold", f"sub-{subject}"))
+            existing_subject = glob.glob(os.path.join(existing_hipp)) #hippunfold_v1.4.1/hippunfold/sub-{sub}/ses-{ses}
             
             if existing_subject:
                 print(f"Found existing HippUnfold output for subject {subject}, session {session} in {existing_hipp}")
-                subj_dir = existing_subject[0]  # Take the first match
-                subj_name = os.path.basename(subj_dir)  # e.g., sub-01
-                target = os.path.join(target_base, subj_name)
+                ses_dir = existing_subject[0]  # Take the first match
+                ses_name = os.path.basename(ses_dir)  # e.g., ses-01
+                target = os.path.join(target_base, f"sub-{subject}",f"ses-{session}") #hippunfold_v1.4.1/hippunfold/sub-{sub}/ses-{ses}
                 
                 if not os.path.exists(target):
-                    print(f"  Creating symlink: {subj_name} -> {subj_dir}")
-                    os.symlink(subj_dir, target, target_is_directory=True)
+                    print(f"  Creating symlink: {ses_dir} -> {target}")
+                    os.symlink(ses_dir, target, target_is_directory=True)
                 else:
-                    print(f"  Subject already exists: {subj_name}")
+                    print(f"  Subject/session already exists: {ses_dir}")
             else:
                 print(f"Warning: No HippUnfold output found for subject {subject}, session {session} in {existing_hipp}")
         

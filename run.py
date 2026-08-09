@@ -6,14 +6,22 @@ This script provides the command-line interface for running the MICA-PET
 neuroimaging pipeline using the Snakebids framework.
 
 Usage:
-    ./run.py <bids_dir> <output_dir> participant [options]
+    ./run.py [options] <bids_dir> <output_dir> participant --cores <cores> --participant-label <participant_label>
     ./run.py --help
 
 Example:
-    ./run.py /path/to/bids /path/to/output participant \
+    /run.py \
         --fastsurfer-img /path/to/fastsurfer.sif \
         --hippunfold-img /path/to/hippunfold.sif \
-        --fs-license /path/to/license.txt
+        --fs-license /path/to/license.txt \
+        --psf {psf} \
+        --ref_region {reference region} \
+        --smoothing {FWHM} \
+        --pvc_method {PVC method} \
+        {other parameters here} \
+        /path/to/bids /path/to/bids/derivatives participant \
+        --cores {# of cores or 'all'} \
+        --participant-label {participant ID}
 """
 from pathlib import Path
 from snakebids import bidsapp, plugins
@@ -33,6 +41,8 @@ def main():
     """Main entry point for the MICA-PET pipeline."""
     # Get the directory where this script is located
     script_dir = Path(__file__).parent.absolute()
+
+    utils.print_time_stamp(f"Starting MICA-PET {utils.MICA_PET_VERSION} pipeline...", "green")
 
     # Create the snakebids app with the SnakemakeBidsApp plugin
     app = bidsapp.app(

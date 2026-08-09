@@ -110,6 +110,7 @@ def fastsurfer(
     """
     from spython.main import Client
     from utils import bcolors
+    from pathlib import Path
     import subprocess
 
     utils.print_time_stamp(f"Starting FastSurfer for subject: {subject}, session: {session}.")
@@ -121,9 +122,34 @@ def fastsurfer(
         print(f"Error: FastSurfer image not found at {fastsurfer_img}")
         sys.exit(1)
 
+    def copy_FSfiles_to_tmp(subj_dir, subject, session, bids_dir):
+        # copy to tmp to avoid deletion of original files if snakemake fails on fastsurfer rule
+        derivatives_tmp_dir = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}/sub-{subject}/ses-{session}/tmp"
+        os.makedirs(derivatives_tmp_dir, exist_ok=True)
+
+        for file in [
+            Path(f"{subj_dir}/sub-{subject}_ses-{session}/surf/lh.pial"),
+            Path(f"{subj_dir}/sub-{subject}_ses-{session}/surf/rh.pial"),
+            Path(f"{subj_dir}/sub-{subject}_ses-{session}/surf/lh.white"),
+            Path(f"{subj_dir}/sub-{subject}_ses-{session}/surf/rh.white"),
+            Path(f"{subj_dir}/sub-{subject}_ses-{session}/surf/lh.sphere.reg"),
+            Path(f"{subj_dir}/sub-{subject}_ses-{session}/surf/rh.sphere.reg"),
+            Path(f"{subj_dir}/sub-{subject}_ses-{session}/mri/transforms/talairach.lta"),
+            Path(f"{subj_dir}/sub-{subject}_ses-{session}/mri/brainmask.mgz"),
+            Path(f"{subj_dir}/sub-{subject}_ses-{session}/mri/norm.mgz"),
+            Path(f"{subj_dir}/sub-{subject}_ses-{session}/mri/aparc+aseg.mgz")
+        ]:
+            if os.path.exists(file):
+                print(f"Copying {file} to derivatives tmp directory")
+                shutil.copy(file, f"{derivatives_tmp_dir}/")
+
     # Check if FastSurfer output already exists
     if os.path.exists(f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.mgz") and force==False:
         utils.print_time_stamp("FastSurfer already run. Please rerun with -force flag to overwrite.","red")
+        
+
+        copy_FSfiles_to_tmp(subj_dir, subject, session, bids_dir)
+        
         return
     elif os.path.exists(f"{subj_dir}/sub-{subject}_ses-{session}") and force==True:
         shutil.rmtree(f"{subj_dir}/sub-{subject}_ses-{session}", ignore_errors=True)
@@ -169,6 +195,9 @@ def fastsurfer(
             ["singularity", "exec"] + options + [fastsurfer_img] + command,
             check=True
         )
+
+        copy_FSfiles_to_tmp(subj_dir, subject, session, bids_dir)
+
     except subprocess.CalledProcessError as e:
         print(f"An error occurred during Singularity execution: {e}")
         sys.exit(1)
@@ -567,19 +596,29 @@ def linear_coreg(
         t1w_path        : path to T1w NIfTI (registration target)
         output_prefix   : ANTs output prefix; affine .mat saved here
         smooth_sigma_mm : Gaussian sigma in mm (default 1.0 → fslmaths -s 1)
-        interpolator    : interpolation for final warp (default "nearestNeighbor")
+        interpolator    : interpolation for final warp (default "nearestNeighbor". Also supports "linear")
     
         Returns
         -------
         nib.Nifti1Image  PET resampled into T1w space
         """
         import ants
+        import subprocess
+        from pathlib import Path
+
+        # Absolute path to the directory above the current script
+        parent_dir = Path(__file__).resolve().parents[1]
+        resources_path = f"{parent_dir}/resources"
     
         # ------------------------------------------------------------------
         # Step 0 – load
+
+        utils.print_time_stamp(f"Starting edge-based registration of PET to T1w for subject: {subject}, session: {session}.")
+        utils.print_time_stamp(f"PET path: {pet_path}")
         
         if space == 'T1wNativepro':
             t1w_path = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz"
+            
         elif space == 'T1wFS':
             t1w_path = f"{subj_dir}/sub-{subject}_ses-{session}/mri/orig.nii.gz"
             if not os.path.exists(t1w_path):
@@ -589,18 +628,23 @@ def linear_coreg(
                 mc.inputs.out_file = t1w_path
                 mc.inputs.out_type = 'niigz'
                 mc.run()
+        utils.print_time_stamp(f"T1w path: {t1w_path}")
+
         t1w_nib = nib.load(t1w_path)          # kept only for output header/affine
+        pet_nib = nib.load(pet_path)          # kept only for output header/affine
         pet = ants.image_read(pet_path)
         t1w = ants.image_read(t1w_path)
         output_prefix = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-{space}_"
     
         # ------------------------------------------------------------------
         # Step 1 – smooth  (fslmaths -s sigma)
+        utils.print_time_stamp(f"Smoothing PET and T1w images with sigma={smooth_sigma_mm} mm.")
         pet_smooth = ants.smooth_image(pet, smooth_sigma_mm, sigma_in_physical_coordinates=True)
         t1w_smooth = ants.smooth_image(t1w, smooth_sigma_mm, sigma_in_physical_coordinates=True)
     
         # ------------------------------------------------------------------
         # Step 2 – edge filter  (fslmaths -edge → gradient magnitude)
+        utils.print_time_stamp("Computing edge images for PET and T1w.")
         def _edge(img):
             d, sp = img.numpy().astype(np.float64), np.array(img.spacing)
             g = [np.gradient(d, sp[i], axis=i) for i in range(3)]
@@ -608,20 +652,47 @@ def linear_coreg(
     
         pet_edge = _edge(pet_smooth)
         t1w_edge = _edge(t1w_smooth)
+
+        # def _smooth_and_edge(img_path):
+        #     basename = Path(os.path.basename(img_path)).name.split(".nii.gz")[0]
+        #     smooth_img = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/tmp/{basename}_smooth.nii.gz"
+        #     cmd = [f"{resources_path}/FSL/fslmaths",
+        #            f"{img_path}",
+        #            "-s", "1",
+        #            f"{smooth_img}"
+        #     ]
+
+        #     subprocess.run(cmd)
+
+        #     edge_img = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/tmp/{basename}_edge.nii.gz"
+        #     cmd = [f"{resources_path}/FSL/fslmaths",
+        #            f"{smooth_img}",
+        #            "-edge",
+        #            f"{edge_img}"
+        #     ]
+
+        #     subprocess.run(cmd)
+
+        #     return ants.image_read(edge_img)
+
+        # t1w_edge = _smooth_and_edge(t1w_path)
+        # pet_edge = _smooth_and_edge(pet_path)
     
         # ------------------------------------------------------------------
         # Step 3 – affine registration on edge images
         # use_legacy_histogram_matching=True mirrors -j 1 in antsRegistrationSyN.sh
+        utils.print_time_stamp("Performing affine registration on edge images using ANTS.")
         reg = ants.registration(
             fixed             = t1w_edge,
             moving            = pet_edge,
-            type_of_transform = "Affine",
+            type_of_transform = "antsRegistrationSyN[a]",
             outprefix         = output_prefix,
             use_legacy_histogram_matching = True,
         )
     
         # ------------------------------------------------------------------
         # Step 4 – apply transform to original (unmodified) PET
+        utils.print_time_stamp(f"Applying affine transform to original PET image {pet_path}.")
         pet_warped = ants.apply_transforms(
             fixed         = t1w,
             moving        = pet,
@@ -632,6 +703,7 @@ def linear_coreg(
         # ------------------------------------------------------------------
         # Step 5 – convert .mat to .lta for FreeSurfer compatibility
         # Convert ANTs affine matrix to FreeSurfer LTA format
+        utils.print_time_stamp("Converting ANTs affine matrix to FreeSurfer LTA format.")
         tx = ants.read_transform(f"{output_prefix}0GenericAffine.mat")
 
         ants.write_transform(tx, f"{output_prefix}0GenericAffine.txt")
@@ -643,6 +715,9 @@ def linear_coreg(
         lta_convert.inputs.target_file = t1w_path
         lta_convert.cmdline
         lta_convert.run()
+
+        with open(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-{space}_xfm.reg.lta", "a") as file:
+            file.write(f"subject sub-{subject}_ses-{session}\n")
         
         # ------------------------------------------------------------------
         # Step 6 – save resampled PET in T1w space
@@ -650,6 +725,15 @@ def linear_coreg(
         out = nib.Nifti1Image(pet_warped.numpy(), t1w_nib.affine, t1w_nib.header)
 
         nib.save(out, f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-none_trc-{trc}_pet.nii.gz")
+
+        # -------------------------------------------------------------------
+        # debug
+
+        out_T1w_edge = nib.Nifti1Image(t1w_edge.numpy(), t1w_nib.affine, t1w_nib.header)
+        nib.save(out_T1w_edge, f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-T1wEdge.nii.gz")
+
+        out_pet_edge = nib.Nifti1Image(pet_edge.numpy(), pet_nib.affine, pet_nib.header)
+        nib.save(out_pet_edge, f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-PETEdge.nii.gz")
 
     for space in ['T1wFS','T1wNativepro']:
         if edge_reg:
@@ -690,7 +774,7 @@ def nonlinear_coreg(
         -trc            : Tracer (eg. FDG, MK6240)
         -bids_dir       : Path to BIDS directory ( . or FULL PATH)
         -subj_dir       : Specify path to FreeSurfer/FastSurfer subjects directory.
-        -pvc_method     : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
+        -pvc_method     : PVC method used for PET image. Options: 'RBV-FS','MG-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
         -ref_region     : Reference regions to use. eg. 'pons','cerebellarGM','cerebellum','composite','WM','GM'.
     """
     from pathlib import Path
@@ -698,7 +782,14 @@ def nonlinear_coreg(
 
     # Absolute path to the directory above the current script
     parent_dir = Path(__file__).resolve().parents[1]
-    MNI_path = f"{parent_dir}/resources/mni_icbm152_t1_tal_nlin_sym_09a.nii.gz"
+    resources_path = f"{parent_dir}/resources"
+
+    # Check if lamareg weights are present
+    lamareg_weights_path = f"{resources_path}/lamareg"
+
+    if not os.path.exists(lamareg_weights_path):
+        print(f"Error: lamareg weights not found at {lamareg_weights_path}. Please ensure the lamareg weights are downloaded.")
+        sys.exit(1)
 
     mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}"
 
@@ -710,11 +801,11 @@ def nonlinear_coreg(
             "--moving",
             f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz",
             "--fixed",
-            f"{MNI_path}/mni_icbm152_t1_tal_nlin_sym_09a.nii.gz",
+            f"{resources_path}/mni_icbm152_t1_tal_nlin_sym_09a.nii.gz",
             "--output",
             f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-MNI_T1w.nii.gz",
             "--fixed-parc",
-            f"{MNI_path}/mni_icbm152_t1_tal_nlin_sym_09a_parc.nii.gz",
+            f"{resources_path}/mni_icbm152_t1_tal_nlin_sym_09a_parc.nii.gz",
             "--skip-fixed-parc",
             "--affine",
             f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-T1wNativepro_to-MNI_lamaregAffine.mat",
@@ -735,7 +826,7 @@ def nonlinear_coreg(
                 "--moving",
                 f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wNativepro_pvc-{pvc}_ref-{ref}_trc-{trc}_pet.nii.gz",
                 "--fixed",
-                f"{MNI_path}/mni_icbm152_t1_tal_nlin_sym_09a.nii.gz",
+                f"{resources_path}/mni_icbm152_t1_tal_nlin_sym_09a.nii.gz",
                 "--output",
                 f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-MNI_pvc-{pvc}_ref-{ref}_trc-{trc}_pet.nii.gz",
                 "--affine",
@@ -914,7 +1005,7 @@ def pvc(
         -bids_dir       : Path to BIDS directory ( . or FULL PATH)
         -subj_dir       : Specify path to FreeSurfer/FastSurfer subjects directory.
         -psf            : Scanner PSF FWHM in mm (eg. 4.5)
-        -pvc_method     : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
+        -pvc_method     : PVC method used for PET image. Options: 'RBV-FS','MG-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
         -pvc_dir        : (Optional) Specify PVC output directory. (Default {subj_dir}/sub-{subject}_ses-{session}/gtmpvc.output).
         -force          : (Optional) Force PVC even if output exists.
 
@@ -930,12 +1021,13 @@ def pvc(
 
     utils.print_time_stamp(f"Starting PVC for subject: {subject}, session: {session}, tracer: {trc}, method: {pvc_method}.")
 
-    if pvc_method not in ['RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL']:
-        print(f"Error: PVC method {pvc_method} is not supported. Please choose from the following: RBV-FS, MG, IY, LABBE, RL, VC, RBV, LABBE+RBV, RBV+VC, RBV+RL, LABBE+RBV+VC, LABBE+RBV+RL, MTC, LABBE+MTC, MTC+VC, MTC+RL, LABBE+MTC+VC, LABBE+MTC+RL, IY+VC, IY+RL, MG+VC, MG+RL.")
+    if pvc_method not in ['RBV-FS','MG-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL']:
+        print(f"Error: PVC method {pvc_method} is not supported. Please choose from the following: RBV-FS, MG-FS, MG, IY, LABBE, RL, VC, RBV, LABBE+RBV, RBV+VC, RBV+RL, LABBE+RBV+VC, LABBE+RBV+RL, MTC, LABBE+MTC, MTC+VC, MTC+RL, LABBE+MTC+VC, LABBE+MTC+RL, IY+VC, IY+RL, MG+VC, MG+RL.")
         sys.exit(1)
 
-    # FreeSurfer RBV PVC  
-    elif pvc_method == 'RBV-FS':
+    # FreeSurfer RBV or MG PVC  
+    elif pvc_method == 'RBV-FS' or pvc_method == 'MG-FS':
+            
         from nipype.interfaces import freesurfer
         from nipype.interfaces.freesurfer import ApplyVolTransform
 
@@ -967,21 +1059,33 @@ def pvc(
 
         gtmpvc.run()
 
-        # Resample RBV to T1w/nativepro space
+        if pvc_method == 'RBV-FS':
+            pvc_img = f"{pvc_dir}/rbv.nii.gz"
+        elif pvc_method == 'MG-FS':
+            pvc_img = f"{pvc_dir}/mgx.gm_reg2T1w.nii.gz"
+
+            # resample mgx.gm to T1wFS space
+            applyreg = ApplyVolTransform()
+            applyreg.inputs.source_file= f"{pvc_dir}/mgx.gm.nii.gz"
+            applyreg.inputs.lta_file=f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wFS_xfm.reg.lta'
+            applyreg.inputs.target_file= f"{f_surf_dir}/mri/orig.mgz"
+            applyreg.inputs.transformed_file= pvc_img
+            applyreg.run()
+
+        # Resample RBV/MG to T1w/nativepro space
         for space in ['T1wFS']:
-            print(f"Resampling RBV to {space} space...")
-            rbv = f"{pvc_dir}/rbv.nii.gz"
+            print(f"Resampling {pvc_method} to {space} space...")
             mri = f"{f_surf_dir}/mri/orig.mgz"
             applyreg = ApplyVolTransform()
-            applyreg.inputs.source_file= rbv
+            applyreg.inputs.source_file= pvc_img
             applyreg.inputs.reg_header=True
             applyreg.inputs.target_file= mri
-            applyreg.inputs.transformed_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-RBV-FS_ref-none_trc-{trc}_pet.nii.gz"
+            applyreg.inputs.transformed_file=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc_method}_ref-none_trc-{trc}_pet.nii.gz"
             applyreg.run()
 
         utils.resample_to_nativepro(
-            input=f"{pvc_dir}/rbv.nii.gz",
-            output=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wNativepro_pvc-RBV-FS_ref-none_trc-{trc}_pet.nii.gz",
+            input=pvc_img,
+            output=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-T1wNativepro_pvc-{pvc_method}_ref-none_trc-{trc}_pet.nii.gz",
             reference=f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-nativepro_T1w.nii.gz",
             interp='trilin')
 
@@ -1067,7 +1171,7 @@ def project_pet_data(
             -trc            : Tracer (eg. FDG, MK6240)
             -bids_dir       : Path to BIDS directory ( . or FULL PATH)
             -subj_dir       : Specify path to FreeSurfer/FastSurfer subjects directory.
-            -pvc_method     : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
+            -pvc_method     : PVC method used for PET image. Options: 'RBV-FS', 'MG-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
             -ref_region : Reference regions to use for projection. eg. 'pons','cerebellarGM','cerebellum','composite','WM','GM'. Default: 'pons'.
             -tmpdir        : Path to temporary directory.
     """
@@ -1213,7 +1317,7 @@ def suvr(
             -trc            : Tracer (eg. FDG, MK6240)
             -bids_dir       : Path to BIDS directory ( . or FULL PATH)
             -subj_dir       : Specify path to FreeSurfer/FastSurfer subjects directory.
-            -pvc_method     : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
+            -pvc_method     : PVC method used for PET image. Options: 'RBV-FS','MG-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
             -ref_region : Reference regions to use for projection. eg. 'pons','cerebellarGM','cerebellum','composite','WM','GM'. Default: 'pons'.
     """
     from nipype.interfaces.freesurfer import FSCommand, ApplyVolTransform
@@ -1295,15 +1399,16 @@ def suvr(
                 # Calculate avg in reference region
                 print(f"Calculating average uptake in reference region: {ref}, PVC: {pvc}, space: {space}...")
 
-                if pvc == 'RBV-FS':
+                if pvc == 'RBV-FS' or pvc == 'MG-FS': #use PVC image to calculate ref region uptake
                     in_file = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-{pvc}_ref-none_trc-{trc}_pet.nii.gz")
-                else:
+                else: #use non-PVC image to calculate ref region uptake (as PVC image other than RBV-FS may have zero values in reference region)
                     in_file = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_space-{space}_pvc-none_ref-none_trc-{trc}_pet.nii.gz")
 
                 in_data = in_file.get_fdata()
                 mask_file = nib.load(f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_space-{space}_desc-{ref}_mask.nii.gz")
                 mask_data = mask_file.get_fdata()
                 masked_data = in_data[mask_data > 0]
+                masked_data = masked_data[masked_data > 0]  # Exclude zero values. Only find average uptake in reference region where PET uptake is greater than zero.
                 ref_region_avg = np.mean(masked_data)
 
                 print(f"Reference region {ref}, pvc {pvc}, space {space} average uptake: {ref_region_avg}")
@@ -1337,7 +1442,7 @@ def subcortical_map(
             -trc            : Tracer (eg. FDG, MK6240)
             -bids_dir       : Path to BIDS directory ( . or FULL PATH)
             -subj_dir       : Specify path to FreeSurfer/FastSurfer subjects directory.
-            -pvc_method     : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
+            -pvc_method     : PVC method used for PET image. Options: 'RBV-FS', 'MG-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
             -ref_region : Reference regions to use for projection. eg. 'pons','cerebellarGM','cerebellum','composite','WM','GM'. Default: 'pons'.
     """  
     from nibabel.processing import resample_from_to
@@ -1403,7 +1508,7 @@ def report(
             -trc            : Tracer (eg. FDG, MK6240)
             -bids_dir       : Path to BIDS directory ( . or FULL PATH)
             -subj_dir       : Specify path to FreeSurfer/FastSurfer subjects directory.
-            -pvc_method     : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
+            -pvc_method     : PVC method used for PET image. Options: 'RBV-FS', 'MG-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
             -ref_region : Reference regions to use for projection. eg. 'pons','cerebellarGM','cerebellum','composite','WM','GM'. Default: 'pons'.
             -hippocampal    : (Optional) Whether to include hippocampal surface in report. Default: True.
             -max_value      : (Optional) Maximum SUVR value for color scale. Default: 1.5 times the 85th percentile SUVR in the data.
@@ -2188,6 +2293,9 @@ def report(
         gc.collect()
         # display.stop()
 
+    # remove derivatives tmp directory
+    derivatives_tmp_files = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}/sub-{subject}/ses-{session}/tmp"
+    utils.cleanup_tmp(derivatives_tmp_files)
 
     utils.print_time_stamp("Report completed.")
 
@@ -2201,7 +2309,7 @@ if __name__ == "__main__":
             -session        : Session. (eg. 01)
             -trc            : Tracer (eg. FDG, MK6240)
             -bids_dir       : Path to BIDS directory ( . or FULL PATH)
-            -pvc_method     : PVC method used for PET image. Options: 'RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
+            -pvc_method     : PVC method used for PET image. Options: 'RBV-FS','MG-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
             -ref_region     : Reference regions to use for projection. eg. 'pons','cerebellarGM','cerebellum','composite','WM','GM'. Default: 'pons'.
             -psf            : Scanner PSF FWHM in mm (eg. 4.5).
             -fastsurfer_img : Path to FastSurfer .sif image.
@@ -2246,7 +2354,7 @@ if __name__ == "__main__":
     parser.add_argument("-session", type=str, required=True, help="(Str) Session (eg. '01')")
     parser.add_argument("-trc", dest="trc", type=str, required=True, help="Tracer (eg. FDG, MK6240).")
     parser.add_argument("-bids_dir", dest="bids_dir", type=str, required=True, help="(Str) Path to BIDS directory ( . or FULL PATH)")
-    parser.add_argument("-pvc_method", dest="pvc_method", required=True, type=str, default='RBV-FS', choices=['RBV-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'], help="(Str) PVC method used for PET image. Options: 'RBV-FS', 'MG','IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL' etc. Default: 'RBV-FS'.")
+    parser.add_argument("-pvc_method", dest="pvc_method", required=True, type=str, default='RBV-FS', choices=['RBV-FS','MG-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'], help="(Str) PVC method used for PET image. Options: 'RBV-FS', 'MG','IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL' etc. Default: 'RBV-FS'.")
     parser.add_argument("-ref_region",dest="ref_region", type=str, default='pons',help="Specify reference region. Default: pons.")
     parser.add_argument("-smoothing", dest="smoothing", type=float, nargs='*', default=0, help="(List of float) List of smoothing FWHM in mm for surface projection. eg. '-smoothing 5 10'. Default: 0 (no smoothing).")
     parser.add_argument("-psf", dest="psf", type=float, required=True, help="Scanner PSF in mm. Ask your PET physicist if unknown.", default=4.5)

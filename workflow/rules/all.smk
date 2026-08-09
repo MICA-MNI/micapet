@@ -10,50 +10,50 @@ warnings.filterwarnings("ignore", category=FutureWarning, module="google.api_cor
 warnings.filterwarnings("ignore", category=UserWarning, module="pkg_resources")
 warnings.filterwarnings("ignore", category=UserWarning, module="stopit")
 
-if not config.get("existing_freesurfer_dir", ""): 
-    rule fastsurfer:
-        input:
-            t1 = inputs['T1w'].path
-        output:
-            pial_lh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "lh.pial"),
-            pial_rh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "rh.pial"),
-            white_lh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "lh.white"),
-            white_rh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "rh.white"),
-            sphere_lh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "lh.sphere.reg"),
-            sphere_rh = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "rh.sphere.reg"),
-            norm = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "norm.mgz"),
-            talairach = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "transforms", "talairach.lta"),
-            brainmask = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "brainmask.mgz"),
-            aparc_aseg = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "aparc+aseg.mgz"),
-        params:
-            bids_dir = config["bids_dir"],
-            fs_license = config.get("fs_license"),
-            img = config.get("fastsurfer_img"),
-            # FastSurfer uses -subj_dir to specify where to write outputs
-            subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
-            # Required tmpdir argument
-            tmpdir = "/tmp",
-            log_dir = os.path.join(root, "logs", "fastsurfer"),
-            force = config.get("force", False),
-        log:
-            os.path.join(root, "logs", "fastsurfer", "sub-{subject}_ses-{session}.log")
-        threads: config.get("threads", 8)
-        shell:
-            '''
-            mkdir -p {params.log_dir}
-            python -u -c "from MICA_PET import fastsurfer; fastsurfer(
-                subject='{wildcards.subject}',
-                session='{wildcards.session}',
-                bids_dir='{params.bids_dir}',
-                subj_dir='{params.subj_dir}',
-                fastsurfer_img='{params.img}',
-                fs_license='{params.fs_license}',
-                threads={threads},
-                tmpdir='{params.tmpdir}',
-                force={params.force}
-            )" \
-                > {log} 2>&1
-            '''
+# if not config.get("existing_freesurfer_dir", ""): 
+rule fastsurfer:
+    input:
+        t1 = inputs['T1w'].path
+    output:
+        pial_lh = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "lh.pial"),
+        pial_rh = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "rh.pial"),
+        white_lh = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "lh.white"),
+        white_rh = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "rh.white"),
+        sphere_lh = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "lh.sphere.reg"),
+        sphere_rh = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "rh.sphere.reg"),
+        norm = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "norm.mgz"),
+        talairach = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "talairach.lta"),
+        brainmask = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "brainmask.mgz"),
+        aparc_aseg = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "aparc+aseg.mgz"),
+    params:
+        bids_dir = config["bids_dir"],
+        fs_license = config.get("fs_license"),
+        img = config.get("fastsurfer_img"),
+        # FastSurfer uses -subj_dir to specify where to write outputs
+        subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
+        # Required tmpdir argument
+        tmpdir = "/tmp",
+        log_dir = os.path.join(root, "logs", "fastsurfer"),
+        force = config.get("force", False),
+    log:
+        os.path.join(root, "logs", "fastsurfer", "sub-{subject}_ses-{session}.log")
+    threads: config.get("threads", 8)
+    shell:
+        '''
+        mkdir -p {params.log_dir}
+        python -u -c "from MICA_PET import fastsurfer; fastsurfer(
+            subject='{wildcards.subject}',
+            session='{wildcards.session}',
+            bids_dir='{params.bids_dir}',
+            subj_dir='{params.subj_dir}',
+            fastsurfer_img='{params.img}',
+            fs_license='{params.fs_license}',
+            threads={threads},
+            tmpdir='{params.tmpdir}',
+            force={params.force}
+        )" \
+            > {log} 2>&1
+        '''
 
 if not config.get("skip_hippunfold", False) and not config.get("existing_hippunfold_dir", ""): #runs hippunfold if flag not set and existing dir not specified, skip hippunfold if flag set or if existing dir specified
     rule hippunfold:
@@ -94,16 +94,16 @@ if not config.get("skip_hippunfold", False) and not config.get("existing_hippunf
 def get_cortical_surface_inputs(wildcards):
     """Get cortical surface inputs - mark as ancient if using existing outputs."""
     base_paths = {
-        "pial_lh": os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "lh.pial"),
-        "pial_rh": os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "rh.pial"),
-        "white_lh": os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "lh.white"),
-        "white_rh": os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "rh.white"),
-        "sphere_lh": os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "lh.sphere.reg"),
-        "sphere_rh": os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "surf", "rh.sphere.reg"),
-        "norm": os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "norm.mgz"),
-        "talairach": os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "transforms", "talairach.lta"),
-        "brainmask": os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "brainmask.mgz"),
-        "aparc_aseg": os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "aparc+aseg.mgz"),
+        "pial_lh": os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "lh.pial"),
+        "pial_rh": os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "rh.pial"),
+        "white_lh": os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "lh.white"),
+        "white_rh": os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "rh.white"),
+        "sphere_lh": os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "lh.sphere.reg"),
+        "sphere_rh": os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "rh.sphere.reg"),
+        "norm": os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "norm.mgz"),
+        "talairach": os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "talairach.lta"),
+        "brainmask": os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "brainmask.mgz"),
+        "aparc_aseg": os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "aparc+aseg.mgz"),
     }
     
     # # If using existing FreeSurfer dir, mark files as ancient (don't trigger fastsurfer rule)
@@ -183,7 +183,8 @@ def get_edge_reg_arg():
 
 def get_linear_coreg_fs_check(wildcards):
     """Get fs_check input - mark as ancient if using existing outputs."""
-    fs_check = os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "norm.mgz")
+    # fs_check = os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "norm.mgz")
+    fs_check = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "norm.mgz")
     if config.get("existing_freesurfer_dir", ""):
         return ancient(fs_check)
     return fs_check
@@ -239,10 +240,15 @@ rule linear_coreg:
 
 def get_gtm_seg_inputs(wildcards):
     """Get GTM seg inputs - mark as ancient if using existing outputs."""
+    # base_paths = {
+    #     "norm": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "norm.mgz"),
+    #     "talairach": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "transforms", "talairach.lta"),
+    #     "brainmask": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "brainmask.mgz"),
+    # }
     base_paths = {
-        "norm": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "norm.mgz"),
-        "talairach": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "transforms", "talairach.lta"),
-        "brainmask": os.path.join(root, FASTSURFER_DIR_NAME, f"sub-{wildcards.subject}_ses-{wildcards.session}", "mri", "brainmask.mgz"),
+        "norm": os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "norm.mgz"),
+        "talairach": os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "talairach.lta"),
+        "brainmask": os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "brainmask.mgz"),
     }
     if config.get("existing_freesurfer_dir", ""):
         return {k: ancient(v) for k, v in base_paths.items()}

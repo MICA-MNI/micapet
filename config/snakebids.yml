@@ -89,21 +89,18 @@ parse_args:
     default: 4.5
   
   --ref-region:
-    help: "Reference region for SUVR (pons, cerebellarGM, composite, none)"
+    help: "Reference region for SUVR (eg. pons, cerebellarGM, cerebellum, composite, GM, WM)"
     dest: ref_region
     default: "pons"
-    choices:
-      - pons
-      - cerebellarGM
-      - composite
-      - none
+    
 # added pvc-method arg + pvc-mask, n_iter, n_deconv, smoothing
   --pvc-method:
-    help: "Partial volume correction method (Options: 1) Freesurfer: RBV-FS; 2) PETPVC: MG, IY, LABBE, RL, VC, RBV, LABBE+RBV, RBV+VC, RBV+RL, LABBE+RBV+VC, LABBE+RBV+RL, MTC, LABBE+MTC, MTC+VC, MTC+RL, LABBE+MTC+VC, LABBE+MTC+RL, IY+VC, IY+RL, MG+VC, MG+RL. Default: RBV-FS)"
+    help: "Partial volume correction method (Options: 1) Freesurfer: RBV-FS, MG-FS; 2) PETPVC: MG, IY, LABBE, RL, VC, RBV, LABBE+RBV, RBV+VC, RBV+RL, LABBE+RBV+VC, LABBE+RBV+RL, MTC, LABBE+MTC, MTC+VC, MTC+RL, LABBE+MTC+VC, LABBE+MTC+RL, IY+VC, IY+RL, MG+VC, MG+RL. Default: RBV-FS)"
     dest: pvc_method
     default: "RBV-FS"
     choices:
       - RBV-FS
+      - MG-FS
       - MG
       - IY
       - MG

@@ -12,7 +12,7 @@ warnings.filterwarnings("ignore", category=FutureWarning, module="google.api_cor
 warnings.filterwarnings("ignore", category=UserWarning, module="pkg_resources")
 warnings.filterwarnings("ignore", category=UserWarning, module="stopit")
 
-MICA_PET_VERSION = 'v.alpha.0.6'
+MICA_PET_VERSION = 'v.beta.0.1'
 os.environ['MICA_PET_VERSION'] = MICA_PET_VERSION
 
 class bcolors:
@@ -232,6 +232,20 @@ def convert_array_to_gifti(input_array, output_path):
     # Save as GIfTI
     nib.save(gifti_image, output_path)
     print(f"Saved GIfTI file to {output_path}")
+
+def cleanup_tmp(tmp_dir):
+    """
+    Clean up temporary files in the specified directory.
+
+    Parameters:
+    - tmp_dir: str, path to the temporary directory to clean up.
+    """
+    import shutil
+    if os.path.exists(tmp_dir):
+        shutil.rmtree(tmp_dir)
+        print(f"Cleaned up temporary directory: {tmp_dir}")
+    else:
+        print(f"Temporary directory does not exist: {tmp_dir}")
 
 subcortical_dict = {'Left-Accumbens-area': 26,
 'Left-Amygdala': 18,
