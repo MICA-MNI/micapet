@@ -8,7 +8,7 @@
   "description": "MICA-PET is a BIDS-oriented pipeline for static PET processing, including anatomical processing, PET-to-MRI registration, partial-volume correction, SUVR normalization, surface mapping, and quality-control reports.",
   "command-line": "mkdir -p [OUTPUT_DIR] && conda run --no-capture-output -n mica-pet python /app/run.py [FS_LICENSE] [PSF] [REF_REGION] [PVC_METHOD] [PVC_MASK] [PVC_N_ITER] [PVC_N_DECONV] [SMOOTHING] [THREADS] [EXISTING_FS] [EXISTING_HIPP] [SKIP_HIPP] [NONLINEAR] [EDGE] [FORCE] [BIDS_DATASET] [OUTPUT_DIR] participant --cores [CORES] --participant-label [PARTICIPANT_LABEL] --nolock",
   "container-image": {
-    "image": "micalab/micapet:v.beta.0.1",
+    "image": "jacx11/micapet:v.beta.0.1",
     "index": "docker://",
     "type": "singularity"
   },
