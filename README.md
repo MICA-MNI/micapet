@@ -16,21 +16,25 @@ MICA-PET is a [snakemake](https://snakemake.readthedocs.io/en/stable/)/[snakebid
 ## Requirements
 
 Before installing the pipeline, make sure you have:
-
-- Python
-- Conda
-- Apptainer or Singularity installed on the host (if running Singularity version of MICA-PET or running FastSurfer and/or HippUnfold as part of the MICA-PET pipeline)
 - A valid [FreeSurfer license file](https://surfer.nmr.mgh.harvard.edu/registration.html)
 - [FreeSurfer](https://surfer.nmr.mgh.harvard.edu/fswiki/rel6downloads) installed (tested with v6.0)
-
-If not running the Singularity version of MICA-PET, also have:
+  
+### If running from a Conda environment: 
+- Conda
+- Apptainer/Singularity installed on the host (if running Singularity version of MICA-PET or running FastSurfer and/or HippUnfold as part of the MICA-PET pipeline)
 - [Connectome Workbench](https://www.humanconnectome.org/software/workbench-command) installed locally (tested with v2.2.1)
 
-Optional:
-- Singularity container images of [FastSurfer](https://github.com/Deep-MI/FastSurfer/releases/tag/v2.4.2) (tested with v2.4.2) and/or [HippUnfold](https://hippunfold.khanlab.ca/en/latest/index.html) (tested with v1.4.1), if running FastSurfer/HippUnfold via the MICA-PET pipeline
+### If running from the Apptainer/Singularity container:
+- Apptainer/Singularity
+  
+### Optional if FastSurfer and/or HippUnfold need to be run via the MICA-PET pipeline:
+- Singularity container images of [FastSurfer](https://github.com/Deep-MI/FastSurfer/releases/tag/v2.4.2) (tested with v2.4.2) 
+- [HippUnfold](https://hippunfold.khanlab.ca/en/latest/index.html) (tested with v1.4.1)
+- Not necessary if FastSurfer/FreeSurfer/HippUnfold already run or if HippUnfold outputs are not necessary
 
 ## Installation
 
+### Option #1: Conda environment
 ```bash
 git clone <repo-url>
 cd micapet
@@ -41,7 +45,7 @@ chmod +x run.py
 
 - For nonlinear co-registration to MNI152, please also download the [LAMAReg](https://github.com/MICA-MNI/LAMAReg) model weights into the [resources subdirectory](resources)
 
-## Apptainer/Singularity container
+### Option #2: Apptainer/Singularity container
 MICA-PET may also be run from an Apptainer/Singularity format (.sif) for use in HPC environments.
 
 ```bash
