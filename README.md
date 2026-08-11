@@ -49,10 +49,10 @@ chmod +x run.py
 MICA-PET may also be run from an Apptainer/Singularity format (.sif) for use in HPC environments.
 
 ```bash
-# Build singularity image from Docker Hub
-singularity build micapet.sif docker://micalab/micapet:v.beta.0.1
+# Either build singularity image from Docker Hub
+singularity build micapet.sif docker://jacx11/micapet:v.beta.0.1
 
-# Build singularity image locally
+# Or build singularity image locally
 export DOCKER_BUILDKIT=1
 export DOCKER_CONTENT_TRUST=0
 export SINGULARITY_TMPDIR=/path/to/tmpdir
@@ -67,8 +67,12 @@ singularity build micapet.sif docker-daemon://micapet:v.beta.0.1
 
 The CBRAIN descriptor is available at
 [`boutiques/micapet_v_beta_0_1.json`](boutiques/micapet_v_beta_0_1.json). It
-targets `docker://micalab/micapet:v.beta.0.1`; publish that container tag before
-importing the descriptor into CBRAIN.
+currently targets the temporary image
+`docker://jacx11/micapet:v.beta.0.1`. Rebuild that image from this revision so
+it contains the CBRAIN workflow fixes and bundled FreeSurfer runtime before
+importing the descriptor into CBRAIN. Replace the temporary image reference
+with `docker://micalab/micapet:v.beta.0.1` after the organization image is
+published.
 
 The CBRAIN integration accepts either a complete `BidsDataset` or one
 `BidsSubject` and requires a FreeSurfer license plus a subject-level
@@ -134,9 +138,9 @@ Run the workflow for one participant with:
   --hippunfold-img /path/to/hippunfold.sif \
   --fs-license /path/to/license.txt \
   --psf {psf} \
-  --ref_region {reference region} \
+  --ref-region {reference region} \
   --smoothing {FWHM} \
-  --pvc_method {PVC method} \
+  --pvc-method {PVC method} \
   {other parameters here} \
   /path/to/bids /path/to/bids/derivatives participant \
   --cores {# of cores or 'all'} \
@@ -149,14 +153,15 @@ Run the workflow for one participant with:
 Or via the container:
 ```bash
 # Run MICA-PET pipeline
-singularity run --cleanenv --env FS_LICENSE="/path/to/license.txt" \
--B ${BIDS_DIR}:/bids -B /path/to/LOCAL_FREESURFER_HOME:/micapet/freesurfer \
+singularity run --cleanenv \
+-B ${BIDS_DIR}:/bids \
+-B /path/to/license.txt:/license.txt:ro \
 /path/to/micapet.sif \
---fastsurfer_img /path/to/fastsurfer-cpu-v2.4.2.sif \
---hippunfold_img /path/to/hippunfold_v1.4.1.sif \
---fs_license /path/to/license.txt \
+--fastsurfer-img /path/to/fastsurfer-cpu-v2.4.2.sif \
+--hippunfold-img /path/to/hippunfold_v1.4.1.sif \
+--fs-license /license.txt \
 --psf ${psf} \
---ref_region ${ref_region} \
+--ref-region ${ref_region} \
 --smoothing 5 10 \
 --pvc-method ${pvc_method} \
 --existing-freesurfer-dir /path/to/existing/fastsurfer \
@@ -167,6 +172,10 @@ singularity run --cleanenv --env FS_LICENSE="/path/to/license.txt" \
 --participant-label ${subject} \
 {snakemake options}
 ```
+
+The MICA-PET container includes the FreeSurfer runtime required by PET
+registration, GTM segmentation, and PVC. A valid FreeSurfer license must still
+be supplied with `--fs-license` (and mounted into the container when needed).
 
 
 ### Mandatory parameters

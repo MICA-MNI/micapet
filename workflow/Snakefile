@@ -33,6 +33,13 @@ HIPPUNFOLD_DIR_NAME = "hippunfold_v1.4.1"
 root = config.get("output_dir", os.path.join(config["bids_dir"], "derivatives"))
 os.environ["MICA_PET_OUTPUT_DIR"] = root
 
+# FreeSurfer utilities invoked by downstream PET rules read the license from
+# the environment. The BIDS app exposes it as a CLI/config value, so propagate
+# that value for every rule rather than requiring an external container env.
+fs_license = config.get("fs_license")
+if fs_license:
+    os.environ["FS_LICENSE"] = str(Path(fs_license).resolve())
+
 # Set PYTHONPATH to include functions directory so scripts can import utils
 os.environ["PYTHONPATH"] = os.path.join(workflow.basedir, "..", "functions") + os.pathsep + os.environ.get("PYTHONPATH", "")
 
