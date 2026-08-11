@@ -102,6 +102,8 @@ BIDS
             └──_ses-<session>/           
 ```
 
+### Option #1: Conda environment
+
 Run the workflow for one participant with:
 
 ```bash
@@ -120,11 +122,13 @@ Run the workflow for one participant with:
   {snakemake options}
 ```
 
+### Option #2: Apptainer/Singularity container
+
 Or via the container:
 ```bash
 # Run MICA-PET pipeline
 singularity run --cleanenv --env FS_LICENSE="/path/to/license.txt" \
--B ${BIDS_DIR}:/bids -B /path/to/FREESURFER_HOME:/micapet/freesurfer \
+-B ${BIDS_DIR}:/bids -B /path/to/LOCAL_FREESURFER_HOME:/micapet/freesurfer \
 /path/to/micapet.sif \
 --fastsurfer_img /path/to/fastsurfer-cpu-v2.4.2.sif \
 --hippunfold_img /path/to/hippunfold_v1.4.1.sif \
