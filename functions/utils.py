@@ -24,6 +24,18 @@ def get_derivatives_root(bids_dir):
     )
 
 
+def get_rawdata_root(bids_dir):
+    """Return the raw BIDS root for standard and legacy MICA-PET layouts.
+
+    A standard BIDS dataset stores ``sub-*`` folders directly under its root.
+    Older MICA-PET projects place the same dataset below a ``rawdata`` folder.
+    Prefer the legacy folder only when it exists so CBRAIN's single-subject
+    BIDS staging remains standards-compatible.
+    """
+    legacy_root = os.path.join(bids_dir, "rawdata")
+    return legacy_root if os.path.isdir(legacy_root) else bids_dir
+
+
 class bcolors:
     RED = '\033[91m'
     PURPLE = '\033[95m'
@@ -143,8 +155,13 @@ def check_bids_dir(bids_dir, subject, session):
         Session identification.
     """
 
-    if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
-        print(f"Error: BIDS rawdata directory for subject {subject}, session {session} does not exist.")
+    subject_session_dir = os.path.join(
+        get_rawdata_root(bids_dir),
+        f"sub-{subject}",
+        f"ses-{session}",
+    )
+    if not os.path.exists(subject_session_dir):
+        print(f"Error: BIDS directory for subject {subject}, session {session} does not exist.")
         sys.exit(1)
 
 def print_time_stamp(message,colour="blue"):

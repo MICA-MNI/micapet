@@ -4,8 +4,9 @@
   "schema-version": "0.5",
   "author": "Multimodal Imaging and Connectome Analysis (MICA) Lab",
   "url": "https://github.com/MICA-MNI/micapet",
+  "descriptor-url": "https://github.com/MICA-MNI/micapet/blob/main/boutiques/micapet_v_beta_0_1.json",
   "description": "MICA-PET is a BIDS-oriented pipeline for static PET processing, including anatomical processing, PET-to-MRI registration, partial-volume correction, SUVR normalization, surface mapping, and quality-control reports.",
-  "command-line": "mkdir -p [OUTPUT_DIR] && conda run --no-capture-output -n mica-pet python /app/run.py [FASTSURFER_IMAGE] [HIPPUNFOLD_IMAGE] [FS_LICENSE] [PSF] [REF_REGION] [PVC_METHOD] [PVC_MASK] [PVC_N_ITER] [PVC_N_DECONV] [SMOOTHING] [THREADS] [HIPPUNFOLD_CACHE] [EXISTING_FS] [EXISTING_HIPP] [SKIP_HIPP] [NONLINEAR] [EDGE] [FORCE] [BIDS_DATASET] [OUTPUT_DIR] participant --cores [CORES] --participant-label [PARTICIPANT_LABEL] --nolock",
+  "command-line": "mkdir -p [OUTPUT_DIR] && conda run --no-capture-output -n mica-pet python /app/run.py [FS_LICENSE] [PSF] [REF_REGION] [PVC_METHOD] [PVC_MASK] [PVC_N_ITER] [PVC_N_DECONV] [SMOOTHING] [THREADS] [EXISTING_FS] [EXISTING_HIPP] [SKIP_HIPP] [NONLINEAR] [EDGE] [FORCE] [BIDS_DATASET] [OUTPUT_DIR] participant --cores [CORES] --participant-label [PARTICIPANT_LABEL] --nolock",
   "container-image": {
     "image": "micalab/micapet:v.beta.0.1",
     "index": "docker://",
@@ -15,7 +16,7 @@
     {
       "id": "bids_dir",
       "name": "BIDS dataset",
-      "description": "MICA-PET dataset root containing rawdata/sub-<label>/ses-<label> with anatomical and PET inputs.",
+      "description": "Standard BIDS dataset containing sub-<label>/ses-<label> anatomical and PET inputs. CBRAIN accepts either a BidsDataset or one BidsSubject; legacy MICA-PET projects with a rawdata subdirectory remain supported outside the single-subject integration.",
       "type": "File",
       "optional": false,
       "value-key": "[BIDS_DATASET]"
@@ -36,24 +37,6 @@
       "optional": false,
       "command-line-flag": "--fs-license",
       "value-key": "[FS_LICENSE]"
-    },
-    {
-      "id": "fastsurfer_image",
-      "name": "FastSurfer Singularity image",
-      "description": "FastSurfer v2.4.2 SIF image. Required unless existing FastSurfer or FreeSurfer outputs are supplied.",
-      "type": "File",
-      "optional": true,
-      "command-line-flag": "--fastsurfer-img",
-      "value-key": "[FASTSURFER_IMAGE]"
-    },
-    {
-      "id": "hippunfold_image",
-      "name": "HippUnfold Singularity image",
-      "description": "HippUnfold v1.4.1 SIF image. Required unless existing HippUnfold outputs are supplied or HippUnfold is skipped.",
-      "type": "File",
-      "optional": true,
-      "command-line-flag": "--hippunfold-img",
-      "value-key": "[HIPPUNFOLD_IMAGE]"
     },
     {
       "id": "psf",
@@ -191,27 +174,18 @@
       "value-key": "[CORES]"
     },
     {
-      "id": "hippunfold_cache_dir",
-      "name": "HippUnfold cache directory",
-      "description": "Optional existing HippUnfold cache directory.",
-      "type": "File",
-      "optional": true,
-      "command-line-flag": "--hippunfold-cache-dir",
-      "value-key": "[HIPPUNFOLD_CACHE]"
-    },
-    {
       "id": "existing_freesurfer_dir",
-      "name": "Existing FreeSurfer or FastSurfer outputs",
-      "description": "Existing subject-level FreeSurfer or FastSurfer output directory to reuse instead of running FastSurfer.",
+      "name": "FastSurfer or FreeSurfer output",
+      "description": "Required subject-level FastSurfer or FreeSurfer output. On CBRAIN, select the FastSurferOutput or ReconAllOutput produced for this participant and session. MICA-PET copies it into the writable result before adding derived surfaces.",
       "type": "File",
-      "optional": true,
+      "optional": false,
       "command-line-flag": "--existing-freesurfer-dir",
       "value-key": "[EXISTING_FS]"
     },
     {
       "id": "existing_hippunfold_dir",
-      "name": "Existing HippUnfold outputs",
-      "description": "Existing subject and session-level HippUnfold output directory to reuse.",
+      "name": "HippUnfold output",
+      "description": "HippUnfold output collection for this participant and session. On CBRAIN, select a HippunfoldOutput. Required unless hippocampal processing is skipped.",
       "type": "File",
       "optional": true,
       "command-line-flag": "--existing-hippunfold-dir",
@@ -267,22 +241,10 @@
   ],
   "groups": [
     {
-      "id": "fastsurfer_source",
-      "name": "FastSurfer source",
-      "description": "Run FastSurfer from a SIF image or reuse one existing subject output directory.",
-      "members": [
-        "fastsurfer_image",
-        "existing_freesurfer_dir"
-      ],
-      "mutually-exclusive": true,
-      "one-is-required": true
-    },
-    {
       "id": "hippunfold_source",
       "name": "HippUnfold source",
-      "description": "Run HippUnfold from a SIF image, reuse an existing output directory, or skip hippocampal processing.",
+      "description": "Reuse a CBRAIN HippUnfold result or skip hippocampal processing. Running a nested container inside the MICA-PET CBRAIN container is intentionally not exposed.",
       "members": [
-        "hippunfold_image",
         "existing_hippunfold_dir",
         "skip_hippunfold"
       ],
@@ -294,9 +256,6 @@
       "name": "Anatomical processing inputs",
       "members": [
         "fs_license",
-        "fastsurfer_image",
-        "hippunfold_image",
-        "hippunfold_cache_dir",
         "existing_freesurfer_dir",
         "existing_hippunfold_dir",
         "skip_hippunfold"
@@ -349,7 +308,31 @@
   },
   "custom": {
     "cbrain:readonly-input-files": true,
+    "cbrain:author": "Multimodal Imaging and Connectome Analysis (MICA) Lab",
     "cbrain:integrator_modules": {
+      "BoutiquesBidsSingleSubjectMaker": {
+        "dataset_input_id": "bids_dir",
+        "subjects_input_id": "participant_label",
+        "keep_sub_prefix": false
+      },
+      "BoutiquesFileTypeVerifier": {
+        "fs_license": [
+          "FreesurferLicense",
+          "TextFile",
+          "SingleFile"
+        ],
+        "existing_freesurfer_dir": [
+          "ReconAllOutput"
+        ],
+        "existing_hippunfold_dir": [
+          "HippunfoldOutput"
+        ],
+        "pvc_mask": [
+          "NiftiFile",
+          "SingleFile"
+        ]
+      },
+      "BoutiquesFreesurferLicenseFinder": "fs_license",
       "BoutiquesOutputCacheCleaner": [
         "output_dir"
       ]

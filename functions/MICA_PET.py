@@ -60,10 +60,15 @@ def dicom_convert(
     utils.print_time_stamp(f"Starting FastSurfer for subject: {subject}, session: {session}.")
 
     # Create BIDS directory structure if it doesn't exist
-    if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}"):
-        os.makedirs(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}")
-        os.makedirs(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat")
-        os.makedirs(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet")
+    rawdata_root = utils.get_rawdata_root(bids_dir)
+    subject_session_dir = os.path.join(
+        rawdata_root,
+        f"sub-{subject}",
+        f"ses-{session}",
+    )
+    if not os.path.exists(subject_session_dir):
+        os.makedirs(os.path.join(subject_session_dir, "anat"))
+        os.makedirs(os.path.join(subject_session_dir, "pet"))
 
     # DICOM to NIfTI conversion using dcm2niixpy
     dcm2niix = dcm2niixpy.DCM2NIIX(version="1.0.20241211")
@@ -78,7 +83,7 @@ def dicom_convert(
     elif image_type == "anat":
         dcm2niix.filename = f"sub-{subject}_ses-{session}_T1w"
 
-    dcm2niix.convert(dicom_dir,output_path=f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/{image_type}")
+    dcm2niix.convert(dicom_dir, output_path=os.path.join(subject_session_dir, image_type))
 
     utils.print_time_stamp("DICOM to NIfTI conversion completed.")
 
@@ -108,19 +113,11 @@ def fastsurfer(
         -force      : (Optional) Force FastSurfer even if output exists.
         -tmpdir     : Path to temporary directory.
     """
-    from spython.main import Client
     from utils import bcolors
     from pathlib import Path
     import subprocess
 
     utils.print_time_stamp(f"Starting FastSurfer for subject: {subject}, session: {session}.")
-
-    # Check if FastSurfer image exists
-    if os.path.exists(fastsurfer_img):
-            print(f"Using FastSurfer image at {fastsurfer_img}")
-    else:
-        print(f"Error: FastSurfer image not found at {fastsurfer_img}")
-        sys.exit(1)
 
     def copy_FSfiles_to_tmp(subj_dir, subject, session, bids_dir):
         # copy to tmp to avoid deletion of original files if snakemake fails on fastsurfer rule
@@ -160,8 +157,21 @@ def fastsurfer(
     elif os.path.exists(f"{subj_dir}/sub-{subject}_ses-{session}") and force==True:
         shutil.rmtree(f"{subj_dir}/sub-{subject}_ses-{session}", ignore_errors=True)
 
+    # A container image is needed only when no reusable subject output exists.
+    if fastsurfer_img and os.path.exists(fastsurfer_img):
+        print(f"Using FastSurfer image at {fastsurfer_img}")
+    else:
+        print(f"Error: FastSurfer image not found at {fastsurfer_img}")
+        sys.exit(1)
+
     # Check if T1w image exists
-    T1_path = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+    T1_path = os.path.join(
+        utils.get_rawdata_root(bids_dir),
+        f"sub-{subject}",
+        f"ses-{session}",
+        "anat",
+        f"sub-{subject}_ses-{session}_T1w.nii.gz",
+    )
     if not os.path.exists(T1_path):
         print(f"Error: T1w image not found at {T1_path}")
         sys.exit(1)
@@ -285,7 +295,14 @@ def hippunfold(
 
     # Check T1 path
     if T1_path is None: #check if user inputted T1_path 
-        if not os.path.exists(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"): # if not T1_path inputted, does T1w image exist already in BIDS?
+        default_t1_path = os.path.join(
+            utils.get_rawdata_root(bids_dir),
+            f"sub-{subject}",
+            f"ses-{session}",
+            "anat",
+            f"sub-{subject}_ses-{session}_T1w.nii.gz",
+        )
+        if not os.path.exists(default_t1_path): # if not T1_path inputted, does T1w image exist already in BIDS?
             print(f"Error: T1w image for subject {subject}, session {session} does not exist. Please specify T1_path argument and replace subject name with "+"{subject}.")
             sys.exit(1)
         else: 
@@ -502,13 +519,25 @@ def linear_coreg(
 
     # Check if PET/MRI exists
     if pet is None:
-        pet = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-{trc}_pet.nii.gz"
+        pet = os.path.join(
+            utils.get_rawdata_root(bids_dir),
+            f"sub-{subject}",
+            f"ses-{session}",
+            "pet",
+            f"sub-{subject}_ses-{session}_trc-{trc}_pet.nii.gz",
+        )
     if not os.path.exists(pet):
         print(f"Error: PET image {pet} does not exist. Please specify pet argument.")
         sys.exit(1)
 
     if mri is None: 
-        mri = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/anat/sub-{subject}_ses-{session}_T1w.nii.gz"
+        mri = os.path.join(
+            utils.get_rawdata_root(bids_dir),
+            f"sub-{subject}",
+            f"ses-{session}",
+            "anat",
+            f"sub-{subject}_ses-{session}_T1w.nii.gz",
+        )
         if not os.path.exists(mri):
             print(f"Error: MRI image for subject {subject}, session {session} does not exist. Please specify mri argument.")
             sys.exit(1)
@@ -517,7 +546,13 @@ def linear_coreg(
         sys.exit(1)
 
     # Check if transmission PET scan exists
-    transmission_list = sorted(glob.glob(f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_*transmission*.nii.gz"))
+    transmission_list = sorted(glob.glob(os.path.join(
+        utils.get_rawdata_root(bids_dir),
+        f"sub-{subject}",
+        f"ses-{session}",
+        "pet",
+        f"sub-{subject}_ses-{session}_*transmission*.nii.gz",
+    )))
     if len(transmission_list) > 1:
         print(f"Warning: Multiple transmission scans found for subject {subject}, session {session}. Using the first one found: {transmission_list[0]}")
     transmission = transmission_list[0] if len(transmission_list) > 0 else None
@@ -1069,7 +1104,13 @@ def pvc(
             sys.exit(1)
 
         gtmpvc = freesurfer.GTMPVC()
-        gtmpvc.inputs.in_file = f"{bids_dir}/rawdata/sub-{subject}/ses-{session}/pet/sub-{subject}_ses-{session}_trc-{trc}_pet.nii.gz"
+        gtmpvc.inputs.in_file = os.path.join(
+            utils.get_rawdata_root(bids_dir),
+            f"sub-{subject}",
+            f"ses-{session}",
+            "pet",
+            f"sub-{subject}_ses-{session}_trc-{trc}_pet.nii.gz",
+        )
         gtmpvc.inputs.reg_file = f'{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm/sub-{subject}_ses-{session}_trc-{trc}_from-pet_to-T1wFS_xfm.reg.lta'
         gtmpvc.inputs.psf = psf
         gtmpvc.inputs.segmentation = f"{f_surf_dir}/mri/gtmseg.mgz"

@@ -7,7 +7,7 @@ USER root
 # ==========================================
 ENV DEBIAN_FRONTEND=noninteractive \
     LC_ALL=C \
-    FREESURFER_HOME="/micapet/freesurfer" \ 
+    FREESURFER_HOME="/micapet/freesurfer" \
     ANTSPATH="/opt/ants" \
     AFNIPATH="/opt/AFNI" \
     CONDA_DIR="/opt/conda" \
@@ -17,7 +17,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     GOPATH="/root/go" \
     VTK_DEFAULT_OPENGL_WINDOW='vtkOSOpenGLRenderWindow' \
     MESA_GL_VERSION_OVERRIDE=3.3 \
-    MICA_PET_VERSION="v.alpha.0.6"
+    MICA_PET_VERSION="v.beta.0.1"
 
     # FREESURFER_HOME="/opt/freesurfer-7.4.1" \
 

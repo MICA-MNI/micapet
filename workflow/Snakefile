@@ -1,5 +1,6 @@
 # ---- snakebids boilerplate ----
 import os
+import shutil
 import sys
 from pathlib import Path  # 1. Added missing Path import
 import snakebids
@@ -80,12 +81,81 @@ if config.get("hippunfold_threads") is None:
 if config.get("gtmseg_threads") is None:
     config["gtmseg_threads"] = max(8, int(TOTAL_CORES * 0.5))
 
-# --- Handle Existing Outputs via Symbolic Links ---
-# If user provides paths to existing FreeSurfer/HippUnfold outputs,
-# create symbolic links to avoid rerunning those steps
-def setup_existing_outputs_symlinks():
-    """Create subject-level symbolic links to existing outputs if provided."""
-    import glob
+# --- Stage Existing Anatomical Outputs ---
+# MICA-PET adds derived surface files to the FastSurfer tree. Copy reused
+# outputs into the writable result directory instead of modifying CBRAIN's
+# shared, read-only input cache through a symbolic link.
+def _is_freesurfer_subject(path):
+    path = Path(path)
+    return all((path / relative).exists() for relative in (
+        "mri/aparc+aseg.mgz",
+        "mri/brainmask.mgz",
+        "mri/norm.mgz",
+        "mri/orig.mgz",
+        "mri/transforms/talairach.lta",
+        "surf/lh.pial",
+        "surf/lh.sphere.reg",
+        "surf/lh.white",
+        "surf/rh.pial",
+        "surf/rh.sphere.reg",
+        "surf/rh.white",
+    ))
+
+
+def _resolve_freesurfer_subject(source, subject, session):
+    source = Path(source)
+    subject_name = f"sub-{subject}_ses-{session}"
+    candidates = (source, source / subject_name)
+    for candidate in candidates:
+        if _is_freesurfer_subject(candidate):
+            return candidate
+    raise FileNotFoundError(
+        f"Could not find FreeSurfer/FastSurfer outputs for {subject_name} in {source}"
+    )
+
+
+def _is_hippunfold_session(path, subject, session):
+    path = Path(path)
+    surf_dir = path / "surf"
+    expected_prefix = f"sub-{subject}_ses-{session}"
+    return all((surf_dir / filename).exists() for filename in (
+        f"{expected_prefix}_hemi-L_space-T1w_den-2mm_label-hipp_midthickness.surf.gii",
+        f"{expected_prefix}_hemi-R_space-T1w_den-2mm_label-hipp_midthickness.surf.gii",
+    ))
+
+
+def _resolve_hippunfold_session(source, subject, session):
+    source = Path(source)
+    subject_dir = f"sub-{subject}"
+    session_dir = f"ses-{session}"
+    candidates = (
+        source,
+        source / "hippunfold" / subject_dir / session_dir,
+        source / subject_dir / session_dir,
+    )
+    for candidate in candidates:
+        if _is_hippunfold_session(candidate, subject, session):
+            return candidate
+    raise FileNotFoundError(
+        f"Could not find HippUnfold outputs for {subject_dir}/{session_dir} in {source}"
+    )
+
+
+def _copy_existing_output(source, target):
+    source = Path(source).resolve()
+    target = Path(target)
+    if target.is_symlink():
+        target.unlink()
+    if target.exists():
+        print(f"  Refreshing staged output: {source} -> {target}")
+    else:
+        print(f"  Copying read-only input into result directory: {source} -> {target}")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(source, target, symlinks=False, dirs_exist_ok=True)
+
+
+def setup_existing_outputs():
+    """Copy selected subject/session outputs into the writable result tree."""
     
     existing_fs = config.get("existing_freesurfer_dir")
     existing_hipp = config.get("existing_hippunfold_dir")
@@ -96,9 +166,9 @@ def setup_existing_outputs_symlinks():
     # Handle FastSurfer/FreeSurfer outputs at subject level
     if existing_fs and existing_fs != "null":
         
-        utils.print_time_stamp("Setting up symbolic links to existing FreeSurfer/FastSurfer outputs...","blue")
+        utils.print_time_stamp("Staging existing FreeSurfer/FastSurfer outputs...", "blue")
         
-        target_base = os.path.join(root, FASTSURFER_DIR_NAME) # fastsurfer
+        target_base = os.path.join(root, FASTSURFER_DIR_NAME)
         os.makedirs(target_base, exist_ok=True)
         
         for idx in range(len(subject_list)):
@@ -106,55 +176,29 @@ def setup_existing_outputs_symlinks():
             session = session_list[idx]
             print(f"Processing subject {subject}, session {session} for existing FreeSurfer/FastSurfer outputs...")
             
-            existing_subject = glob.glob(os.path.join(existing_fs)) # fastsurfer/sub-{sub}_ses-{ses}
-            
-            if existing_subject:
-                print(f"Found existing FreeSurfer/FastSurfer output for subject {subject}, session {session} in {existing_fs}")
-                subj_dir = existing_subject[0]  # Take the first match
-                subj_name = os.path.basename(subj_dir)  # e.g., sub-01_ses-01
-                target = os.path.join(target_base, subj_name)
-                
-                if not os.path.exists(target):
-                    print(f"  Creating symlink: {subj_dir} -> {target}")
-                    os.symlink(subj_dir, target, target_is_directory=True)
-                else:
-                    print(f"  Subject/session already exists: {subj_dir}")
-            else:
-                print(f"Warning: No FreeSurfer/FastSurfer output found for subject {subject}, session {session} in {existing_fs}")
+            source = _resolve_freesurfer_subject(existing_fs, subject, session)
+            target = Path(target_base) / f"sub-{subject}_ses-{session}"
+            _copy_existing_output(source, target)
             
     
     # Handle HippUnfold outputs at subject level
     if existing_hipp and existing_hipp != "null":
-        target_base = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold") #hippunfold_v1.4.1/hippunfold
-        print(os.path.join(target_base, f"sub-{subject}",f"ses-{session}"))
-        os.makedirs(os.path.join(target_base, f"sub-{subject}"), exist_ok=True)
+        target_base = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold")
         
-        utils.print_time_stamp("Setting up symbolic links to existing Hippunfold outputs...","blue")
+        utils.print_time_stamp("Staging existing HippUnfold outputs...", "blue")
         
         for idx in range(len(subject_list)):
             subject = subject_list[idx]
             session = session_list[idx]
             print(f"Processing subject {subject}, session {session} for existing Hippunfold outputs...")
             
-            existing_subject = glob.glob(os.path.join(existing_hipp)) #hippunfold_v1.4.1/hippunfold/sub-{sub}/ses-{ses}
-            
-            if existing_subject:
-                print(f"Found existing HippUnfold output for subject {subject}, session {session} in {existing_hipp}")
-                ses_dir = existing_subject[0]  # Take the first match
-                ses_name = os.path.basename(ses_dir)  # e.g., ses-01
-                target = os.path.join(target_base, f"sub-{subject}",f"ses-{session}") #hippunfold_v1.4.1/hippunfold/sub-{sub}/ses-{ses}
-                
-                if not os.path.exists(target):
-                    print(f"  Creating symlink: {ses_dir} -> {target}")
-                    os.symlink(ses_dir, target, target_is_directory=True)
-                else:
-                    print(f"  Subject/session already exists: {ses_dir}")
-            else:
-                print(f"Warning: No HippUnfold output found for subject {subject}, session {session} in {existing_hipp}")
+            source = _resolve_hippunfold_session(existing_hipp, subject, session)
+            target = Path(target_base) / f"sub-{subject}" / f"ses-{session}"
+            _copy_existing_output(source, target)
         
 
-# Call setup function before workflow starts
-setup_existing_outputs_symlinks()
+# Stage reusable anatomical outputs before workflow execution.
+setup_existing_outputs()
 
 # --- Wildcard constraints ---
 wildcard_constraints:
