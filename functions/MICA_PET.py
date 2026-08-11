@@ -124,7 +124,13 @@ def fastsurfer(
 
     def copy_FSfiles_to_tmp(subj_dir, subject, session, bids_dir):
         # copy to tmp to avoid deletion of original files if snakemake fails on fastsurfer rule
-        derivatives_tmp_dir = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}/sub-{subject}/ses-{session}/tmp"
+        derivatives_tmp_dir = os.path.join(
+            utils.get_derivatives_root(bids_dir),
+            f"MICA-PET_{utils.MICA_PET_VERSION}",
+            f"sub-{subject}",
+            f"ses-{session}",
+            "tmp",
+        )
         os.makedirs(derivatives_tmp_dir, exist_ok=True)
 
         for file in [
@@ -261,7 +267,10 @@ def hippunfold(
 
     # Check if HippUnfold directory exists
     if hippunfold_dir is None: #check if user inputted hippunfold_dir
-        hippunfold_dir = f"{bids_dir}/derivatives/hippunfold_v1.4.1"
+        hippunfold_dir = os.path.join(
+            utils.get_derivatives_root(bids_dir),
+            "hippunfold_v1.4.1",
+        )
         os.makedirs(hippunfold_dir,exist_ok=True) #makes hippunfold_dir if it doesn't already exist
     elif not os.path.exists(hippunfold_dir):
         print(f"Error: HippUnfold directory not found at {hippunfold_dir}")
@@ -363,7 +372,10 @@ def cortical_surface(
     from nipype.interfaces.workbench.base import WBCommand
 
     f_surf_dir = f"{os.path.realpath(subj_dir)}/sub-{subject}_ses-{session}"
-    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}"
+    mica_pet_derivatives = os.path.join(
+        utils.get_derivatives_root(bids_dir),
+        f"MICA-PET_{utils.MICA_PET_VERSION}",
+    )
     FSCommand.set_default_subjects_dir(subj_dir)
 
     # Check if surface files exists
@@ -482,7 +494,10 @@ def linear_coreg(
     from nipype.interfaces.freesurfer import MRICoreg, ApplyVolTransform, FSCommand, MRIConvert, FSCommand
     from nipype.interfaces.freesurfer.utils import LTAConvert
 
-    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}"
+    mica_pet_derivatives = os.path.join(
+        utils.get_derivatives_root(bids_dir),
+        f"MICA-PET_{utils.MICA_PET_VERSION}",
+    )
     FSCommand.set_default_subjects_dir(subj_dir)
 
     # Check if PET/MRI exists
@@ -791,7 +806,10 @@ def nonlinear_coreg(
         print(f"Error: lamareg weights not found at {lamareg_weights_path}. Please ensure the lamareg weights are downloaded.")
         sys.exit(1)
 
-    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}"
+    mica_pet_derivatives = os.path.join(
+        utils.get_derivatives_root(bids_dir),
+        f"MICA-PET_{utils.MICA_PET_VERSION}",
+    )
 
     for pvc in ['none']:
         # register PET to MNI
@@ -862,7 +880,10 @@ def gtm_seg(
     """
 
     from nipype.interfaces.freesurfer import ApplyVolTransform, MRIConvert, GTMSeg, CARegister
-    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}"
+    mica_pet_derivatives = os.path.join(
+        utils.get_derivatives_root(bids_dir),
+        f"MICA-PET_{utils.MICA_PET_VERSION}",
+    )
     f_surf_dir = f"{os.path.realpath(subj_dir)}/sub-{subject}_ses-{session}"
 
     # Determine segmentation type   
@@ -1016,7 +1037,10 @@ def pvc(
     """
     from nipype.interfaces.freesurfer import FSCommand
     f_surf_dir = f"{os.path.realpath(subj_dir)}/sub-{subject}_ses-{session}"
-    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}"
+    mica_pet_derivatives = os.path.join(
+        utils.get_derivatives_root(bids_dir),
+        f"MICA-PET_{utils.MICA_PET_VERSION}",
+    )
     FSCommand.set_default_subjects_dir(subj_dir)
 
     utils.print_time_stamp(f"Starting PVC for subject: {subject}, session: {session}, tracer: {trc}, method: {pvc_method}.")
@@ -1180,7 +1204,10 @@ def project_pet_data(
     import pandas as pd
     from pathlib import Path
 
-    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}"
+    mica_pet_derivatives = os.path.join(
+        utils.get_derivatives_root(bids_dir),
+        f"MICA-PET_{utils.MICA_PET_VERSION}",
+    )
     f_surf_dir = f"{os.path.realpath(subj_dir)}/sub-{subject}_ses-{session}"
     FSCommand.set_default_subjects_dir(subj_dir)
 
@@ -1210,7 +1237,10 @@ def project_pet_data(
     # check if hippunfold_dir exists
     if hippocampal:
         if hippunfold_dir is None: #check if user inputted hippunfold_dir
-            hippunfold_dir = f"{bids_dir}/derivatives/hippunfold_v1.4.1" 
+            hippunfold_dir = os.path.join(
+                utils.get_derivatives_root(bids_dir),
+                "hippunfold_v1.4.1",
+            )
             if not os.path.exists(hippunfold_dir):
                 print(f"Error: HippUnfold directory {hippunfold_dir} does not exist.")
                 sys.exit(1)
@@ -1331,7 +1361,10 @@ def suvr(
     ref_region_list = ref_region_list_df.ref_region.to_list()
     
     f_surf_dir = f"{os.path.realpath(subj_dir)}/sub-{subject}_ses-{session}"
-    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}"
+    mica_pet_derivatives = os.path.join(
+        utils.get_derivatives_root(bids_dir),
+        f"MICA-PET_{utils.MICA_PET_VERSION}",
+    )
     FSCommand.set_default_subjects_dir(subj_dir)
 
     utils.print_time_stamp(f"Starting SUVR calculation for subject: {subject}, session: {session}, tracer: {trc}, PVC method: {pvc_method}, reference regions: {ref_region}.")
@@ -1448,7 +1481,10 @@ def subcortical_map(
     from nibabel.processing import resample_from_to
     import csv
     f_surf_dir = f"{os.path.realpath(subj_dir)}/sub-{subject}_ses-{session}"
-    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}"
+    mica_pet_derivatives = os.path.join(
+        utils.get_derivatives_root(bids_dir),
+        f"MICA-PET_{utils.MICA_PET_VERSION}",
+    )
     qc_dir = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/qc"
 
     space='T1wFS'
@@ -1532,7 +1568,10 @@ def report(
     PathType = Union[str, os.PathLike]
     Analysis = Literal["regional", "asymmetry"]
 
-    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}"
+    mica_pet_derivatives = os.path.join(
+        utils.get_derivatives_root(bids_dir),
+        f"MICA-PET_{utils.MICA_PET_VERSION}",
+    )
     f_surf_dir = f"{os.path.realpath(subj_dir)}/sub-{subject}_ses-{session}"
     qc_dir = f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/qc"
     FSCommand.set_default_subjects_dir(subj_dir)
@@ -1864,7 +1903,10 @@ def report(
 
     def plot_roi(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc,pvc_method):
         pet_derivatives=f'{mica_pet_derivatives}'
-        mri_derivatives=f'{bids_dir}/derivatives/fastsurfer'
+        mri_derivatives = os.path.join(
+            utils.get_derivatives_root(bids_dir),
+            "fastsurfer",
+        )
 
         img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_SUVR_plot_roi_clin_report.png"
 
@@ -1884,7 +1926,10 @@ def report(
         from utils import convert_array_to_gifti
 
         pet_derivatives=f'{mica_pet_derivatives}'
-        mri_derivatives=f'{bids_dir}/derivatives/fastsurfer'
+        mri_derivatives = os.path.join(
+            utils.get_derivatives_root(bids_dir),
+            "fastsurfer",
+        )
         pvc_method = 'none'
         Z_score_threhold = 1.96
 
@@ -2294,7 +2339,13 @@ def report(
         # display.stop()
 
     # remove derivatives tmp directory
-    derivatives_tmp_files = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}/sub-{subject}/ses-{session}/tmp"
+    derivatives_tmp_files = os.path.join(
+        utils.get_derivatives_root(bids_dir),
+        f"MICA-PET_{utils.MICA_PET_VERSION}",
+        f"sub-{subject}",
+        f"ses-{session}",
+        "tmp",
+    )
     utils.cleanup_tmp(derivatives_tmp_files)
 
     utils.print_time_stamp("Report completed.")

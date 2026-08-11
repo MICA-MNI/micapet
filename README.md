@@ -63,6 +63,22 @@ docker build -t micapet:v.beta.0.1 .
 singularity build micapet.sif docker-daemon://micapet:v.beta.0.1
 ```
 
+### CBRAIN / Boutiques
+
+The CBRAIN descriptor is available at
+[`boutiques/micapet_v_beta_0_1.json`](boutiques/micapet_v_beta_0_1.json). It
+targets `docker://micalab/micapet:v.beta.0.1`; publish that container tag before
+importing the descriptor into CBRAIN.
+
+In addition to a MICA-PET BIDS dataset and participant label, CBRAIN requires a
+FreeSurfer license. Supply the FastSurfer v2.4.2 and HippUnfold v1.4.1 SIF files
+unless existing outputs are being reused or HippUnfold is skipped. Validate the
+descriptor with:
+
+```bash
+bosh validate boutiques/micapet_v_beta_0_1.json
+```
+
 <!--### Docker
 The latest Docker image can be pulled from Docker Hub
 

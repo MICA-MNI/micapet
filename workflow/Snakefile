@@ -30,6 +30,7 @@ HIPPUNFOLD_DIR_NAME = "hippunfold_v1.4.1"
 
 # Output root directory (from snakebids app or config)
 root = config.get("output_dir", os.path.join(config["bids_dir"], "derivatives"))
+os.environ["MICA_PET_OUTPUT_DIR"] = root
 
 # Set PYTHONPATH to include functions directory so scripts can import utils
 os.environ["PYTHONPATH"] = os.path.join(workflow.basedir, "..", "functions") + os.pathsep + os.environ.get("PYTHONPATH", "")

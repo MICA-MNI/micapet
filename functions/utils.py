@@ -15,6 +15,15 @@ warnings.filterwarnings("ignore", category=UserWarning, module="stopit")
 MICA_PET_VERSION = 'v.beta.0.1'
 os.environ['MICA_PET_VERSION'] = MICA_PET_VERSION
 
+
+def get_derivatives_root(bids_dir):
+    """Return the configured derivatives root, falling back to BIDS defaults."""
+    return os.environ.get(
+        "MICA_PET_OUTPUT_DIR",
+        os.path.join(bids_dir, "derivatives"),
+    )
+
+
 class bcolors:
     RED = '\033[91m'
     PURPLE = '\033[95m'

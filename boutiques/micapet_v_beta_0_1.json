@@ -1,0 +1,358 @@
+{
+  "name": "micapet",
+  "tool-version": "v.beta.0.1",
+  "schema-version": "0.5",
+  "author": "Multimodal Imaging and Connectome Analysis (MICA) Lab",
+  "url": "https://github.com/MICA-MNI/micapet",
+  "description": "MICA-PET is a BIDS-oriented pipeline for static PET processing, including anatomical processing, PET-to-MRI registration, partial-volume correction, SUVR normalization, surface mapping, and quality-control reports.",
+  "command-line": "mkdir -p [OUTPUT_DIR] && conda run --no-capture-output -n mica-pet python /app/run.py [FASTSURFER_IMAGE] [HIPPUNFOLD_IMAGE] [FS_LICENSE] [PSF] [REF_REGION] [PVC_METHOD] [PVC_MASK] [PVC_N_ITER] [PVC_N_DECONV] [SMOOTHING] [THREADS] [HIPPUNFOLD_CACHE] [EXISTING_FS] [EXISTING_HIPP] [SKIP_HIPP] [NONLINEAR] [EDGE] [FORCE] [BIDS_DATASET] [OUTPUT_DIR] participant --cores [CORES] --participant-label [PARTICIPANT_LABEL] --nolock",
+  "container-image": {
+    "image": "micalab/micapet:v.beta.0.1",
+    "index": "docker://",
+    "type": "singularity"
+  },
+  "inputs": [
+    {
+      "id": "bids_dir",
+      "name": "BIDS dataset",
+      "description": "MICA-PET dataset root containing rawdata/sub-<label>/ses-<label> with anatomical and PET inputs.",
+      "type": "File",
+      "optional": false,
+      "value-key": "[BIDS_DATASET]"
+    },
+    {
+      "id": "participant_label",
+      "name": "Participant label",
+      "description": "Participant identifier without the sub- prefix.",
+      "type": "String",
+      "optional": false,
+      "value-key": "[PARTICIPANT_LABEL]"
+    },
+    {
+      "id": "fs_license",
+      "name": "FreeSurfer license",
+      "description": "FreeSurfer license.txt file.",
+      "type": "File",
+      "optional": false,
+      "command-line-flag": "--fs-license",
+      "value-key": "[FS_LICENSE]"
+    },
+    {
+      "id": "fastsurfer_image",
+      "name": "FastSurfer Singularity image",
+      "description": "FastSurfer v2.4.2 SIF image. Required unless existing FastSurfer or FreeSurfer outputs are supplied.",
+      "type": "File",
+      "optional": true,
+      "command-line-flag": "--fastsurfer-img",
+      "value-key": "[FASTSURFER_IMAGE]"
+    },
+    {
+      "id": "hippunfold_image",
+      "name": "HippUnfold Singularity image",
+      "description": "HippUnfold v1.4.1 SIF image. Required unless existing HippUnfold outputs are supplied or HippUnfold is skipped.",
+      "type": "File",
+      "optional": true,
+      "command-line-flag": "--hippunfold-img",
+      "value-key": "[HIPPUNFOLD_IMAGE]"
+    },
+    {
+      "id": "psf",
+      "name": "Scanner point-spread function",
+      "description": "Scanner point-spread-function full width at half maximum in millimetres.",
+      "type": "Number",
+      "optional": true,
+      "default-value": 4.5,
+      "minimum": 0.1,
+      "command-line-flag": "--psf",
+      "value-key": "[PSF]"
+    },
+    {
+      "id": "ref_region",
+      "name": "SUVR reference region",
+      "description": "Reference region used for SUVR normalization.",
+      "type": "String",
+      "optional": true,
+      "default-value": "pons",
+      "value-choices": [
+        "pons",
+        "cerebellarGM",
+        "cerebellum",
+        "composite",
+        "WM",
+        "GM"
+      ],
+      "command-line-flag": "--ref-region",
+      "value-key": "[REF_REGION]"
+    },
+    {
+      "id": "pvc_method",
+      "name": "Partial-volume correction method",
+      "description": "FreeSurfer PETSurfer or PETPVC correction method.",
+      "type": "String",
+      "optional": true,
+      "default-value": "RBV-FS",
+      "value-choices": [
+        "RBV-FS",
+        "MG-FS",
+        "MG",
+        "IY",
+        "LABBE",
+        "RL",
+        "VC",
+        "RBV",
+        "LABBE+RBV",
+        "RBV+VC",
+        "RBV+RL",
+        "LABBE+RBV+VC",
+        "LABBE+RBV+RL",
+        "MTC",
+        "LABBE+MTC",
+        "MTC+VC",
+        "MTC+RL",
+        "LABBE+MTC+VC",
+        "LABBE+MTC+RL",
+        "IY+VC",
+        "IY+RL",
+        "MG+VC",
+        "MG+RL"
+      ],
+      "command-line-flag": "--pvc-method",
+      "value-key": "[PVC_METHOD]"
+    },
+    {
+      "id": "pvc_mask",
+      "name": "Custom PETPVC mask",
+      "description": "Optional 4D NIfTI PETPVC mask in FreeSurfer or FastSurfer space, with one ROI per frame.",
+      "type": "File",
+      "optional": true,
+      "command-line-flag": "--pvc-mask",
+      "value-key": "[PVC_MASK]"
+    },
+    {
+      "id": "pvc_n_iter",
+      "name": "Iterative PVC iterations",
+      "description": "Number of iterations for iterative PVC methods such as IY.",
+      "type": "Number",
+      "integer": true,
+      "minimum": 1,
+      "optional": true,
+      "default-value": 10,
+      "command-line-flag": "--pvc-n-iter",
+      "value-key": "[PVC_N_ITER]"
+    },
+    {
+      "id": "pvc_n_deconv",
+      "name": "PVC deconvolution iterations",
+      "description": "Number of deconvolution iterations for PVC methods such as RL and VC.",
+      "type": "Number",
+      "integer": true,
+      "minimum": 1,
+      "optional": true,
+      "default-value": 10,
+      "command-line-flag": "--pvc-n-deconv",
+      "value-key": "[PVC_N_DECONV]"
+    },
+    {
+      "id": "smoothing",
+      "name": "Surface smoothing FWHM",
+      "description": "One or more surface smoothing full-width-at-half-maximum values in millimetres.",
+      "type": "Number",
+      "list": true,
+      "optional": true,
+      "default-value": [
+        10.0
+      ],
+      "command-line-flag": "--smoothing",
+      "value-key": "[SMOOTHING]"
+    },
+    {
+      "id": "threads",
+      "name": "Threads per processing step",
+      "description": "Number of threads exposed to multithreaded processing steps.",
+      "type": "Number",
+      "integer": true,
+      "minimum": 1,
+      "maximum": 128,
+      "optional": true,
+      "default-value": 8,
+      "command-line-flag": "--threads",
+      "value-key": "[THREADS]"
+    },
+    {
+      "id": "cores",
+      "name": "Snakemake cores",
+      "description": "Maximum number of cores Snakemake may use.",
+      "type": "Number",
+      "integer": true,
+      "minimum": 1,
+      "maximum": 128,
+      "optional": true,
+      "default-value": 16,
+      "value-key": "[CORES]"
+    },
+    {
+      "id": "hippunfold_cache_dir",
+      "name": "HippUnfold cache directory",
+      "description": "Optional existing HippUnfold cache directory.",
+      "type": "File",
+      "optional": true,
+      "command-line-flag": "--hippunfold-cache-dir",
+      "value-key": "[HIPPUNFOLD_CACHE]"
+    },
+    {
+      "id": "existing_freesurfer_dir",
+      "name": "Existing FreeSurfer or FastSurfer outputs",
+      "description": "Existing subject-level FreeSurfer or FastSurfer output directory to reuse instead of running FastSurfer.",
+      "type": "File",
+      "optional": true,
+      "command-line-flag": "--existing-freesurfer-dir",
+      "value-key": "[EXISTING_FS]"
+    },
+    {
+      "id": "existing_hippunfold_dir",
+      "name": "Existing HippUnfold outputs",
+      "description": "Existing subject and session-level HippUnfold output directory to reuse.",
+      "type": "File",
+      "optional": true,
+      "command-line-flag": "--existing-hippunfold-dir",
+      "value-key": "[EXISTING_HIPP]"
+    },
+    {
+      "id": "skip_hippunfold",
+      "name": "Skip HippUnfold",
+      "description": "Skip hippocampal unfolding and hippocampal PET surface outputs.",
+      "type": "Flag",
+      "optional": true,
+      "command-line-flag": "--skip-hippunfold",
+      "value-key": "[SKIP_HIPP]"
+    },
+    {
+      "id": "nonlinear_coreg",
+      "name": "Nonlinear MNI co-registration",
+      "description": "Run nonlinear co-registration to MNI space with LAMAReg.",
+      "type": "Flag",
+      "optional": true,
+      "command-line-flag": "--nonlinear-coreg",
+      "value-key": "[NONLINEAR]"
+    },
+    {
+      "id": "edge_reg",
+      "name": "Edge-based PET registration",
+      "description": "Use edge-based PET-to-T1w registration instead of FreeSurfer mri_coreg.",
+      "type": "Flag",
+      "optional": true,
+      "command-line-flag": "--edge-reg",
+      "value-key": "[EDGE]"
+    },
+    {
+      "id": "force",
+      "name": "Force reprocessing",
+      "description": "Force processing steps to run even when outputs already exist.",
+      "type": "Flag",
+      "optional": true,
+      "command-line-flag": "--force",
+      "value-key": "[FORCE]"
+    }
+  ],
+  "output-files": [
+    {
+      "id": "output_dir",
+      "name": "MICA-PET output directory",
+      "description": "Derivatives, logs, intermediate anatomy products, and quality-control reports generated for the selected participant.",
+      "optional": false,
+      "list": false,
+      "value-key": "[OUTPUT_DIR]",
+      "path-template": "[PARTICIPANT_LABEL]_micapet_output"
+    }
+  ],
+  "groups": [
+    {
+      "id": "fastsurfer_source",
+      "name": "FastSurfer source",
+      "description": "Run FastSurfer from a SIF image or reuse one existing subject output directory.",
+      "members": [
+        "fastsurfer_image",
+        "existing_freesurfer_dir"
+      ],
+      "mutually-exclusive": true,
+      "one-is-required": true
+    },
+    {
+      "id": "hippunfold_source",
+      "name": "HippUnfold source",
+      "description": "Run HippUnfold from a SIF image, reuse an existing output directory, or skip hippocampal processing.",
+      "members": [
+        "hippunfold_image",
+        "existing_hippunfold_dir",
+        "skip_hippunfold"
+      ],
+      "mutually-exclusive": true,
+      "one-is-required": true
+    },
+    {
+      "id": "anatomical_inputs",
+      "name": "Anatomical processing inputs",
+      "members": [
+        "fs_license",
+        "fastsurfer_image",
+        "hippunfold_image",
+        "hippunfold_cache_dir",
+        "existing_freesurfer_dir",
+        "existing_hippunfold_dir",
+        "skip_hippunfold"
+      ]
+    },
+    {
+      "id": "pet_processing",
+      "name": "PET processing options",
+      "members": [
+        "psf",
+        "ref_region",
+        "pvc_method",
+        "pvc_mask",
+        "pvc_n_iter",
+        "pvc_n_deconv",
+        "smoothing",
+        "nonlinear_coreg",
+        "edge_reg"
+      ]
+    },
+    {
+      "id": "execution",
+      "name": "Execution options",
+      "members": [
+        "threads",
+        "cores",
+        "force"
+      ]
+    }
+  ],
+  "suggested-resources": {
+    "cpu-cores": 16,
+    "ram": 32,
+    "walltime-estimate": 86400
+  },
+  "error-codes": [
+    {
+      "code": 1,
+      "description": "MICA-PET or one of its processing dependencies failed."
+    }
+  ],
+  "tags": {
+    "domain": [
+      "BIDS",
+      "PET",
+      "neuroimaging",
+      "surface",
+      "quality control"
+    ]
+  },
+  "custom": {
+    "cbrain:readonly-input-files": true,
+    "cbrain:integrator_modules": {
+      "BoutiquesOutputCacheCleaner": [
+        "output_dir"
+      ]
+    }
+  }
+}
