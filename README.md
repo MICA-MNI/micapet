@@ -49,10 +49,10 @@ chmod +x run.py
 MICA-PET may also be run from an Apptainer/Singularity format (.sif) for use in HPC environments.
 
 ```bash
-# Build singularity image from Docker Hub
-singularity build micapet.sif docker://micalab/micapet:v.beta.0.1
+# Either build singularity image from Docker Hub
+singularity build micapet.sif docker://jacx11/micapet:v.beta.0.1
 
-# Build singularity image locally
+# Or build singularity image locally
 export DOCKER_BUILDKIT=1
 export DOCKER_CONTENT_TRUST=0
 export SINGULARITY_TMPDIR=/path/to/tmpdir
