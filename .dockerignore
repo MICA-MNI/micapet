@@ -1,0 +1,9 @@
+.git
+.claude
+.ruff_cache
+__pycache__
+**/__pycache__
+*.py[cod]
+*.sif
+resources/freesurfer-*.tar.gz
+.DS_Store

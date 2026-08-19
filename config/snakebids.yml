@@ -161,12 +161,12 @@ parse_args:
     default: ""
   
   --existing-freesurfer-dir: 
-    help: "Path to existing FastSurfer/FreeSurfer outputs directory (optional). If provided, will create symlinks instead of running FastSurfer."
+    help: "Path to existing FastSurfer/FreeSurfer outputs directory (optional). If provided, its subject output is copied into the writable result directory instead of running FastSurfer."
     dest: existing_freesurfer_dir
     default: ""
   
   --existing-hippunfold-dir:
-    help: "Path to existing HippUnfold outputs directory (optional). If provided, will create symlinks instead of running HippUnfold."
+    help: "Path to existing HippUnfold outputs directory (optional). If provided, its subject/session output is copied into the writable result directory instead of running HippUnfold."
     dest: existing_hippunfold_dir
     default: ""
 

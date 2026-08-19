@@ -7,7 +7,7 @@ USER root
 # ==========================================
 ENV DEBIAN_FRONTEND=noninteractive \
     LC_ALL=C \
-    FREESURFER_HOME="/micapet/freesurfer" \ 
+    FREESURFER_HOME="/micapet/freesurfer" \
     ANTSPATH="/opt/ants" \
     AFNIPATH="/opt/AFNI" \
     CONDA_DIR="/opt/conda" \
@@ -17,9 +17,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     GOPATH="/root/go" \
     VTK_DEFAULT_OPENGL_WINDOW='vtkOSOpenGLRenderWindow' \
     MESA_GL_VERSION_OVERRIDE=3.3 \
-    MICA_PET_VERSION="v.alpha.0.6"
-
-    # FREESURFER_HOME="/opt/freesurfer-7.4.1" \
+    MICA_PET_VERSION="v.beta.0.1"
 
 # Combine all binary directories safely into a single PATH declaration
 ENV PATH="${CONDA_DIR}/bin:${FREESURFER_HOME}/bin:${FREESURFER_HOME}/mni/bin:${ANTSPATH}/bin:${AFNIPATH}:/usr/local/go/bin:${GOPATH}/bin:${PATH}"
@@ -62,32 +60,25 @@ RUN git clone https://github.com/apptainer/apptainer.git /usr/local/src/apptaine
 # We copy resources once to a temporary scratch space to avoid cache/layer bloating.
 COPY resources/ /tmp/resources/
 
-# Install FreeSurfer (minimal extraction)
-# RUN if [ -f /tmp/resources/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz ]; then \
-#         echo "Found local FreeSurfer archive"; \
-#         mv /tmp/resources/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz /tmp/fs.tar.gz; \
-#     else \
-#         echo "Downloading FreeSurfer archive..."; \
-#         wget -O /tmp/fs.tar.gz https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.4.1/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz; \
-#     fi \
-#     && mkdir -p $FREESURFER_HOME \
-#     && tar -xzf /tmp/fs.tar.gz -C $FREESURFER_HOME --strip-components=1 \
-#     --exclude='average/mult-comp-cor' \
-#     --exclude='lib/qt' \
-#     --exclude='lib/cuda' \
-#     --exclude='trctrain' \
-#     --exclude='subjects/bert' \
-#     --exclude='subjects/V1_average' \
-#     --exclude='subjects/cvs_*' \
-#     --exclude='subjects/fsaverage3' \
-#     --exclude='subjects/fsaverage4' \
-#     --exclude='subjects/fsaverage5' \
-#     --exclude='subjects/fsaverage6' \
-#     --exclude='subjects/fsaverage_sym' \
-#     && rm -f /tmp/fs.tar.gz \
-#     && mv /opt/freesurfer-7.4.1/freesurfer /opt/freesurfer_tmp \
-#     && rm -r /opt/freesurfer-7.4.1 \
-#     && mv /opt/freesurfer_tmp /opt/freesurfer-7.4.1
+# Install FreeSurfer. MICA-PET calls FreeSurfer utilities even when it reuses
+# an existing FastSurfer/FreeSurfer subject, so the application container must
+# carry the binaries and average templates for CBRAIN execution.
+RUN wget -O /tmp/fs.tar.gz https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.4.1/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz \
+    && echo "e200a3a3326d887bace33a3c25fe5d1c  /tmp/fs.tar.gz" | md5sum -c - \
+    && mkdir -p "$FREESURFER_HOME" \
+    && tar -xzf /tmp/fs.tar.gz -C "$FREESURFER_HOME" --strip-components=2 \
+        --exclude='./freesurfer/lib/cuda' \
+        --exclude='./freesurfer/lib/qt' \
+        --exclude='./freesurfer/subjects/bert' \
+        --exclude='./freesurfer/subjects/V1_average' \
+        --exclude='./freesurfer/subjects/cvs_*' \
+        --exclude='./freesurfer/trctrain' \
+    && test -x "$FREESURFER_HOME/bin/mri_convert" \
+    && test -x "$FREESURFER_HOME/bin/mri_ca_register" \
+    && test -x "$FREESURFER_HOME/bin/mri_gtmseg" \
+    && test -f "$FREESURFER_HOME/average/RB_all_2016-05-10.vc700.gca" \
+    && "$FREESURFER_HOME/bin/mri_convert" --version \
+    && rm -f /tmp/fs.tar.gz
 
 # # Install ANTs
 RUN curl -fsSL -o /tmp/ants.zip https://github.com/ANTsX/ANTs/releases/download/v2.4.3/ants-2.4.3-centos7-X64-gcc.zip \
@@ -137,7 +128,6 @@ COPY . /app
 RUN chmod +x /app/run.py \
     && rm -rf /app/resources/lamareg \
     && rm -rf /app/resources/AFNI
-    # && rm /app/resources/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz \
 
 # Set the entrypoint to run seamlessly within the conda environment context
 ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "mica-pet", "python", "/app/run.py"]

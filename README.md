@@ -63,6 +63,32 @@ docker build -t micapet:v.beta.0.1 .
 singularity build micapet.sif docker-daemon://micapet:v.beta.0.1
 ```
 
+### CBRAIN / Boutiques
+
+The CBRAIN descriptor is available at
+[`boutiques/micapet_v_beta_0_1.json`](boutiques/micapet_v_beta_0_1.json). It
+currently targets the temporary image
+`docker://jacx11/micapet:v.beta.0.1`. Rebuild that image from this revision so
+it contains the CBRAIN workflow fixes and bundled FreeSurfer runtime before
+importing the descriptor into CBRAIN. Replace the temporary image reference
+with `docker://micalab/micapet:v.beta.0.1` after the organization image is
+published.
+
+The CBRAIN integration accepts either a complete `BidsDataset` or one
+`BidsSubject` and requires a FreeSurfer license plus a subject-level
+`FastSurferOutput`/`ReconAllOutput`. Run CBRAIN's FastSurfer 2.4.2 task first.
+Select a `HippunfoldOutput` produced by CBRAIN's HippUnfold task, or choose
+**Skip HippUnfold**. This avoids unsupported nested Singularity/Apptainer
+execution inside the MICA-PET task container. The CBRAIN installation must
+include the current
+[`cbrain-plugins-neuro`](https://github.com/aces/cbrain-plugins-neuro) package,
+which provides the BIDS single-subject integrator, license handling, and the
+anatomical output file types used by this descriptor. Validate it with:
+
+```bash
+bosh validate boutiques/micapet_v_beta_0_1.json
+```
+
 <!--### Docker
 The latest Docker image can be pulled from Docker Hub
 
@@ -117,9 +143,9 @@ Run the workflow for one participant with:
   --hippunfold-img /path/to/hippunfold.sif \
   --fs-license /path/to/license.txt \
   --psf {psf} \
-  --ref_region {reference region} \
+  --ref-region {reference region} \
   --smoothing {FWHM} \
-  --pvc_method {PVC method} \
+  --pvc-method {PVC method} \
   {other parameters here} \
   /path/to/bids /path/to/bids/derivatives participant \
   --cores {# of cores or 'all'} \
@@ -132,14 +158,15 @@ Run the workflow for one participant with:
 Or via the container:
 ```bash
 # Run MICA-PET pipeline
-singularity run --cleanenv --env FS_LICENSE="/path/to/license.txt" \
--B ${BIDS_DIR}:/bids -B /path/to/LOCAL_FREESURFER_HOME:/micapet/freesurfer \
+singularity run --cleanenv \
+-B ${BIDS_DIR}:/bids \
+-B /path/to/license.txt:/license.txt:ro \
 /path/to/micapet.sif \
---fastsurfer_img /path/to/fastsurfer-cpu-v2.4.2.sif \
---hippunfold_img /path/to/hippunfold_v1.4.1.sif \
---fs_license /path/to/license.txt \
+--fastsurfer-img /path/to/fastsurfer-cpu-v2.4.2.sif \
+--hippunfold-img /path/to/hippunfold_v1.4.1.sif \
+--fs-license /license.txt \
 --psf ${psf} \
---ref_region ${ref_region} \
+--ref-region ${ref_region} \
 --smoothing 5 10 \
 --pvc-method ${pvc_method} \
 --existing-freesurfer-dir /path/to/existing/fastsurfer \
@@ -151,6 +178,10 @@ singularity run --cleanenv --env FS_LICENSE="/path/to/license.txt" \
 {snakemake options}
 ```
 
+The MICA-PET container includes the FreeSurfer runtime required by PET
+registration, GTM segmentation, and PVC. A valid FreeSurfer license must still
+be supplied with `--fs-license` (and mounted into the container when needed).
+
 
 ### Mandatory parameters
 
@@ -160,8 +191,8 @@ singularity run --cleanenv --env FS_LICENSE="/path/to/license.txt" \
 - `--fs-license`: path to the FreeSurfer license file, which can be obtained [here](https://surfer.nmr.mgh.harvard.edu/registration.html)
 - `--fastsurfer-img`: (if FastSurfer to be run) path to the FastSurfer Singularity image
 - `--hippunfold-img`: (if HippUnfold to be run) path to the HippUnfold Singularity image
-- `--existing-freesurfer-dir` : (if FastSurfer/FreeSurfer already run) Path to existing FreeSurfer subject outputs directory (ex. /path/to/freesurfer/sub-01_ses-01). If provided, will create symlinks instead of running FastSurfer.
-- `--existing-hippunfold-dir` : (if HippUnfold already run) Path to existing HippUnfold subject outputs directory (ex. /path/to/hippunfold_v1.4.1). If provided, will create symlinks instead of running HippUnfold.
+- `--existing-freesurfer-dir` : (if FastSurfer/FreeSurfer already run) Path to existing FreeSurfer subject outputs directory (ex. /path/to/freesurfer/sub-01_ses-01). If provided, the subject output is copied into the writable results instead of running FastSurfer.
+- `--existing-hippunfold-dir` : (if HippUnfold already run) Path to existing HippUnfold output collection or subject/session directory (ex. /path/to/hippunfold_v1.4.1). If provided, the matching subject/session output is copied into the writable results instead of running HippUnfold.
 
 ### Optional parameters
 - `--hippunfold-cache-dir` : Path to hippunfold cache directory.
