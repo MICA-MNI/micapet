@@ -160,6 +160,10 @@ def fastsurfer(
         print(f"Error: T1w image not found at {T1_path}")
         sys.exit(1)
 
+    # Check if fastsurfer output directory exists, if not create it
+    if not os.path.exists(subj_dir):
+        os.makedirs(subj_dir, exist_ok=True)
+
     command = [
         "/fastsurfer/run_fastsurfer.sh",
         "--fs_license", "/output/license.txt",
@@ -233,6 +237,7 @@ def hippunfold(
         -force          : (Optional) Force HippUnfold even if output exists.
     """
     from spython.main import Client
+    from pathlib import Path
 
     # Check tmpdir
     if tmpdir is None:
@@ -269,10 +274,30 @@ def hippunfold(
     else:
         hippunfold_dir = os.path.realpath(hippunfold_dir)
 
+    def copy_hippunfold_files_to_tmp(hippunfold_dir, subject, session, bids_dir):
+            # copy to tmp to avoid deletion of original files if snakemake fails on hippunfold rule
+            derivatives_tmp_dir = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}/sub-{subject}/ses-{session}/tmp"
+            os.makedirs(derivatives_tmp_dir, exist_ok=True)
+            derivatives_surf_dir = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}/sub-{subject}/ses-{session}/surf"
+
+            for file in [
+                Path(os.path.join(hippunfold_dir, "hippunfold", f"sub-{subject}", f"ses-{session}", "surf", f"sub-{subject}_ses-{session}_hemi-L_space-T1w_den-2mm_label-hipp_midthickness.surf.gii")),
+                Path(os.path.join(hippunfold_dir, "hippunfold", f"sub-{subject}", f"ses-{session}", "surf", f"sub-{subject}_ses-{session}_hemi-R_space-T1w_den-2mm_label-hipp_midthickness.surf.gii")),
+            ]:
+                if os.path.exists(file):
+                    print(f"Copying {file} to derivatives tmp directory")
+                    shutil.copy(file, f"{derivatives_tmp_dir}/") 
+                    shutil.copy(file, f"{derivatives_surf_dir}/") 
+
     # Check if HippUnfold output already exists
-        if os.path.exists(os.path.join(hippunfold_dir, "hippunfold", f"sub-{subject}", f"ses-{session}", "surf", f"sub-{subject}_ses-{session}_hemi-L_space-T1w_den-2mm_label-hipp_midthickness.surf.gii")) and force==False:
-            print("HippUnfold already run. Please rerun with -force flag to overwrite.")
-            return            
+    if os.path.exists(os.path.join(hippunfold_dir, "hippunfold", f"sub-{subject}", f"ses-{session}", "surf", f"sub-{subject}_ses-{session}_hemi-L_space-T1w_den-2mm_label-hipp_midthickness.surf.gii")) and force==False:
+        utils.print_time_stamp("HippUnfold already run. Please rerun with -force flag to overwrite.","red")
+
+        copy_hippunfold_files_to_tmp(hippunfold_dir, subject, session, bids_dir)
+
+        return
+
+               
 
     # Check T1 path
     if T1_path is None: #check if user inputted T1_path 
@@ -298,6 +323,7 @@ def hippunfold(
         "participant",
         "--participant-label",f"{subject}",
         "--modality", "T1w",
+        "--filter-T1w", f"session={session}",
         "--output-density","2mm",
         "--cores", str(threads),
         "--force-output", "--rerun-incomplete"
@@ -340,6 +366,8 @@ def hippunfold(
         sys.exit(result['return_code'])
     elif isinstance(result, str):
         print(result)
+
+    copy_hippunfold_files_to_tmp(hippunfold_dir, subject, session, bids_dir)
 
     utils.print_time_stamp(f"HippUnfold completed for subject: {subject}, session: {session}.","green")
 

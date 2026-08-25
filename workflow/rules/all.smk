@@ -55,13 +55,13 @@ rule fastsurfer:
             > {log} 2>&1
         '''
 
-if not config.get("skip_hippunfold", False) and not config.get("existing_hippunfold_dir", ""): #runs hippunfold if flag not set and existing dir not specified, skip hippunfold if flag set or if existing dir specified
+if not config.get("skip_hippunfold", False): #and not config.get("existing_hippunfold_dir", ""): #runs hippunfold if flag not set and existing dir not specified, skip hippunfold if flag set or if existing dir specified
     rule hippunfold:
         input:
             t1 = inputs['T1w'].path
         output:
-            hipp_lh = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-L_space-T1w_den-2mm_label-hipp_midthickness.surf.gii"),
-            hipp_rh = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", "sub-{subject}", "ses-{session}", "surf", "sub-{subject}_ses-{session}_hemi-R_space-T1w_den-2mm_label-hipp_midthickness.surf.gii"),
+            hipp_lh = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "sub-{subject}_ses-{session}_hemi-L_space-T1w_den-2mm_label-hipp_midthickness.surf.gii"),
+            hipp_rh = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", "sub-{subject}_ses-{session}_hemi-R_space-T1w_den-2mm_label-hipp_midthickness.surf.gii"),
         params:
             bids_dir = config["bids_dir"],
             img = config.get("hippunfold_img"),
@@ -411,13 +411,17 @@ def get_project_pet_data_inputs(wildcards):
         "suvr_pet_native_pvc": rules.suvr.output.suvr_pet_native_pvc}
     
     if not config.get("skip_hippunfold", False): # If not skipping HippUnfold, add HippUnfold outputs to inputs_dict
-        inputs_dict["hipp_lh"] = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", f"sub-{wildcards.subject}", f"ses-{wildcards.session}", "surf", f"sub-{wildcards.subject}_ses-{wildcards.session}_hemi-L_space-T1w_den-2mm_label-hipp_midthickness.surf.gii")
         
-        inputs_dict["hipp_rh"] = os.path.join(root, HIPPUNFOLD_DIR_NAME, "hippunfold", f"sub-{wildcards.subject}", f"ses-{wildcards.session}", "surf", f"sub-{wildcards.subject}_ses-{wildcards.session}_hemi-R_space-T1w_den-2mm_label-hipp_midthickness.surf.gii")
+        inputs_dict["hipp_lh"] = rules.hippunfold.output.hipp_lh
+        inputs_dict["hipp_rh"] = rules.hippunfold.output.hipp_rh
+
+        # inputs_dict["hipp_lh"] = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", f"sub-{wildcards.subject}_ses-{wildcards.session}_hemi-L_space-T1w_den-2mm_label-hipp_midthickness.surf.gii")
         
-        if config.get("existing_hippunfold_dir", ""): # If using existing HippUnfold outputs, mark as ancient
-            inputs_dict["hipp_lh"] = ancient(inputs_dict["hipp_lh"])
-            inputs_dict["hipp_rh"] = ancient(inputs_dict["hipp_rh"])
+        # inputs_dict["hipp_rh"] = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "tmp", f"sub-{wildcards.subject}_ses-{wildcards.session}_hemi-R_space-T1w_den-2mm_label-hipp_midthickness.surf.gii")
+        
+        # if config.get("existing_hippunfold_dir", ""): # If using existing HippUnfold outputs, mark as ancient
+        #     inputs_dict["hipp_lh"] = ancient(inputs_dict["hipp_lh"])
+        #     inputs_dict["hipp_rh"] = ancient(inputs_dict["hipp_rh"])
     
     return inputs_dict
 
@@ -486,7 +490,7 @@ rule subcortical_map:
     input:
         # unpack(get_subcortical_map_inputs)
         suvr_pet_fs = rules.suvr.output.suvr_pet_fs,
-        aparc_aseg = os.path.join(root, FASTSURFER_DIR_NAME, "sub-{subject}_ses-{session}", "mri", "aparc+aseg.mgz"),
+        aparc_aseg = rules.fastsurfer.output.aparc_aseg,
     output:
         csv = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "qc", "sub-{subject}_ses-{session}_pvc-"+get_pvc_method()+"_ref-" + get_ref_region() + "_trc-{trc}_subcortical_means_pet.csv"),
     params:

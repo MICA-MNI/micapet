@@ -4,6 +4,7 @@ resources/*tar.gz
 functions/stderr.nipype
 functions/stdout.nipype
 functions/talairach.label*
+functions/test*
 archive_Dockerfile
 pipfreeze.txt
 report.html
@@ -23,6 +24,7 @@ list_of_tests.txt
 push_changes*
 ADNI_validation.ipynb
 resources/lamareg/*
+*/test*
 
 scripts/build_sif.sh
 scripts/mutual_info.ipynb

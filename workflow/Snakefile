@@ -115,7 +115,10 @@ def setup_existing_outputs_symlinks():
                 
                 if not os.path.exists(target):
                     print(f"  Creating symlink: {subj_dir} -> {target}")
-                    os.symlink(subj_dir, target, target_is_directory=True)
+                    try:
+                        os.symlink(subj_dir, target, target_is_directory=True)
+                    except FileExistsError:
+                        pass
                 else:
                     print(f"  Subject/session already exists: {subj_dir}")
             else:
@@ -145,7 +148,10 @@ def setup_existing_outputs_symlinks():
                 
                 if not os.path.exists(target):
                     print(f"  Creating symlink: {ses_dir} -> {target}")
-                    os.symlink(ses_dir, target, target_is_directory=True)
+                    try:
+                        os.symlink(ses_dir, target, target_is_directory=True)
+                    except FileExistsError:
+                        pass
                 else:
                     print(f"  Subject/session already exists: {ses_dir}")
             else:
