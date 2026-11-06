@@ -1,5 +1,12 @@
 # MICA-PET Pipeline
-`version beta.0.1`
+
+[![Docker Image Version](https://img.shields.io/docker/v/micalab/micapet?color=blue&label=docker%20version)](https://hub.docker.com/r/micalab/micapet)
+<!-- Uncomment when repository is Public
+[![version](https://img.shields.io/github/v/tag/MICA-MNI/micapet)](https://github.com/MICA-MNI/micapet)
+[![License: GPL v3](https://img.shields.io/github/license/MICA-MNI/micapet?color=blue)](https://www.gnu.org/licenses/gpl-3.0)
+[![GitHub issues](https://img.shields.io/github/issues/MICA-MNI/micapet)](https://github.com/MICA-MNI/MICA-7t/issues)
+[![GitHub stars](https://img.shields.io/github/stars/MICA-MNI/micapet.svg?style=flat&label=⭐%EF%B8%8F%20stars&color=brightgreen)](https://github.com/MICA-MNI/micapet/stargazers)
+-->
 
 MICA-PET is a [snakemake](https://snakemake.readthedocs.io/en/stable/)/[snakebids](https://github.com/khanlab/snakebids) neuroimaging workflow for processing static PET data in a [BIDS](https://bids.neuroimaging.io/)-compatible project. It runs anatomical reconstruction, PET-to-MRI registration, partial volume correction, surface projection, and report generation from a single entry point.
 
