@@ -119,6 +119,18 @@ class BIDSName:
         
         return "_".join(parts)
 
+def make_bids_dir(mica_pet_derivatives, subject, session):
+    # Create BIDS directory structure
+    for directory in [
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}",
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat",
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet",
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf",
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm",
+        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/qc",
+    ]:
+        os.makedirs(directory, exist_ok=True)
+
 def check_bids_dir(bids_dir, subject, session):
     """
     Check if the provided directory is a valid BIDS dataset.

@@ -238,6 +238,7 @@ def hippunfold(
     """
     from spython.main import Client
     from pathlib import Path
+    mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}"
 
     # Check tmpdir
     if tmpdir is None:
@@ -273,6 +274,9 @@ def hippunfold(
         sys.exit(1)
     else:
         hippunfold_dir = os.path.realpath(hippunfold_dir)
+
+    # Create BIDS directory structure
+    utils.make_bids_dir(mica_pet_derivatives, subject, session)
 
     def copy_hippunfold_files_to_tmp(hippunfold_dir, subject, session, bids_dir):
             # copy to tmp to avoid deletion of original files if snakemake fails on hippunfold rule
@@ -536,15 +540,7 @@ def linear_coreg(
     transmission = transmission_list[0] if len(transmission_list) > 0 else None
     
     # Create BIDS directory structure
-    for directory in [
-        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}",
-        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/anat",
-        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/pet",
-        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/surf",
-        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/xfm",
-        f"{mica_pet_derivatives}/sub-{subject}/ses-{session}/qc",
-    ]:
-        os.makedirs(directory, exist_ok=True)
+    utils.make_bids_dir(mica_pet_derivatives, subject, session)
 
     utils.print_time_stamp(f"Starting PET to MRI co-registration for subject: {subject}, session: {session}.")
 
