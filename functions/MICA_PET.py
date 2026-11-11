@@ -1548,7 +1548,8 @@ def report(
     import matplotlib.pyplot as pltl
     import pandas as pd
     from PIL import Image
-    import report_creator as rc
+    # import report_creator as rc
+    from petreport import report as rc
     import nibabel as nib
     from brainspace.mesh.mesh_io import read_surface
     from pathlib import Path
@@ -2070,242 +2071,244 @@ def report(
 
     cortical_SUVR, max_value = plot_SUVR(subject,session,bids_dir,qc_dir, pial_left, pial_right, mask,max_value,mica_pet_derivatives,ref_region,trc,pvc_method)
 
-    if trc == "FDG":
-        with rc.ReportCreator(
-            title="MICA-PET Report",
-            description=f"**Subject**: {subject} | **Session**: {session} | **Modality**: {trc} PET | **Ref region**: {ref_region} | **PVC method**: {pvc_method}",
-            footer="Multimodal Imaging and Connectome Analysis (MICA) Lab - McGill University. For research use only.",
-            logo=f"https://box.bic.mni.mcgill.ca/s/GbLcj26GmYWBfLL/download"
-        ) as report:
+    # if trc == "FDG":
+    #     with rc.ReportCreator(
+    #         title="MICA-PET Report",
+    #         description=f"**Subject**: {subject} | **Session**: {session} | **Modality**: {trc} PET | **Ref region**: {ref_region} | **PVC method**: {pvc_method}",
+    #         footer="Multimodal Imaging and Connectome Analysis (MICA) Lab - McGill University. For research use only.",
+    #         logo=f"https://box.bic.mni.mcgill.ca/s/GbLcj26GmYWBfLL/download"
+    #     ) as report:
             
-            if hippocampal:
-                SUVR_blocks = [
-                        rc.Image(
-                            cortical_SUVR,
-                            label=f"Cortical {trc} SUVR",
-                            extra_css="width: 900px; height: auto;",
-                        ),
-                        # rc.Image(
-                        #     plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
-                        #     label=f"Subcortical {trc} SUVR",
-                        #     extra_css="width: 900px; height: auto;",
-                        # ),
-                        rc.Image(
-                            plot_hippunfold(subject,session,bids_dir,qc_dir,max_value,mica_pet_derivatives,ref_region,trc,pvc_method),
-                            label=f"Hippocampal {trc} SUVR",
-                            extra_css="width: 450px; height: auto;",
-                        ) 
-                    ]
-                AI_blocks = [
-                        # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
-                        # Each `rc.Image()` block specifies the path to an image file and provides a label for
-                        # that image.
-                        rc.Image(
-                            plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method),
-                            label=f"Cortical {trc} SUVR AI"
-                        ),
-                        rc.Image(
-                            plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc),
-                            label=f"Subcortical {trc} SUVR AI"
-                        ),
-                        rc.Image(
-                            plot_hippunfold_AI(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc,pvc_method),
-                            label=f"Hippocampal {trc} SUVR AI",
-                        ),
+    #         if hippocampal:
+    #             SUVR_blocks = [
+    #                     rc.Image(
+    #                         cortical_SUVR,
+    #                         label=f"Cortical {trc} SUVR",
+    #                         extra_css="width: 900px; height: auto;",
+    #                     ),
+    #                     # rc.Image(
+    #                     #     plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
+    #                     #     label=f"Subcortical {trc} SUVR",
+    #                     #     extra_css="width: 900px; height: auto;",
+    #                     # ),
+    #                     rc.Image(
+    #                         plot_hippunfold(subject,session,bids_dir,qc_dir,max_value,mica_pet_derivatives,ref_region,trc,pvc_method),
+    #                         label=f"Hippocampal {trc} SUVR",
+    #                         extra_css="width: 450px; height: auto;",
+    #                     ) 
+    #                 ]
+    #             AI_blocks = [
+    #                     # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
+    #                     # Each `rc.Image()` block specifies the path to an image file and provides a label for
+    #                     # that image.
+    #                     rc.Image(
+    #                         plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method),
+    #                         label=f"Cortical {trc} SUVR AI"
+    #                     ),
+    #                     rc.Image(
+    #                         plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc),
+    #                         label=f"Subcortical {trc} SUVR AI"
+    #                     ),
+    #                     rc.Image(
+    #                         plot_hippunfold_AI(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc,pvc_method),
+    #                         label=f"Hippocampal {trc} SUVR AI",
+    #                     ),
                         
-                    ]
-            else:
-                SUVR_blocks = [
-                        rc.Image(
-                            cortical_SUVR,
-                            label=f"Cortical {trc} SUVR",
-                            extra_css="width: 900px; height: auto;",
-                        ),
-                        rc.Image(
-                            plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
-                            label=f"Subcortical {trc} SUVR",
-                            extra_css="width: 900px; height: auto;",
-                        )
-                    ]
-                AI_blocks = [
-                        # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
-                        # Each `rc.Image()` block specifies the path to an image file and provides a label for
-                        # that image.
-                        rc.Image(
-                            plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method),
-                            label=f"Cortical {trc} SUVR AI"
-                        ),
-                        rc.Image(
-                            plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc),
-                            label=f"Subcortical {trc} SUVR AI"
-                        ),       
-                    ]
+    #                 ]
+    #         else:
+    #             SUVR_blocks = [
+    #                     rc.Image(
+    #                         cortical_SUVR,
+    #                         label=f"Cortical {trc} SUVR",
+    #                         extra_css="width: 900px; height: auto;",
+    #                     ),
+    #                     rc.Image(
+    #                         plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
+    #                         label=f"Subcortical {trc} SUVR",
+    #                         extra_css="width: 900px; height: auto;",
+    #                     )
+    #                 ]
+    #             AI_blocks = [
+    #                     # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
+    #                     # Each `rc.Image()` block specifies the path to an image file and provides a label for
+    #                     # that image.
+    #                     rc.Image(
+    #                         plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method),
+    #                         label=f"Cortical {trc} SUVR AI"
+    #                     ),
+    #                     rc.Image(
+    #                         plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc),
+    #                         label=f"Subcortical {trc} SUVR AI"
+    #                     ),       
+    #                 ]
 
-            view = rc.Block(
-                rc.Heading(label="Standard Uptake Value Ratio (SUVR)"),
+    #         view = rc.Block(
+    #             rc.Heading(label="Standard Uptake Value Ratio (SUVR)"),
                 
-                rc.Select(
-                    blocks=SUVR_blocks
-                ),
+    #             rc.Select(
+    #                 blocks=SUVR_blocks
+    #             ),
 
-                rc.Heading(label="Asymmetry Index (AI)"), 
-                        # rc.Heading(label="(BLUE = Left < Right; RED = Right < Left)",level=3),
+    #             rc.Heading(label="Asymmetry Index (AI)"), 
+    #                     # rc.Heading(label="(BLUE = Left < Right; RED = Right < Left)",level=3),
                 
-                rc.Select(
-                    blocks=AI_blocks
-                ),
-                rc.Group(
-                    rc.Metric(
-                        heading="Asymmetry Index interpretation",
-                        value="BLUE = Left < Right; RED = Right < Left",
-                        label="AI = (L - R) / (0.5 * (L + R))"
-                    ),
-                ),
+    #             rc.Select(
+    #                 blocks=AI_blocks
+    #             ),
+    #             rc.Group(
+    #                 rc.Metric(
+    #                     heading="Asymmetry Index interpretation",
+    #                     value="BLUE = Left < Right; RED = Right < Left",
+    #                     label="AI = (L - R) / (0.5 * (L + R))"
+    #                 ),
+    #             ),
                 
-                rc.Heading(label=f"{trc} PET Z score thresholded at |Z| > 1.96"), 
+    #             rc.Heading(label=f"{trc} PET Z score thresholded at |Z| > 1.96"), 
                 
-                rc.Select(
-                    blocks=[
-                        rc.Image(
-                            plot_Zscore(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc),
-                            label=f"{trc} PET Z score",
-                            extra_css="width: 900px; height: auto;"
-                        ),
-                    ]
-                ),
-                rc.Select(
-                    blocks=[
-                        rc.DataTable(
-                            parcel_stats(subject,session,bids_dir,subj_dir,qc_dir,space,mica_pet_derivatives,ref_region,trc,pvc_method),
-                            label="Regional SUVR and Asymmetry Index Statistics",
-                            index=False
-                        )
-                    ]
-                ), 
-                rc.Select(
-                    blocks=[
-                        rc.Image(
-                            f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_SUVR_mosaic_screenshot.png",
-                            label="PET-MRI Overlay",
-                            extra_css="width: 1300px; height: auto;"
-                        ),
-                    ]
-                )
-            )
+    #             rc.Select(
+    #                 blocks=[
+    #                     rc.Image(
+    #                         plot_Zscore(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc),
+    #                         label=f"{trc} PET Z score",
+    #                         extra_css="width: 900px; height: auto;"
+    #                     ),
+    #                 ]
+    #             ),
+    #             rc.Select(
+    #                 blocks=[
+    #                     rc.DataTable(
+    #                         parcel_stats(subject,session,bids_dir,subj_dir,qc_dir,space,mica_pet_derivatives,ref_region,trc,pvc_method),
+    #                         label="Regional SUVR and Asymmetry Index Statistics",
+    #                         index=False
+    #                     )
+    #                 ]
+    #             ), 
+    #             rc.Select(
+    #                 blocks=[
+    #                     rc.Image(
+    #                         f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_SUVR_mosaic_screenshot.png",
+    #                         label="PET-MRI Overlay",
+    #                         extra_css="width: 1300px; height: auto;"
+    #                     ),
+    #                 ]
+    #             )
+    #         )
 
-    else: 
-        with rc.ReportCreator(
-            title="MICA-PET Report",
-            description=f"**Subject**: {subject} | **Session**: {session} | **Modality**: {trc} PET | **Ref region**: {ref_region} | **PVC method**: {pvc_method}",
-            footer="Multimodal Imaging and Connectome Analysis (MICA) Lab - McGill University. For research use only.",
-            logo=f"https://box.bic.mni.mcgill.ca/s/GbLcj26GmYWBfLL/download"
-        ) as report:
+    # else: 
+    #     with rc.ReportCreator(
+    #         title="MICA-PET Report",
+    #         description=f"**Subject**: {subject} | **Session**: {session} | **Modality**: {trc} PET | **Ref region**: {ref_region} | **PVC method**: {pvc_method}",
+    #         footer="Multimodal Imaging and Connectome Analysis (MICA) Lab - McGill University. For research use only.",
+    #         logo=f"https://box.bic.mni.mcgill.ca/s/GbLcj26GmYWBfLL/download"
+    #     ) as report:
             
-            if hippocampal:
-                SUVR_blocks = [
-                        rc.Image(
-                            cortical_SUVR,
-                            label=f"Cortical {trc} SUVR",
-                            extra_css="width: 900px; height: auto;",
-                        ),
-                        rc.Image(
-                            plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
-                            label=f"Subcortical {trc} SUVR",
-                            extra_css="width: 900px; height: auto;",
-                        ),
-                        rc.Image(
-                            plot_hippunfold(subject,session,bids_dir,qc_dir,max_value,mica_pet_derivatives,ref_region,trc,pvc_method),
-                            label=f"Hippocampal {trc} SUVR",
-                            extra_css="width: 450px; height: auto;",
-                        ) 
-                    ]
-                AI_blocks = [
-                        # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
-                        # Each `rc.Image()` block specifies the path to an image file and provides a label for
-                        # that image.
-                        rc.Image(
-                            plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method),
-                            label=f"Cortical {trc} SUVR AI"
-                        ),
-                        rc.Image(
-                            plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc),
-                            label=f"Subcortical {trc} SUVR AI"
-                        ),
-                        rc.Image(
-                            plot_hippunfold_AI(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc,pvc_method),
-                            label=f"Hippocampal {trc} SUVR AI",
-                        ),
+    #         if hippocampal:
+    #             SUVR_blocks = [
+    #                     rc.Image(
+    #                         cortical_SUVR,
+    #                         label=f"Cortical {trc} SUVR",
+    #                         extra_css="width: 900px; height: auto;",
+    #                     ),
+    #                     rc.Image(
+    #                         plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
+    #                         label=f"Subcortical {trc} SUVR",
+    #                         extra_css="width: 900px; height: auto;",
+    #                     ),
+    #                     rc.Image(
+    #                         plot_hippunfold(subject,session,bids_dir,qc_dir,max_value,mica_pet_derivatives,ref_region,trc,pvc_method),
+    #                         label=f"Hippocampal {trc} SUVR",
+    #                         extra_css="width: 450px; height: auto;",
+    #                     ) 
+    #                 ]
+    #             AI_blocks = [
+    #                     # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
+    #                     # Each `rc.Image()` block specifies the path to an image file and provides a label for
+    #                     # that image.
+    #                     rc.Image(
+    #                         plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method),
+    #                         label=f"Cortical {trc} SUVR AI"
+    #                     ),
+    #                     rc.Image(
+    #                         plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc),
+    #                         label=f"Subcortical {trc} SUVR AI"
+    #                     ),
+    #                     rc.Image(
+    #                         plot_hippunfold_AI(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc,pvc_method),
+    #                         label=f"Hippocampal {trc} SUVR AI",
+    #                     ),
                         
-                    ]
-            else:
-                SUVR_blocks = [
-                        rc.Image(
-                            cortical_SUVR,
-                            label=f"Cortical {trc} SUVR",
-                            extra_css="width: 900px; height: auto;",
-                        ),
-                        rc.Image(
-                            plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
-                            label=f"Subcortical {trc} SUVR",
-                            extra_css="width: 900px; height: auto;",
-                        )
-                    ]
-                AI_blocks = [
-                        # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
-                        # Each `rc.Image()` block specifies the path to an image file and provides a label for
-                        # that image.
-                        rc.Image(
-                            plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method),
-                            label=f"Cortical {trc} SUVR AI"
-                        ),
-                        rc.Image(
-                            plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc),
-                            label=f"Subcortical {trc} SUVR AI"
-                        ),       
-                    ]
+    #                 ]
+    #         else:
+    #             SUVR_blocks = [
+    #                     rc.Image(
+    #                         cortical_SUVR,
+    #                         label=f"Cortical {trc} SUVR",
+    #                         extra_css="width: 900px; height: auto;",
+    #                     ),
+    #                     rc.Image(
+    #                         plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
+    #                         label=f"Subcortical {trc} SUVR",
+    #                         extra_css="width: 900px; height: auto;",
+    #                     )
+    #                 ]
+    #             AI_blocks = [
+    #                     # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
+    #                     # Each `rc.Image()` block specifies the path to an image file and provides a label for
+    #                     # that image.
+    #                     rc.Image(
+    #                         plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method),
+    #                         label=f"Cortical {trc} SUVR AI"
+    #                     ),
+    #                     rc.Image(
+    #                         plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc),
+    #                         label=f"Subcortical {trc} SUVR AI"
+    #                     ),       
+    #                 ]
 
-            view = rc.Block(
-                rc.Heading(label="Standard Uptake Value Ratio (SUVR)"),
+    #         view = rc.Block(
+    #             rc.Heading(label="Standard Uptake Value Ratio (SUVR)"),
                 
-                rc.Select(
-                    blocks=SUVR_blocks
-                ),
+    #             rc.Select(
+    #                 blocks=SUVR_blocks
+    #             ),
 
-                rc.Heading(label="Asymmetry Index (AI)"), 
-                        # rc.Heading(label="(BLUE = Left < Right; RED = Right < Left)",level=3),
+    #             rc.Heading(label="Asymmetry Index (AI)"), 
+    #                     # rc.Heading(label="(BLUE = Left < Right; RED = Right < Left)",level=3),
                 
-                rc.Select(
-                    blocks=AI_blocks
-                ),
-                rc.Group(
-                    rc.Metric(
-                        heading="Asymmetry Index interpretation",
-                        value="BLUE = Left < Right; RED = Right < Left",
-                        label="AI = (L - R) / (0.5 * (L + R))"
-                    ),
-                ),
+    #             rc.Select(
+    #                 blocks=AI_blocks
+    #             ),
+    #             rc.Group(
+    #                 rc.Metric(
+    #                     heading="Asymmetry Index interpretation",
+    #                     value="BLUE = Left < Right; RED = Right < Left",
+    #                     label="AI = (L - R) / (0.5 * (L + R))"
+    #                 ),
+    #             ),
                 
-                rc.Select(
-                    blocks=[
-                        rc.DataTable(
-                            parcel_stats(subject,session,bids_dir,subj_dir,qc_dir,space,mica_pet_derivatives,ref_region,trc,pvc_method),
-                            label="Regional SUVR and Asymmetry Index Statistics",
-                            index=False
-                        )
-                    ]
-                ), 
-                rc.Select(
-                    blocks=[
-                        rc.Image(
-                            f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_SUVR_mosaic_screenshot.png",
-                            label="PET-MRI Overlay",
-                            extra_css="width: 1300px; height: auto;"
-                        ),
-                    ]
-                )
-            )
+    #             rc.Select(
+    #                 blocks=[
+    #                     rc.DataTable(
+    #                         parcel_stats(subject,session,bids_dir,subj_dir,qc_dir,space,mica_pet_derivatives,ref_region,trc,pvc_method),
+    #                         label="Regional SUVR and Asymmetry Index Statistics",
+    #                         index=False
+    #                     )
+    #                 ]
+    #             ), 
+    #             rc.Select(
+    #                 blocks=[
+    #                     rc.Image(
+    #                         f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_SUVR_mosaic_screenshot.png",
+    #                         label="PET-MRI Overlay",
+    #                         extra_css="width: 1300px; height: auto;"
+    #                     ),
+    #                 ]
+    #             )
+    #         )
 
-    report.save(view, f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_report.html")
+    # report.save(view, f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_report.html")
+
+    rc(f"{bids_dir}",subject=f"sub-{subject}",session=f"ses-{session}",pvc=f"{pvc_method}",ref=f"{ref_region}")
 
     # Clean up display
     # Close all matplotlib figures and force-GC VTK render window objects so

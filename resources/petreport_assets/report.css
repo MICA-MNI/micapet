@@ -1,0 +1,423 @@
+/* Report shell stylesheet: topbar, section nav, the editable clinical fields
+ * and the Volume stage. Injected into the report's <style> by petreport.py.
+ */
+  :root {
+    --bg-color: #ffffff;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
+    --tooltip-bg: rgba(255,255,255,0.95);
+    --tooltip-border: #e2e8f0;
+    --accent: #470A68;
+    --stats-selected: #470A68;
+    --page-bg: #f8f9fa;
+    --card-bg: #ffffff;
+    --card-border: #f1f5f9;
+    --card-shadow: none;
+    --accent-soft: #f4e9f8;
+    --topbar-bg: rgba(255, 255, 255, 0.85);
+    --report-selector-font-size: 18.48px;
+    --report-label-font-size: 12.67px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { height: 100%; overflow: hidden; }
+  body {
+    background: #111827; color: var(--text-main);
+    font-family: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    letter-spacing: 0.3px;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+  #report-canvas {
+    width: 1600px;
+    height: 900px;
+    background: var(--page-bg);
+    position: relative;
+    transform-origin: center center;
+    overflow: hidden;
+    border-radius: 16px;
+    border: 1px solid var(--card-border);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+
+  /* Top bar */
+  .report-logo {
+    height: 32px;
+    width: auto;
+    margin-right: 24px;
+    padding-right: 32px;
+    border-right: 1px solid var(--tooltip-border);
+    display: inline-block;
+    vertical-align: middle;
+  }
+  .report-topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 64px; z-index: 100;
+    background: var(--topbar-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 32px;
+    gap: 32px;
+    border-bottom: 1px solid var(--card-border);
+    box-shadow: 0 1px 6px rgba(20, 32, 46, 0.05);
+    transition: background 0.2s;
+  }
+  .topbar-left {
+    display: flex; align-items: center; min-width: 0;
+  }
+  .report-subject {
+    color: var(--text-muted); font-size: 1.13em; font-weight: 400;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    user-select: none; -webkit-user-select: none;
+    transform: translateY(-1px);
+  }
+  .topbar-actions {
+    display: flex; align-items: center; gap: 12px;
+    justify-content: flex-end;
+  }
+  .action-btn {
+    background: transparent; border: none;
+    color: var(--text-muted); padding: 8px; border-radius: 50%;
+    cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+    transition: all 0.2s ease;
+  }
+  .action-btn:hover { color: var(--text-main); background: var(--card-border); }
+  .save-btn:hover { color: var(--accent); background: var(--accent-soft); }
+
+  body.edit-mode .snap-btn, body.edit-mode .fs-btn, body.edit-mode .edit-btn { display: none; }
+  body.edit-mode .save-btn { display: inline-flex; }
+  body.view-mode .save-btn { display: none; }
+  body.view-mode .edit-btn, body.view-mode .snap-btn, body.view-mode .fs-btn { display: inline-flex; }
+  #nav-menu {
+    display: flex; gap: 26px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  #nav-menu::-webkit-scrollbar { display: none; }
+  .nav-btn {
+    background: transparent; border: none; border-bottom: 3px solid transparent;
+    color: var(--text-muted); padding: 10px 22px;
+    cursor: pointer; font: inherit; font-size: 1.16em; font-weight: 500;
+    letter-spacing: 0.3px;
+    transition: all 0.15s ease; user-select: none; -webkit-user-select: none; white-space: nowrap;
+  }
+  .nav-btn:hover { color: var(--text-main); }
+  .nav-btn.active {
+    color: var(--accent);
+    border-bottom: 3px solid var(--accent);
+  }
+
+  /* Sections — only the active one is shown */
+  .report-section {
+    position: absolute; top: 64px; left: 0; right: 0; bottom: 0;
+    display: none; overflow-y: auto;
+    padding: 16px 20px;
+    background: var(--page-bg);
+  }
+  .report-section.active { display: block; }
+  .report-section--stats { padding: 0; overflow: hidden; }
+  .report-section--surface { padding: 0; overflow: hidden; }
+  .report-section--surface iframe {
+    width: 100%; height: 100%; border: 0; display: block;
+    background: var(--bg-color);
+  }
+
+  /* Stats section chrome — identical to the original static Volume section so
+     the type/cluster tabs, bar, separator and stage match exactly. */
+  .report-stats {
+    height: 100%; display: flex; flex-direction: column; position: relative;
+    background: var(--card-bg);
+  }
+  .report-stats-bar {
+    flex: 0 0 auto; position: relative; min-height: 96px;
+    padding: 16px 20px 12px;
+  }
+  .stats-note {
+    position: absolute; left: 24px; top: 15px;
+    color: var(--text-muted); font-size: var(--report-label-font-size); font-weight: 400;
+    padding-top: 2px; line-height: 1.5; text-align: left;
+  }
+  .stats-clustset.active { display: flex; }
+  .stats-ids button.active, .stats-clustset button.active {
+    color: var(--accent); background: var(--accent-soft);
+  }
+  .report-stats-stage {
+    flex: 1 1 auto; min-height: 0; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    padding: 4px 8px 8px;
+  }
+
+  /* Interactive Volume viewer — lives inside .report-stats-stage so the outer
+     chrome (tabs, bar, padding) is inherited from the .report-stats rules
+     above. Only the viewer's internal elements need bespoke rules. */
+  .iv-viewer {
+    width: 100%; height: 100%; display: flex; flex-direction: column;
+    min-height: 0; gap: 4px; position: relative; margin-top: 16px;
+  }
+  .iv-views {
+    flex: 1 1 0; min-height: 0; display: flex;
+    align-items: center; justify-content: center; gap: 60px;
+    margin-top: -8px;
+  }
+  .iv-view {
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #iv-view-sag, #iv-view-cor {
+    margin-top: -32px;
+  }
+  .iv-label {
+    position: absolute;
+    top: -13px;
+    font-size: 1.4em;
+    font-weight: 500;
+    color: var(--text-dim);
+    user-select: none;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .iv-label.left { left: 65px; }
+  .iv-label.right { right: 65px; }
+  .iv-cbox {
+    position: relative; cursor: crosshair; flex: 0 0 auto;
+  }
+  .iv-cbox canvas { display: block; }
+  .iv-pbar-row {
+    flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+    min-height: 0; margin-top: 0; transform: translateY(-50%); z-index: 5;
+  }
+  #iv-pbar {
+    max-height: 88px; max-width: 100%; height: auto; width: auto;
+    image-rendering: -webkit-optimize-contrast;
+  }
+  .iv-peak {
+    flex: 0 0 auto; text-align: center; font-size: 1.4em;
+    font-weight: 500; color: #000000; padding: 0 0 12px; margin-top: -20px;
+    transform: translateY(-50%); z-index: 5;
+  }
+
+  /* Inner content typography (matches existing builders' classes) */
+  .report-inner { max-width: 1400px; margin: 0 auto; }
+  #sec-motion.active { display: flex; flex-direction: column; overflow: hidden; }
+  #sec-motion .report-inner { max-width: none; margin: 0; flex: 1 1 0; display: flex; flex-direction: column; min-height: 0; }
+  /* History/Discussion: full-width single column */
+  .clinical-editor-section {
+    font-size: var(--report-selector-font-size);
+    scrollbar-width: none; -ms-overflow-style: none;
+  }
+  #sec-ieds.active { display: flex; flex-direction: column; overflow: hidden; }
+  #sec-ieds .report-inner {
+    max-width: none; margin: 0; flex: 1 1 0;
+    min-height: 0; display: flex; flex-direction: column;
+  }
+
+  /* Dashboard History Grids */
+  .history-row-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    align-items: stretch;
+    margin-bottom: 16px;
+  }
+  .history-row-2 .clinical-field {
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .history-row-2 .clinical-field .clinical-edit {
+    flex: 1;
+  }
+  .history-row-3 .clinical-field--sub .clinical-edit {
+    flex: 1;
+  }
+  .history-row-2 .clinical-field > h3, .history-row-3 .clinical-field > h3 {
+    color: var(--accent);
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .overview-footer {
+    text-align: center;
+    font-size: 0.85em;
+    color: var(--text-dim);
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--card-border);
+    outline: none;
+  }
+  .overview-footer[contenteditable="true"]:focus {
+    color: var(--text-main);
+  }
+  .report-section b,
+  .report-section strong,
+  .report-section span[style*="bold"],
+  .report-section span[style*="700"] {
+    font-weight: inherit !important;
+    color: var(--accent) !important;
+    background-color: var(--accent-soft) !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+  }
+  body.exec-bold-fix b,
+  body.exec-bold-fix strong,
+  body.exec-bold-fix span[style*="bold"] {
+    font-weight: bold !important;
+  }
+  .clinical-editor-section::-webkit-scrollbar { display: none; }
+  .clinical-editor-section .report-inner { max-width: none; margin: 0; }
+  h2 { font-size: 1.4em; font-weight: 400; color: var(--text-main); margin: 0 0 1em 0; }
+  h3 { font-size: 1.15em; font-weight: 500; color: var(--text-main); margin: 0 0 0.6em 0; }
+  h4 { font-size: 1em; font-weight: 500; color: var(--text-main); margin: 0; }
+  .small { font-size: 0.85em; }
+  .report-cluster-nav button.active { color: var(--accent); background: var(--accent-soft); }
+  .report-cluster-card.active { display: block; }
+  .report-cluster-card .label { color: var(--text-muted); margin-bottom: 6px; font-size: 0.95em; }
+
+  .clinical-field { margin-bottom: 16px; }
+  .clinical-edit {
+    width: 100%; min-height: 46px;
+    color: var(--text-main); background: transparent;
+    border: none; border-radius: 0;
+    padding: 0; line-height: 1.6; color: var(--text-main); outline: none;
+    user-select: text; -webkit-user-select: text;
+  }
+  .clinical-edit--multiline { min-height: 132px; }
+  .clinical-edit { text-align: justify; }
+  .field-hint {
+    display: none; margin-top: 4px;
+    color: var(--text-dim); font-size: 0.8em; font-style: italic;
+  }
+  body.edit-mode .clinical-field:hover .field-hint { display: block; }
+  body.edit-mode .ied-tabbar:hover ~ .ied-desc-hint { display: block; }
+  .clinical-edit:focus {
+    outline: none;
+  }
+  .clinical-edit:empty::before {
+    content: attr(data-placeholder); color: var(--text-dim); font-style: italic;
+  }
+  .clinical-edit ul { margin: 0.4em 0; padding-left: 1.4em; }
+  .clinical-edit li { margin: 0.2em 0; }
+  .clinical-edit b, .clinical-edit strong { font-weight: inherit; color: var(--text-main); }
+  .clinical-editor-section .clinical-field:not(.clinical-group):not(.clinical-field--sub),
+  .clinical-editor-section .clinical-group,
+  .ied-response-card,
+  .motion-qc-grid > div {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: var(--card-shadow);
+    padding: 12px 16px;
+  }
+  body.edit-mode .clinical-editor-section .clinical-field:not(.clinical-field--sub):focus-within,
+  body.edit-mode .ied-response-card:focus-within,
+  body.edit-mode .ied-panel:focus-within,
+  body.edit-mode .motion-qc-grid > div:focus-within {
+    border-color: #cbd5df;
+    box-shadow: 0 3px 14px rgba(20, 32, 46, 0.10);
+  }
+  body.view-mode .clinical-editor-section .clinical-edit {
+    min-height: 0; background: none; border: none; padding: 0;
+  }
+  body.view-mode .clinical-editor-section .clinical-edit:empty,
+  body.view-mode .clinical-editor-section .clinical-field:has(.clinical-edit:empty),
+  body.view-mode .clinical-editor-section .ied-desc:empty {
+    display: none;
+  }
+  body.view-mode .clinical-editor-section .clinical-edit:empty::before {
+    content: "";
+  }
+  body.view-mode .clinical-editor-section .ied-dropzone:not(.has-image) {
+    display: none;
+  }
+  body.view-mode .ied-dropzone {
+    background: none; border: none; cursor: default;
+  }
+  body.view-mode .ied-dropzone.has-image { cursor: zoom-in; }
+  .ied-tab.active { color: var(--accent); background: var(--accent-soft); }
+  .ied-desc-tab.active { display: block; }
+  body.edit-mode .ied-desc {
+    min-height: 0; padding: 6px 0;
+    font-size: var(--report-selector-font-size); line-height: 1.2;
+  }
+  .ied-panel-tab.active {
+    display: flex; flex-direction: column; flex: 1 1 0; min-height: 0;
+  }
+  .clinical-editor-section .clinical-field:not(.clinical-group):not(.clinical-field--sub):hover,
+  .clinical-editor-section .clinical-group:hover,
+  .ied-response-card:hover,
+  .motion-qc-grid > div:hover,
+  .ied-panel:hover {
+    
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  }
+  .ied-dropzone:hover, .ied-dropzone.drag-over { border-color: var(--text-muted); }
+  .ied-dropzone.has-image img.active { display: block; }
+  .ied-lightbox.active { display: flex; }
+
+  @media (max-width: 900px) {
+    #nav-menu { position: static; transform: none; margin-left: 18px; overflow-x: auto; }
+  }
+
+  .unlock-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(5px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .unlock-overlay.active {
+    opacity: 1; pointer-events: all;
+  }
+  .unlock-modal {
+    background: var(--card-bg);
+    padding: 30px 40px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    text-align: center;
+    transform: translateY(-20px);
+    transition: transform 0.2s ease;
+    border: 1px solid var(--card-border);
+  }
+  .unlock-overlay.active .unlock-modal {
+    transform: translateY(0);
+  }
+  .unlock-modal h3 {
+    margin: 0 0 15px 0;
+    color: var(--text-main);
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+  .unlock-modal input {
+    width: 250px;
+    padding: 10px 15px;
+    font-size: 1rem;
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    outline: none;
+    font-family: inherit;
+    color: var(--text-main);
+    transition: border-color 0.2s;
+  }
+  input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
+    border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+  }
+  button:focus, a:focus { outline: none; }
+  .hidden { display: none !important; }
+  .unlock-modal input:focus {
+    border-color: var(--card-border);
+  }

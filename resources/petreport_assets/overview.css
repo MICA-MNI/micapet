@@ -1,0 +1,29 @@
+  /* Overview — the pipeline's own QC figures, laid out row by row with the
+   * caption above each. The figures carry a white background of their own, so
+   * the section is white too and they read as artwork rather than as cards.
+   * Rows span the section's full inner width by default, which lines their left
+   * edge and their captions up with the fields in History. Injected into the
+   * report shell's <style>, so it uses report.css's tokens and matches its
+   * indentation.
+   */
+  #sec-overview { background: var(--card-bg); }
+  #sec-overview .report-inner { max-width: none; margin: 0; }
+
+  /* Images sit at the bottom of each column, so a caption that wraps to two
+     lines pushes itself up instead of pushing its image out of line. */
+  .qc-row { display: flex; gap: 16px; align-items: flex-end; margin-bottom: 26px; }
+  .qc-row:last-child { margin-bottom: 8px; }
+  /* A row narrower than the section sits centred in it. */
+  .qc-row--narrow { margin-left: auto; margin-right: auto; }
+
+  /* flex-basis 0 with a grow factor set per figure from its aspect ratio: the
+     row's width divides in that proportion, so the images share a height. */
+  .qc-figure { flex: 1 1 0; min-width: 0; }
+  .qc-figure figcaption {
+    margin-bottom: 6px;
+    color: var(--accent); font-size: 0.95em; font-weight: 500;
+  }
+  .qc-figure img {
+    display: block; width: 100%; height: auto;
+    border-radius: 8px;
+  }

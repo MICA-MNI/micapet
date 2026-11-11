@@ -1,0 +1,94 @@
+  /* Per-region SUVR table, shown over the brain with T.
+   *
+   * Injected into the surface viewer's own <style>, so it uses that document's
+   * tokens (--accent, --accent-soft, the text ramp) and is indented to match.
+   * The fMRI report has no HTML table anywhere, so there was no existing
+   * vocabulary to inherit; this is built from the tokens instead of invented.
+   */
+  .table-panel {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.98);
+    z-index: 40;
+    display: none;
+    flex-direction: column;
+    width: min(760px, 92vw);
+    max-height: min(72vh, 720px);
+    background: var(--bg-color);
+    border-radius: 10px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.22);
+    padding: 14px 18px 6px;
+    opacity: 0;
+    transition: opacity .13s ease, transform .13s ease;
+  }
+  .table-panel.open { display: flex; opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+  .table-bar { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; margin-bottom: 10px; }
+  .summary-filter {
+    font-family: inherit; font-size: 0.78em; color: var(--text-main);
+    background: var(--bg-color);
+    border: 1px solid var(--tooltip-border); border-radius: 7px;
+    padding: 6px 11px; width: 210px; outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .summary-filter::placeholder { color: var(--text-dim); }
+  .summary-filter:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .summary-count { font-size: 0.72em; color: var(--text-dim); }
+  .table-close {
+    margin-left: auto; background: none; border: none; cursor: pointer;
+    color: var(--text-dim); font-size: 1.3em; line-height: 1;
+    padding: 0 2px; font-family: inherit;
+  }
+  .table-close:hover { color: var(--accent); }
+
+  /* The scrollbar fades in on hover/scroll but its gutter is ALWAYS reserved:
+     toggling scrollbar-width would change the content box and squeeze the table
+     sideways every time the pointer entered it. Only the colour animates. */
+  .summary-scroll {
+    flex: 1 1 auto; min-height: 0; overflow-y: scroll; overflow-x: hidden;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color .25s ease;
+  }
+  .summary-scroll:hover, .summary-scroll.scrolling {
+    scrollbar-color: rgba(148,163,184,0.55) transparent;
+  }
+  .summary-scroll::-webkit-scrollbar { width: 7px; }
+  .summary-scroll::-webkit-scrollbar-track { background: transparent; }
+  .summary-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
+  .summary-scroll:hover::-webkit-scrollbar-thumb,
+  .summary-scroll.scrolling::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.55); }
+
+  .summary-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 0.76em;
+    font-variant-numeric: tabular-nums;   /* digit columns must line up */
+  }
+  .summary-table thead th {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--bg-color);
+    color: var(--text-muted);
+    font-weight: 500; font-size: 0.95em;
+    text-align: left; padding: 7px 12px;
+    border-bottom: 1.5px solid var(--tooltip-border);
+    cursor: pointer; user-select: none; white-space: nowrap;
+  }
+  .summary-table thead th:hover { color: var(--accent); }
+  .summary-table thead th.num, .summary-table td.num { text-align: right; }
+  .summary-table td.txt { white-space: nowrap; }
+
+  /* Sort caret shows only on the active column, so the header stays quiet. */
+  .summary-table thead th::after { content: ""; display: inline-block; width: 0.7em; opacity: 0; }
+  .summary-table thead th.sorted-asc::after  { content: "\2191"; opacity: 1; }
+  .summary-table thead th.sorted-desc::after { content: "\2193"; opacity: 1; }
+  .summary-table thead th.sorted-asc,
+  .summary-table thead th.sorted-desc { color: var(--accent); }
+
+  .summary-table tbody td {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--accent-soft);
+    color: var(--text-main);
+  }
+  .summary-table tbody tr:last-child td { border-bottom: none; }
+  .summary-table tbody tr:hover td { background: var(--accent-soft); }
+  .summary-table tbody tr.filtered-out { display: none; }

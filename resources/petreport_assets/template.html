@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{TITLE}}</title>
+<style>
+  {{FONT_FACE_CSS}}
+  :root {
+    --bg-color: #ffffff;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
+    --tooltip-bg: #ffffff;
+    --tooltip-border: #ddd;
+    --tooltip-val: #007acc;
+    --accent: #470A68;
+    --accent-soft: #f4e9f8;
+  }
+
+  #nav-menu {
+    position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 5px; z-index: 100; flex-wrap: nowrap;
+    padding: 0; background: none; border: none;
+  }
+  .nav-btn {
+    position: relative;
+    background: transparent; border: none; border-radius: 12px; color: var(--text-muted);
+    padding: 6px 14px; cursor: pointer; font: inherit;
+    font-size: 1.05em; font-weight: 400; letter-spacing: 0.3px;
+    transition: color .15s ease, background .15s ease;
+    user-select: none; -webkit-user-select: none; white-space: nowrap;
+  }
+  .nav-btn:hover { color: var(--accent); background: var(--accent-soft); }
+  .nav-btn.active { color: var(--accent); background: var(--accent-soft); }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { overflow: hidden; background: var(--bg-color);
+         font-family: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+         color: var(--text-main); letter-spacing: 0.3px;
+         user-select: none; -webkit-user-select: none;
+         font-size: clamp(13px, 1.1vw, 22px); }
+
+  #container-left  { width: 50vw; height: 100vh; float: left; position: relative; }
+  #container-right { width: 50vw; height: 100vh; float: left; position: relative; }
+
+  #loading {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    color: var(--text-main); font-size: 1.38em; font-weight: 200; z-index: 50;
+  }
+
+  /* ── Map label (top-left) — aligned with nav-menu top + outer topbar left padding ── */
+  #map-label {
+    position: absolute; top: 15px; left: 24px; z-index: 20;
+    pointer-events: none;
+  }
+  #map-label-main  { display: none; }
+  #map-label-sub   { display: block; color: var(--text-muted); font-size: 0.72em; font-weight: 400; margin-top: 2px; line-height: 1.5; }
+
+  /* ── Colorbar (vertical midline) ── */
+  #colorbar-wrap {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    z-index: 20; display: flex; flex-direction: column; align-items: center;
+    color: var(--text-muted); font-size: 1.13em; font-weight: 400;
+    /* Interactive: dragging it up or down rescales the colour range. It sits
+       on the midline between the two hemispheres, so taking the pointer here
+       costs the hover query nothing. */
+    cursor: ns-resize; touch-action: none;
+  }
+  #colorbar-title {
+    font-weight: 500; text-align: center; font-size: 1em; color: var(--text-muted);
+    margin-bottom: 5px;
+  }
+  #colorbar-canvas {
+    width: 14px; height: 300px; border-radius: 4px; display: block;
+    margin: 5px 0;
+  }
+  /* Per-map reading note. Sits midway between the foot of the colorbar
+     (50% + ~185px) and the help bar (bottom: 10px), so it belongs to neither
+     and crowds neither. Hidden unless the active map supplies text. */
+  #cb-note {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    top: calc(75% + 72px); z-index: 20; pointer-events: none;
+    display: none; text-align: center; white-space: nowrap;
+    font-size: 0.88em; line-height: 1.6;   /* matches .help-bar */
+  }
+  /* Each line is tinted with the colour it describes, so the legend restates
+     the colormap instead of just naming it. The colour word stays in the text
+     as well — tint alone would be no help to a colourblind reader. Both are
+     darkened from the pure bwr endpoints, which are too light to read as text. */
+  #cb-note .cb-note-pos { color: #d21f1f; }
+  #cb-note .cb-note-neg { color: #1f4fd2; }
+
+  /* Region-table overlay (empty when the session has no per-region data) */
+{{TABLE_CSS}}
+
+  /* ── Tooltip ── */
+  #tooltip {
+    position: fixed; display: none; background: rgba(255,255,255,0.9);
+    color: var(--text-main); padding: 12px 16px; border-radius: 6px; border: none;
+    z-index: 20; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    width: fit-content; font-size: 0.81em; line-height: 1.5;
+    pointer-events: none; user-select: text; -webkit-user-select: text;
+  }
+
+  .tooltip-header { margin-bottom: 4px; }
+  .tooltip-map-val { color: var(--tooltip-val); font-size: 0.85em; margin-top: 3px; margin-bottom: 1px; }
+  .help-bar {
+    position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+    color: var(--text-dim); font-size: 0.88em; z-index: 10; text-align: center;
+    pointer-events: none; white-space: nowrap;
+  }
+
+  #help-modal {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    z-index: 100; display: none; align-items: center; justify-content: center;
+  }
+  .help-modal-content {
+    background: var(--bg-color); color: var(--text-main);
+    padding: 30px 40px; border-radius: 8px; border: 1px solid var(--tooltip-border);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2); font-family: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  .help-modal-content h3 { margin-top: 0; margin-bottom: 24px; font-weight: 500; text-align: center; font-size: 1.2em; letter-spacing: 0.5px;}
+  .help-grid { display: grid; grid-template-columns: max-content auto; gap: 12px 20px; align-items: center; font-size: 0.95em;}
+  .help-key { 
+    background: var(--tooltip-bg); padding: 4px 10px; border-radius: 4px; 
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; 
+    font-size: 0.85em; text-align: center; border: 1px solid var(--tooltip-border); font-weight: 600;
+  }
+</style>
+</head>
+<body class="{{THEME_CLASS}}">
+
+<div id="loading">Loading…</div>
+
+<div id="nav-menu"></div>
+
+<div id="map-label">
+  <span id="map-label-main"></span>
+  <span id="map-label-sub"></span>
+</div>
+
+<div id="colorbar-wrap">
+  <div id="colorbar-title"></div>
+  <span id="cb-max"></span>
+  <canvas id="colorbar-canvas" width="14" height="300"></canvas>
+  <span id="cb-min"></span>
+</div>
+
+<div id="cb-note"></div>
+
+<div id="tooltip"></div>
+
+<div id="container-left"></div>
+<div id="container-right"></div>
+
+{{TABLE_HTML}}
+
+<div class="help-bar">
+  <span>H help · Scroll/←→ inflate/deflate · ↑↓ zoom · [ ] switch map · C colormap · Q query · T table · O opacity · M mesh · L lock · R reset</span>
+</div>
+
+<div id="help-modal">
+  <div class="help-modal-content">
+    <h3>Viewer Controls</h3>
+    <div class="help-grid">
+      <div class="help-key">H</div><div>Show or hide this help menu</div>
+      <div class="help-key">Scroll / ←→</div><div>Fold or unfold the brain surface</div>
+      <div class="help-key">↑↓</div><div>Zoom in or out</div>
+      <div class="help-key">[ ]</div><div>Switch to the previous / next map</div>
+      <div class="help-key">C</div><div>Change color palette</div>
+      <div class="help-key">Drag bar</div><div>Rescale the colour range (50-150%); double-click to reset</div>
+      <div class="help-key">Q</div><div>Turn on / off the hover query (parcel name and value)</div>
+      <div class="help-key">T</div><div>Show / hide the per-region SUVR table</div>
+      <div class="help-key">O</div><div>Make brain transparent (to see inner structures)</div>
+      <div class="help-key">M</div><div>Show / hide the surface mesh</div>
+      <div class="help-key">L</div><div>Lock / unlock individual hemisphere rotation</div>
+      <div class="help-key">R</div><div>Reset view to default</div>
+    </div>
+  </div>
+</div>
+
+<script>{{THREE_JS}}</script>
+<script>{{ORBIT_CONTROLS_JS}}</script>
+<script>{{HTML2CANVAS_JS}}</script>
+
+<script>const PAYLOAD = {{PAYLOAD_JSON}};</script>
+<script>{{VIEWER_JS}}
+</script>
+<script>
+{{TABLE_JS}}</script>
+</body>
+</html>
