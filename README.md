@@ -177,6 +177,7 @@ singularity run --cleanenv --env FS_LICENSE="/path/to/license.txt" \
 - `--nonlinear-coreg` : Flag to perform nonlinear co-registration to MNI space. If set, will run lamareg nonlinear registration.
 - `--smoothing`: one or more smoothing values for cortical surface projection
 - `--threads`: number of CPU threads
+- `--normalize-histogram-max`: Flag to normalize surface map by the histogram maximum prior to Z-score calculation
 
 ### Optional PETPVC parameters
 - `--pvc_mask`       : Optional custom mask to use for PETPVC. Must be a 4D NIfTI with one ROI per frame. Sum across timeframes must be 1 at each voxel. Must be in FreeSurfer/FastSurfer space (eg. orig.mgz). If not provided, a two tissue mask will be generated for MG PVC and a GM+WM+CSF+background mask will be generated for all others.

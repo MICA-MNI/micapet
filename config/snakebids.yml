@@ -176,6 +176,12 @@ parse_args:
     action: 'store_true'
     default: false
 
+  --normalize-histogram-max:
+    help: "Flag to normalize PET surface data by the histogram maximum before Z-score calculation."
+    dest: normalize_histogram_max
+    action: 'store_true'
+    default: false
+
   --nonlinear-coreg:
     help: "Flag to perform nonlinear co-registration to MNI space (optional). If set, will run lamareg nonlinear registration."
     dest: nonlinear_coreg

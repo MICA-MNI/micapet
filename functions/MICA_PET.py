@@ -1521,7 +1521,10 @@ def report(
     pvc_method: str,
     ref_region: str,
     hippocampal: bool = True,
-    max_value: float = None
+    z_score: bool = True,
+    normalize_histogram_max: bool = False,
+    max_value: float = None,
+    smoothing: Union[float, List[float]] = 0.0,
 ):
     """
         This script is part of MICA-PET pipeline for generating HTML reports.
@@ -1535,8 +1538,10 @@ def report(
             -pvc_method     : PVC method used for PET image. Options: 'RBV-FS', 'MG-FS', 'MG', 'IY', 'LABBE', 'RL', 'VC', 'RBV', 'LABBE+RBV', 'RBV+VC', 'RBV+RL', 'LABBE+RBV+VC', 'LABBE+RBV+RL', 'MTC', 'LABBE+MTC', 'MTC+VC', 'MTC+RL', 'LABBE+MTC+VC', 'LABBE+MTC+RL', 'IY+VC', 'IY+RL', 'MG+VC', 'MG+RL'.
             -ref_region : Reference regions to use for projection. eg. 'pons','cerebellarGM','cerebellum','composite','WM','GM'. Default: 'pons'.
             -hippocampal    : (Optional) Whether to include hippocampal surface in report. Default: True.
+            -z_score        : (Optional) Whether to include the cortical Z-score surface tab. Default: True.
+            -normalize_histogram_max : (Optional) Normalize PET surface data by histogram maximum for Z-score calculation. Default: False.
             -max_value      : (Optional) Maximum SUVR value for color scale. Default: 1.5 times the 85th percentile SUVR in the data.
-
+            -smoothing      : (List of float) List of smoothing FWHM in mm for surface projection. eg. '-smoothing 5 10'. Default: 0 (no smoothing).
     """
     import gc
     from nipype.interfaces.freesurfer import FSCommand, MRIConvert, ApplyVolTransform
@@ -1548,14 +1553,22 @@ def report(
     import matplotlib.pyplot as pltl
     import pandas as pd
     from PIL import Image
-    # import report_creator as rc
-    from petreport import report as rc
+    import report_creator as rc
+    from petreport import report as petrep
     import nibabel as nib
     from brainspace.mesh.mesh_io import read_surface
     from pathlib import Path
     from typing import List, Union, Tuple, Literal
     PathType = Union[str, os.PathLike]
     Analysis = Literal["regional", "asymmetry"]
+    
+    # Absolute path to the directory above the current script
+    parent_dir = Path(__file__).resolve().parents[1]
+    resources_path = f"{parent_dir}/resources"
+
+    reference_dir = os.path.join(resources_path,"reference")
+    if reference_dir not in sys.path:
+        sys.path.insert(0, reference_dir)
 
     mica_pet_derivatives = f"{bids_dir}/derivatives/MICA-PET_{utils.MICA_PET_VERSION}"
     f_surf_dir = f"{os.path.realpath(subj_dir)}/sub-{subject}_ses-{session}"
@@ -1585,7 +1598,22 @@ def report(
     else:
         max_value = None
 
-    utils.print_time_stamp(f"Starting report generation for subject: {subject}, session: {session}, tracer: {trc}, PVC method: {pvc_method}, reference regions: {ref_region}.")
+    # Smoothing values
+    #  Normalize input into a list if a single int/float was passed
+    if isinstance(smoothing, (int, float)):
+        smoothing_list = [float(smoothing)]
+    elif isinstance(smoothing, list):
+        smoothing_list = [float(s) for s in smoothing]
+    elif isinstance(smoothing, str):
+        smoothing_list = [float(x) for x in smoothing.split()]
+    else:
+        raise TypeError(f"smoothing must be a float or list of floats, got {type(smoothing)}")
+
+    smoothing_list_int = [int(x) for x in smoothing_list]
+
+    smooth_max = np.max(smoothing_list_int)
+
+    utils.print_time_stamp(f"Starting report generation for subject: {subject}, session: {session}, tracer: {trc}, PVC method: {pvc_method}, reference regions: {ref_region}, smooth max: {smooth_max}.")
 
     pial_left, pial_right = fetch_template_surface("fslr32k",join=False)
     mask = fetch_mask("fslr32k")
@@ -1905,33 +1933,42 @@ def report(
         max_value = bin_centers[max_index]
         return max_value
 
-    def plot_Zscore(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc):
+    def plot_Zscore(subject,session,bids_dir,qc_dir,mica_pet_derivatives,pvc_method,ref_region,trc,ref_dataset,mask,normalize_histogram_max=False):
         from utils import convert_array_to_gifti
 
         pet_derivatives=f'{mica_pet_derivatives}'
         mri_derivatives=f'{bids_dir}/derivatives/fastsurfer'
-        pvc_method = 'none'
+        # pvc_method = 'none'
         Z_score_threhold = 1.96
 
-        FDG_surf_ctrl_hist_norm_mean = np.genfromtxt(f'{parent_dir}/surfaces/FDG_surf_ctrl_hist_norm_mean.csv', delimiter=',', missing_values='""', filling_values=np.nan)
-        FDG_surf_ctrl_hist_norm_std = np.genfromtxt(f'{parent_dir}/surfaces/FDG_surf_ctrl_hist_norm_std.csv', delimiter=',', missing_values='""', filling_values=np.nan)
+        # Load reference data
+
+        ctrl_data = np.genfromtxt(f'{ref_dataset}', delimiter=',', missing_values='""', filling_values=np.nan)
+
+        # ctrl_data[~mask] = np.nan
+        surf_ctrl_hist_norm_mean = np.nanmean(ctrl_data, axis=0)
+        surf_ctrl_hist_norm_std = np.nanstd(ctrl_data, axis=0)
         
         tmp_L = nilearn.surface.load_surf_data(get_surf_path(pet_derivatives, subject, session, "L", pvc_method, ref_region, trc))
         tmp_R = nilearn.surface.load_surf_data(get_surf_path(pet_derivatives, subject, session, "R", pvc_method, ref_region, trc))
 
         tmp = np.hstack((tmp_L,tmp_R))
         tmp[~mask] = np.nan
-        norm_factor = max_hist(tmp) #normalize by histogram max
-        test_FDG_surf_pt = tmp / norm_factor
+        if normalize_histogram_max:
+            print("Normalizing PET surface data by histogram maximum for Z-score calculation...")
+            norm_factor = max_hist(tmp)
+            test_surf = tmp / norm_factor
+            print(f"Normalization factor (histogram max): {norm_factor}")
+        else:
+            test_surf = tmp
 
-        Zscore = (test_FDG_surf_pt - FDG_surf_ctrl_hist_norm_mean)/ FDG_surf_ctrl_hist_norm_std
+        Zscore = (test_surf - surf_ctrl_hist_norm_mean)/ surf_ctrl_hist_norm_std
 
         to_plot = Zscore
-        # to_plot = test_FDG_surf_pt
         to_plot[~mask] = np.nan   
         to_plot[(to_plot >= -Z_score_threhold) & (to_plot <= Z_score_threhold)] = 0 # Filter out values outside the range
 
-        img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_FDG_SUVR_plot_Zscore_clin_report.png"
+        img_stream = f"{qc_dir}/sub-{subject}_ses-{session}_SUVR_plot_Zscore_clin_report.png"
 
         # save gifti
         convert_array_to_gifti(to_plot[: len(to_plot) // 2], f"{qc_dir}/sub-{subject}_ses-{session}_hemi-L_surf-fsLR-32k_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_desc-SUVRZscore_pet.func.gii")
@@ -2071,244 +2108,43 @@ def report(
 
     cortical_SUVR, max_value = plot_SUVR(subject,session,bids_dir,qc_dir, pial_left, pial_right, mask,max_value,mica_pet_derivatives,ref_region,trc,pvc_method)
 
-    # if trc == "FDG":
-    #     with rc.ReportCreator(
-    #         title="MICA-PET Report",
-    #         description=f"**Subject**: {subject} | **Session**: {session} | **Modality**: {trc} PET | **Ref region**: {ref_region} | **PVC method**: {pvc_method}",
-    #         footer="Multimodal Imaging and Connectome Analysis (MICA) Lab - McGill University. For research use only.",
-    #         logo=f"https://box.bic.mni.mcgill.ca/s/GbLcj26GmYWBfLL/download"
-    #     ) as report:
-            
-    #         if hippocampal:
-    #             SUVR_blocks = [
-    #                     rc.Image(
-    #                         cortical_SUVR,
-    #                         label=f"Cortical {trc} SUVR",
-    #                         extra_css="width: 900px; height: auto;",
-    #                     ),
-    #                     # rc.Image(
-    #                     #     plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
-    #                     #     label=f"Subcortical {trc} SUVR",
-    #                     #     extra_css="width: 900px; height: auto;",
-    #                     # ),
-    #                     rc.Image(
-    #                         plot_hippunfold(subject,session,bids_dir,qc_dir,max_value,mica_pet_derivatives,ref_region,trc,pvc_method),
-    #                         label=f"Hippocampal {trc} SUVR",
-    #                         extra_css="width: 450px; height: auto;",
-    #                     ) 
-    #                 ]
-    #             AI_blocks = [
-    #                     # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
-    #                     # Each `rc.Image()` block specifies the path to an image file and provides a label for
-    #                     # that image.
-    #                     rc.Image(
-    #                         plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method),
-    #                         label=f"Cortical {trc} SUVR AI"
-    #                     ),
-    #                     rc.Image(
-    #                         plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc),
-    #                         label=f"Subcortical {trc} SUVR AI"
-    #                     ),
-    #                     rc.Image(
-    #                         plot_hippunfold_AI(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc,pvc_method),
-    #                         label=f"Hippocampal {trc} SUVR AI",
-    #                     ),
-                        
-    #                 ]
-    #         else:
-    #             SUVR_blocks = [
-    #                     rc.Image(
-    #                         cortical_SUVR,
-    #                         label=f"Cortical {trc} SUVR",
-    #                         extra_css="width: 900px; height: auto;",
-    #                     ),
-    #                     rc.Image(
-    #                         plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
-    #                         label=f"Subcortical {trc} SUVR",
-    #                         extra_css="width: 900px; height: auto;",
-    #                     )
-    #                 ]
-    #             AI_blocks = [
-    #                     # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
-    #                     # Each `rc.Image()` block specifies the path to an image file and provides a label for
-    #                     # that image.
-    #                     rc.Image(
-    #                         plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method),
-    #                         label=f"Cortical {trc} SUVR AI"
-    #                     ),
-    #                     rc.Image(
-    #                         plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc),
-    #                         label=f"Subcortical {trc} SUVR AI"
-    #                     ),       
-    #                 ]
+    # find ref dataset
+    def find_ref_dataset(pvc_method,ref_region,smooth_max,trc):
+        pattern = f"{reference_dir}/referenceset_surf-fsLR-32k_label-midthickness_pvc-{pvc_method}_ref-{ref_region}_smooth-{smooth_max}mm_trc-{trc}_pet.csv"
+        print(f"Searching for reference dataset with pattern: {pattern}")
+        matches = glob.glob(pattern)
+        if matches:
+            return matches[0]
+        else:
+            return None
 
-    #         view = rc.Block(
-    #             rc.Heading(label="Standard Uptake Value Ratio (SUVR)"),
-                
-    #             rc.Select(
-    #                 blocks=SUVR_blocks
-    #             ),
+    if z_score and find_ref_dataset(pvc_method,ref_region,smooth_max,trc) is not None:
+        ref_dataset = find_ref_dataset(pvc_method,ref_region,smooth_max,trc)
+        plot_Zscore(subject,session,bids_dir,qc_dir,mica_pet_derivatives,pvc_method,ref_region,trc,ref_dataset,mask,normalize_histogram_max)
+    
+    if hippocampal:
+        plot_hippunfold(subject,session,bids_dir,qc_dir,max_value,mica_pet_derivatives,ref_region,trc,pvc_method)
+        
+        plot_hippunfold_AI(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc,pvc_method)
+        
+    plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method)
+    
+    plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc)
+    
+    plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc)
 
-    #             rc.Heading(label="Asymmetry Index (AI)"), 
-    #                     # rc.Heading(label="(BLUE = Left < Right; RED = Right < Left)",level=3),
-                
-    #             rc.Select(
-    #                 blocks=AI_blocks
-    #             ),
-    #             rc.Group(
-    #                 rc.Metric(
-    #                     heading="Asymmetry Index interpretation",
-    #                     value="BLUE = Left < Right; RED = Right < Left",
-    #                     label="AI = (L - R) / (0.5 * (L + R))"
-    #                 ),
-    #             ),
-                
-    #             rc.Heading(label=f"{trc} PET Z score thresholded at |Z| > 1.96"), 
-                
-    #             rc.Select(
-    #                 blocks=[
-    #                     rc.Image(
-    #                         plot_Zscore(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc),
-    #                         label=f"{trc} PET Z score",
-    #                         extra_css="width: 900px; height: auto;"
-    #                     ),
-    #                 ]
-    #             ),
-    #             rc.Select(
-    #                 blocks=[
-    #                     rc.DataTable(
-    #                         parcel_stats(subject,session,bids_dir,subj_dir,qc_dir,space,mica_pet_derivatives,ref_region,trc,pvc_method),
-    #                         label="Regional SUVR and Asymmetry Index Statistics",
-    #                         index=False
-    #                     )
-    #                 ]
-    #             ), 
-    #             rc.Select(
-    #                 blocks=[
-    #                     rc.Image(
-    #                         f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_SUVR_mosaic_screenshot.png",
-    #                         label="PET-MRI Overlay",
-    #                         extra_css="width: 1300px; height: auto;"
-    #                     ),
-    #                 ]
-    #             )
-    #         )
+    parcel_stats(subject,session,bids_dir,subj_dir,qc_dir,space,mica_pet_derivatives,ref_region,trc,pvc_method)
 
-    # else: 
-    #     with rc.ReportCreator(
-    #         title="MICA-PET Report",
-    #         description=f"**Subject**: {subject} | **Session**: {session} | **Modality**: {trc} PET | **Ref region**: {ref_region} | **PVC method**: {pvc_method}",
-    #         footer="Multimodal Imaging and Connectome Analysis (MICA) Lab - McGill University. For research use only.",
-    #         logo=f"https://box.bic.mni.mcgill.ca/s/GbLcj26GmYWBfLL/download"
-    #     ) as report:
-            
-    #         if hippocampal:
-    #             SUVR_blocks = [
-    #                     rc.Image(
-    #                         cortical_SUVR,
-    #                         label=f"Cortical {trc} SUVR",
-    #                         extra_css="width: 900px; height: auto;",
-    #                     ),
-    #                     rc.Image(
-    #                         plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
-    #                         label=f"Subcortical {trc} SUVR",
-    #                         extra_css="width: 900px; height: auto;",
-    #                     ),
-    #                     rc.Image(
-    #                         plot_hippunfold(subject,session,bids_dir,qc_dir,max_value,mica_pet_derivatives,ref_region,trc,pvc_method),
-    #                         label=f"Hippocampal {trc} SUVR",
-    #                         extra_css="width: 450px; height: auto;",
-    #                     ) 
-    #                 ]
-    #             AI_blocks = [
-    #                     # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
-    #                     # Each `rc.Image()` block specifies the path to an image file and provides a label for
-    #                     # that image.
-    #                     rc.Image(
-    #                         plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method),
-    #                         label=f"Cortical {trc} SUVR AI"
-    #                     ),
-    #                     rc.Image(
-    #                         plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc),
-    #                         label=f"Subcortical {trc} SUVR AI"
-    #                     ),
-    #                     rc.Image(
-    #                         plot_hippunfold_AI(subject,session,bids_dir,qc_dir,mica_pet_derivatives,ref_region,trc,pvc_method),
-    #                         label=f"Hippocampal {trc} SUVR AI",
-    #                     ),
-                        
-    #                 ]
-    #         else:
-    #             SUVR_blocks = [
-    #                     rc.Image(
-    #                         cortical_SUVR,
-    #                         label=f"Cortical {trc} SUVR",
-    #                         extra_css="width: 900px; height: auto;",
-    #                     ),
-    #                     rc.Image(
-    #                         plot_subcort(subject,session,bids_dir,qc_dir,ref_region,max_value,pvc_method,trc),
-    #                         label=f"Subcortical {trc} SUVR",
-    #                         extra_css="width: 900px; height: auto;",
-    #                     )
-    #                 ]
-    #             AI_blocks = [
-    #                     # The `rc.Image()` blocks in the code are creating images to be displayed in the report.
-    #                     # Each `rc.Image()` block specifies the path to an image file and provides a label for
-    #                     # that image.
-    #                     rc.Image(
-    #                         plot_AI(subject,session,bids_dir,qc_dir, pial_left, pial_right,mica_pet_derivatives,ref_region,trc,pvc_method),
-    #                         label=f"Cortical {trc} SUVR AI"
-    #                     ),
-    #                     rc.Image(
-    #                         plot_subcortical_AI(subject,session,bids_dir,ref_region,qc_dir,pvc_method,trc),
-    #                         label=f"Subcortical {trc} SUVR AI"
-    #                     ),       
-    #                 ]
-
-    #         view = rc.Block(
-    #             rc.Heading(label="Standard Uptake Value Ratio (SUVR)"),
-                
-    #             rc.Select(
-    #                 blocks=SUVR_blocks
-    #             ),
-
-    #             rc.Heading(label="Asymmetry Index (AI)"), 
-    #                     # rc.Heading(label="(BLUE = Left < Right; RED = Right < Left)",level=3),
-                
-    #             rc.Select(
-    #                 blocks=AI_blocks
-    #             ),
-    #             rc.Group(
-    #                 rc.Metric(
-    #                     heading="Asymmetry Index interpretation",
-    #                     value="BLUE = Left < Right; RED = Right < Left",
-    #                     label="AI = (L - R) / (0.5 * (L + R))"
-    #                 ),
-    #             ),
-                
-    #             rc.Select(
-    #                 blocks=[
-    #                     rc.DataTable(
-    #                         parcel_stats(subject,session,bids_dir,subj_dir,qc_dir,space,mica_pet_derivatives,ref_region,trc,pvc_method),
-    #                         label="Regional SUVR and Asymmetry Index Statistics",
-    #                         index=False
-    #                     )
-    #                 ]
-    #             ), 
-    #             rc.Select(
-    #                 blocks=[
-    #                     rc.Image(
-    #                         f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_SUVR_mosaic_screenshot.png",
-    #                         label="PET-MRI Overlay",
-    #                         extra_css="width: 1300px; height: auto;"
-    #                     ),
-    #                 ]
-    #             )
-    #         )
-
-    # report.save(view, f"{qc_dir}/sub-{subject}_ses-{session}_pvc-{pvc_method}_ref-{ref_region}_trc-{trc}_report.html")
-
-    rc(f"{bids_dir}",subject=f"sub-{subject}",session=f"ses-{session}",pvc=f"{pvc_method}",ref=f"{ref_region}")
+    petrep(
+        f"{bids_dir}",
+        subject=f"sub-{subject}",
+        session=f"ses-{session}",
+        pvc=f"{pvc_method}",
+        ref=f"{ref_region}",
+        trc=f"{trc}",
+        hippocampal=hippocampal,
+        z_score=z_score,
+    )
 
     # Clean up display
     # Close all matplotlib figures and force-GC VTK render window objects so
@@ -2402,6 +2238,7 @@ if __name__ == "__main__":
     parser.add_argument("-pvc_n_iter", dest="pvc_n_iter", type=int, default=10, help="(Int) Number of iterations for iterative PVC methods (IY). Default: 10.")
     parser.add_argument("-pvc_n_deconv", dest="pvc_n_deconv", type=int, default=10, help="(Int) Number of iterations for deconvolution PVC methods (RL, VC). Default: 10.")
     parser.add_argument("-output_dir", dest="output_dir", type=str, help="(Str) Specify output directory for MICA-PET derivatives. Default: {bids_dir}/derivatives/MICA-PET_{version}")
+    parser.add_argument("-normalize_histogram_max", dest="normalize_histogram_max", action='store_true', help="(Flag) Normalize by histogram max for Z-score plotting.")
     args = parser.parse_args()
 
 
@@ -2594,5 +2431,7 @@ if __name__ == "__main__":
         subj_dir=subj_dir,
         pvc_method=args.pvc_method,
         ref_region=args.ref_region,
-        hippocampal=hippocampal
+        hippocampal=hippocampal,
+        smoothing=args.smoothing,
+        normalize_histogram_max=args.normalize_histogram_max
     )

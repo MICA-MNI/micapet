@@ -45,6 +45,7 @@ PET_DERIV_GLOB = "MICA-PET*"
 RESOLUTION = "fsLR-32k"
 N_VERTS = 32492
 TRACER = "FDG"
+DEFAULT_TRACER = TRACER
 
 # PET values come from MICA-PET; the hippocampal geometry they sit on comes
 # from HippUnfold's own derivative tree.
@@ -90,7 +91,7 @@ NAV_LEFT_OFFSET = 8             # horizontal nudge of the topbar nav, px
 
 # Guards against editing a report by accident. Not a security control: it ships
 # in the HTML and is readable by anyone who opens the file.
-EDIT_PASSCODE = "woof woof"
+EDIT_PASSCODE = "micapet"
 
 # Surface viewer camera. CAM_DIST frames the fsLR cortex at CORTEX_RADIUS; any
 # other mesh is placed at the same ratio of its own radius, so it fills the
@@ -191,15 +192,17 @@ def hipp_geom_path(hipp_root: Path, subject: str, session: Optional[str],
             f"_den-{HIPP_DENSITY}_label-hipp_midthickness.surf.gii")
 
 
-def hipp_map_path(sdir: Path, idb: str, hemi: str, pvc: str, ref: str) -> Path:
+def hipp_map_path(sdir: Path, idb: str, hemi: str, pvc: str, ref: str,
+                  tracer: str = TRACER) -> Path:
     return (sdir / "surf" /
             f"{idb}_hemi-{hemi}_surf-hipp_den-{HIPP_DENSITY}_label-midthickness"
-            f"_pvc-{pvc}_ref-{ref}_trc-{TRACER}_pet.func.gii")
+            f"_pvc-{pvc}_ref-{ref}_trc-{tracer}_pet.func.gii")
 
 
-def pet_volume_path(sdir: Path, idb: str, pvc: str, ref: str) -> Path:
+def pet_volume_path(sdir: Path, idb: str, pvc: str, ref: str,
+                    tracer: str = TRACER) -> Path:
     return (sdir / "pet" /
-            f"{idb}_space-T1wFS_pvc-{pvc}_ref-{ref}_trc-{TRACER}_pet.nii.gz")
+            f"{idb}_space-T1wFS_pvc-{pvc}_ref-{ref}_trc-{tracer}_pet.nii.gz")
 
 
 def surf_geom_path(sdir: Path, idb: str, hemi: str, label: str) -> Path:
@@ -208,14 +211,14 @@ def surf_geom_path(sdir: Path, idb: str, hemi: str, label: str) -> Path:
 
 
 def surf_map_path(sdir: Path, idb: str, hemi: str, pvc: str, ref: str,
-                  smooth: str) -> Path:
+                  smooth: str, tracer: str = TRACER) -> Path:
     return (sdir / "surf" /
             f"{idb}_hemi-{hemi}_surf-{RESOLUTION}_label-midthickness_"
-            f"pvc-{pvc}_ref-{ref}_smooth-{smooth}_trc-{TRACER}_pet.func.gii")
+            f"pvc-{pvc}_ref-{ref}_smooth-{smooth}_trc-{tracer}_pet.func.gii")
 
 
 def qc_map_paths(sdir: Path, idb: str, desc: str, ref: str,
-                 prefer_pvc: str) -> Optional[tuple[str, dict]]:
+                 prefer_pvc: str, tracer: str = TRACER) -> Optional[tuple[str, dict]]:
     """Locate a derived ``qc/`` surface map: ``(pvc, {"lh": path|None, ...})``.
 
     Each map is written for the PVC it was computed from (Z from ``pvc-none``,
@@ -225,7 +228,7 @@ def qc_map_paths(sdir: Path, idb: str, desc: str, ref: str,
     found: dict[str, dict] = {}
     for hemi, key in (("L", "lh"), ("R", "rh")):
         pattern = (f"{idb}_hemi-{hemi}_surf-{RESOLUTION}_label-midthickness_"
-                   f"pvc-*_ref-{ref}_trc-{TRACER}_desc-{desc}_pet.func.gii")
+                   f"pvc-*_ref-{ref}_trc-{tracer}_desc-{desc}_pet.func.gii")
         for p in sorted((sdir / "qc").glob(pattern)):
             pvc = p.name.split("_pvc-")[1].split("_ref-")[0]
             found.setdefault(pvc, {})[key] = p
@@ -235,21 +238,24 @@ def qc_map_paths(sdir: Path, idb: str, desc: str, ref: str,
     return pvc, {"lh": found[pvc].get("lh"), "rh": found[pvc].get("rh")}
 
 
-def available_smoothings(sdir: Path, idb: str, pvc: str, ref: str) -> list[str]:
+def available_smoothings(sdir: Path, idb: str, pvc: str, ref: str,
+                         tracer: str = TRACER) -> list[str]:
     return [s for s in SMOOTH_LEVELS
-            if surf_map_path(sdir, idb, "L", pvc, ref, s).exists()
-            and surf_map_path(sdir, idb, "R", pvc, ref, s).exists()]
+            if surf_map_path(sdir, idb, "L", pvc, ref, s, tracer).exists()
+            and surf_map_path(sdir, idb, "R", pvc, ref, s, tracer).exists()]
 
 
-def available_pvcs(sdir: Path, idb: str, ref: str) -> list[str]:
+def available_pvcs(sdir: Path, idb: str, ref: str,
+                   tracer: str = TRACER) -> list[str]:
     return [p for p in ("RBV-FS", "none")
-            if pet_volume_path(sdir, idb, p, ref).exists()]
+            if pet_volume_path(sdir, idb, p, ref, tracer).exists()]
 
 
-def parcel_stats_path(sdir: Path, idb: str, pvc: str, ref: str) -> Path:
+def parcel_stats_path(sdir: Path, idb: str, pvc: str, ref: str,
+                      tracer: str = TRACER) -> Path:
     """micapet's own per-region table, when the pipeline wrote one."""
     return (sdir / "qc" /
-            f"{idb}_pvc-{pvc}_ref-{ref}_trc-{TRACER}_AI_parcelstats.csv")
+            f"{idb}_pvc-{pvc}_ref-{ref}_trc-{tracer}_AI_parcelstats.csv")
 
 
 def output_dir(sdir: Path) -> Path:
@@ -376,29 +382,29 @@ _AI_NOTE_NEG = {"text": "Blue · lower uptake where you look than in the homolog
 
 DERIVED_MAPS = (
     {"desc": "SUVRZscore", "nav_label": "Z-score", "cb_label": "Z",
-     "label": "FDG-PET SUVR Z-score", "cmap": "bwr", "vmax": 5.0,
+     "label": "{tracer}-PET SUVR Z-score", "cmap": "bwr", "vmax": 5.0,
      "threshold": ("|Z|", 1.96), "mirror": False, "clip": None, "cb_note": ()},
     # One panel per sign: the two questions — where is uptake higher than the
     # homologue, where is it lower — are read one at a time. Each keeps its own
     # half of the bwr ramp, so a colour means the same magnitude in both.
     {"desc": "SUVRAI", "nav_label": "Asymmetry +", "cb_label": "Asymmetry",
-     "label": "FDG-PET SUVR asymmetry, higher side", "cmap": "bwr", "vmax": 0.25,
+     "label": "{tracer}-PET SUVR asymmetry, higher side", "cmap": "bwr", "vmax": 0.25,
      "threshold": None, "mirror": True, "clip": "pos", "cb_note": (_AI_NOTE_POS,)},
     {"desc": "SUVRAI", "nav_label": "Asymmetry −", "cb_label": "Asymmetry",
-     "label": "FDG-PET SUVR asymmetry, lower side", "cmap": "bwr", "vmax": 0.25,
+     "label": "{tracer}-PET SUVR asymmetry, lower side", "cmap": "bwr", "vmax": 0.25,
      "threshold": None, "mirror": True, "clip": "neg", "cb_note": (_AI_NOTE_NEG,)},
 )
 
 
 def suvr_display_max(sdir: Path, idb: str, pvc: str, ref: str,
-                     smooth: str) -> float:
+                     smooth: str, tracer: str = TRACER) -> float:
     """The 0..vmax SUVR scale shared by the Volume and Surface tabs.
 
     The 99th percentile of cortical vertices over both hemispheres. micapet
     uses ``max * 1.5`` instead, which leaves half the colour range unused and
     lets one hot vertex set the scale.
     """
-    vals = _load_surf_map({key: surf_map_path(sdir, idb, hemi, pvc, ref, smooth)
+    vals = _load_surf_map({key: surf_map_path(sdir, idb, hemi, pvc, ref, smooth, tracer)
                            for hemi, key in (("L", "lh"), ("R", "rh"))})
     both = np.concatenate([vals["lh"], vals["rh"]])
     cortex = np.concatenate([cortex_mask("L"), cortex_mask("R")]).astype(bool)
@@ -409,16 +415,19 @@ def suvr_display_max(sdir: Path, idb: str, pvc: str, ref: str,
 def surface_map_specs(sdir: Path, idb: str, pvc: str, ref: str, smooth: str,
                       vmax: float, hipp_root: Optional[Path] = None,
                       subject: str = "", session: Optional[str] = None,
-                      log=lambda _msg: None) -> list[dict]:
+                      log=lambda _msg: None,
+                      tracer: str = TRACER,
+                      include_hippocampal: bool = True,
+                      include_z_score: bool = True) -> list[dict]:
     """One spec per Surface-tab panel: SUVR, hippocampal SUVR, derived maps.
 
     Every spec names the mesh it is drawn on. All but the hippocampal one use
     the fsLR-32k cortex.
     """
     specs = [{
-        "paths": {h: surf_map_path(sdir, idb, H, pvc, ref, smooth)
+        "paths": {h: surf_map_path(sdir, idb, H, pvc, ref, smooth, tracer)
                   for H, h in (("L", "lh"), ("R", "rh"))},
-        "label": "FDG-PET SUVR",
+        "label": f"{tracer}-PET SUVR",
         "nav_label": "SUVR",
         "sub_label": f"pvc-{pvc} · ref-{ref} · smooth-{smooth}",
         "cb_label": "SUVR",
@@ -437,12 +446,16 @@ def surface_map_specs(sdir: Path, idb: str, pvc: str, ref: str, smooth: str,
     }]
 
     # Hippocampal SUVR, on HippUnfold's midthickness.
-    hipp = _hipp_spec(sdir, idb, pvc, ref, vmax, hipp_root, subject, session, log)
-    if hipp:
-        specs.append(hipp)
+    if include_hippocampal:
+        hipp = _hipp_spec(sdir, idb, pvc, ref, vmax, hipp_root, subject, session,
+                          log, tracer)
+        if hipp:
+            specs.append(hipp)
 
     for m in DERIVED_MAPS:
-        hit = qc_map_paths(sdir, idb, m["desc"], ref, pvc)
+        if m["desc"] == "SUVRZscore" and not include_z_score:
+            continue
+        hit = qc_map_paths(sdir, idb, m["desc"], ref, pvc, tracer)
         if hit is None:
             log(f"  {m['nav_label']}: not available")
             continue
@@ -460,7 +473,7 @@ def surface_map_specs(sdir: Path, idb: str, pvc: str, ref: str, smooth: str,
         span = {"pos": (0.5, 1.0), "neg": (0.0, 0.5)}.get(m["clip"], (0.0, 1.0))
         specs.append({
             "paths": paths,
-            "label": m["label"],
+            "label": m["label"].format(tracer=tracer),
             "nav_label": m["nav_label"],
             "sub_label": sub,
             "cb_label": m["cb_label"],
@@ -479,7 +492,7 @@ def surface_map_specs(sdir: Path, idb: str, pvc: str, ref: str, smooth: str,
 
 def _hipp_spec(sdir: Path, idb: str, pvc: str, ref: str, vmax: float,
                hipp_root: Optional[Path], subject: str, session: Optional[str],
-               log) -> Optional[dict]:
+               log, tracer: str = TRACER) -> Optional[dict]:
     """The hippocampal SUVR panel, or None when either half is missing.
 
     Needs the PET values (MICA-PET) and the geometry they were sampled on
@@ -489,7 +502,7 @@ def _hipp_spec(sdir: Path, idb: str, pvc: str, ref: str, vmax: float,
         log("  hippocampus: skipped, no HippUnfold data")
         return None
     geom = {h: hipp_geom_path(hipp_root, subject, session, h) for h in ("L", "R")}
-    paths = {h: hipp_map_path(sdir, idb, h, pvc, ref) for h in ("L", "R")}
+    paths = {h: hipp_map_path(sdir, idb, h, pvc, ref, tracer) for h in ("L", "R")}
     missing = [p.name for p in list(geom.values()) + list(paths.values())
                if not p.exists()]
     if missing:
@@ -509,7 +522,7 @@ def _hipp_spec(sdir: Path, idb: str, pvc: str, ref: str, vmax: float,
         "paths": {"lh": paths["L"], "rh": paths["R"]},
         "geom": {"lh": geom["L"], "rh": geom["R"]},
         "geom_flat": {"lh": flat["L"], "rh": flat["R"]} if flat else None,
-        "label": "Hippocampal FDG-PET SUVR",
+        "label": f"Hippocampal {tracer}-PET SUVR",
         "nav_label": "SUVR-hipp",
         "sub_label": f"pvc-{pvc} · ref-{ref} · den-{HIPP_DENSITY}",
         "cb_label": "SUVR",
@@ -1026,10 +1039,10 @@ def brain_mask(sdir: Path, idb: str, pet: np.ndarray, *,
 
 
 def build_volume_payload(sdir: Path, idb: str, pvc: str, ref: str,
-                         vmax: float) -> dict:
+                         vmax: float, tracer: str = TRACER) -> dict:
     """Composite PET SUVR over the FS-space T1 and emit 3-axis sprite sheets."""
     t1_img = _to_ras(nib.load(str(t1_path(sdir, idb))))
-    pet_img = _to_ras(nib.load(str(pet_volume_path(sdir, idb, pvc, ref))))
+    pet_img = _to_ras(nib.load(str(pet_volume_path(sdir, idb, pvc, ref, tracer))))
     t1 = np.asarray(t1_img.dataobj, dtype=np.float32)
     pet = np.asarray(pet_img.dataobj, dtype=np.float32)
     if t1.shape != pet.shape:
@@ -1077,7 +1090,7 @@ def build_volume_payload(sdir: Path, idb: str, pvc: str, ref: str,
         "sprites": sprites,
         "pbar": _colorbar_b64(0.0, vmax, "SUVR"),
         "meta": {
-            "label": f"FDG-PET SUVR · pvc-{pvc} · ref-{ref}",
+            "label": f"{tracer}-PET SUVR · pvc-{pvc} · ref-{ref}",
             "dims": [int(x) for x in rgb.shape[:3]],
             "vmin": 0.0, "vmax": vmax,
             "views": views,
@@ -1126,13 +1139,13 @@ def build_volume_html(payload: dict, note: str) -> str:
 # The pipeline's regional statistics table is left out — the Surface tab
 # carries it, sortable and filterable, behind T.
 QC_ROWS = (
-    (1.0, (("Cortical FDG SUVR", "SUVR_clin_report"),)),
-    (0.3, (("Hippocampal FDG SUVR", "hippunfold_clin_report"),)),
+    (1.0, (("Cortical SUVR", "SUVR_clin_report"),)),
+    (0.3, (("Hippocampal SUVR", "hippunfold_clin_report"),)),
     (1.0, (("Cortical asymmetry", "AI_surface_clin_report_cropped"),
            ("Subcortical asymmetry", "AI_subcortical_clin_report_cropped"),
            ("Hippocampal asymmetry", "AI_hippunfold_clin_report"))),
-    (1.0, (("Cortical FDG SUVR Z-score, |Z| > 1.96",
-            "FDG_SUVR_plot_Zscore_clin_report"),)),
+    (1.0, (("Cortical SUVR Z-score, |Z| > 1.96",
+            "SUVR_plot_Zscore_clin_report"),)),
     (1.0, (("PET-MRI overlay", "SUVR_mosaic_screenshot"),)),
 )
 
@@ -1164,10 +1177,10 @@ def _trim_white(im: "Image.Image") -> "Image.Image":
 
 
 def qc_figure_path(sdir: Path, idb: str, pvc: str, ref: str,
-                   stem: str) -> Optional[Path]:
+                   stem: str, tracer: str = TRACER) -> Optional[Path]:
     """Locate one QC figure: most carry the full entity prefix, the Z-score
     plot only the subject and session, so try both."""
-    for name in (f"{idb}_pvc-{pvc}_ref-{ref}_trc-{TRACER}_{stem}.png",
+    for name in (f"{idb}_pvc-{pvc}_ref-{ref}_trc-{tracer}_{stem}.png",
                  f"{idb}_{stem}.png"):
         path = sdir / "qc" / name
         if path.exists():
@@ -1175,7 +1188,8 @@ def qc_figure_path(sdir: Path, idb: str, pvc: str, ref: str,
     return None
 
 
-def build_overview_html(sdir: Path, idb: str, pvc: str, ref: str) -> str:
+def build_overview_html(sdir: Path, idb: str, pvc: str, ref: str,
+                        tracer: str = TRACER) -> str:
     """Lay the QC figures out row by row, each captioned.
 
     Empty string when the session ships none, which drops the section.
@@ -1184,7 +1198,7 @@ def build_overview_html(sdir: Path, idb: str, pvc: str, ref: str) -> str:
     for width, entries in QC_ROWS:
         figures = []
         for caption, stem in entries:
-            path = qc_figure_path(sdir, idb, pvc, ref, stem)
+            path = qc_figure_path(sdir, idb, pvc, ref, stem, tracer)
             if path is None:
                 continue
             im = Image.open(path).convert("RGB")
@@ -1334,7 +1348,8 @@ def _region_means(seg_img, pet_img) -> tuple[list[dict], list[str]]:
 
 
 def summary_rows(sdir: Path, idb: str, pvc: str, ref: str,
-                 log=lambda _msg: None) -> tuple[list[dict], str]:
+                 log=lambda _msg: None,
+                 tracer: str = TRACER) -> tuple[list[dict], str]:
     """Per-region SUVR and asymmetry, sorted ascending by AI as micapet does.
 
     Three sources, best first:
@@ -1349,7 +1364,7 @@ def summary_rows(sdir: Path, idb: str, pvc: str, ref: str,
 
     Returns ``(rows, provenance)``; rows are empty if no source is available.
     """
-    csv_p = parcel_stats_path(sdir, idb, pvc, ref)
+    csv_p = parcel_stats_path(sdir, idb, pvc, ref, tracer)
     if csv_p.exists():
         rows = []
         for line in csv_p.read_text().splitlines()[1:]:
@@ -1362,7 +1377,7 @@ def summary_rows(sdir: Path, idb: str, pvc: str, ref: str,
             rows.sort(key=lambda r: r["ai"])
             return rows, f"{csv_p.name} (micapet)"
 
-    pet_p = pet_volume_path(sdir, idb, pvc, ref)
+    pet_p = pet_volume_path(sdir, idb, pvc, ref, tracer)
     if not pet_p.exists():
         log("  region table skipped, no PET volume")
         return [], ""
@@ -1454,7 +1469,7 @@ def build_history_html() -> str:
         for i, (a, ap, b, bp) in enumerate(rows)
     )
     return (body + '<div class="overview-footer" contenteditable="true">'
-            f'Report generated on {now} | {REPORT_FOOTER_ORG}</div>')
+            f'Report generated on {now} | {REPORT_FOOTER_ORG} <br><br> Click on Overview to view the surface maps.</div>')
 
 
 def build_discussion_html() -> str:
@@ -1501,10 +1516,10 @@ def render_report(subject: str, session: Optional[str], variant: str,
                 'stroke="currentColor" stroke-width="2" stroke-linecap="round" '
                 f'stroke-linejoin="round">{path}</svg></button>')
 
-    tabs = [("history", "History")]
-    if overview_html:
-        tabs.append(("overview", "Overview"))
+    tabs = [("overview", "Overview")]
+
     tabs += [("volume", "Volume"), ("surface", "Surface"), ("discussion", "Discussion")]
+    tabs.append(("history", "History"))
     nav = "".join(
         f'<button class="nav-btn{" active" if i == 0 else ""}" data-target="{t}">{lbl}</button>'
         for i, (t, lbl) in enumerate(tabs)
@@ -1548,10 +1563,6 @@ def render_report(subject: str, session: Optional[str], variant: str,
   </div>
 </div>
 
-<section class="report-section clinical-editor-section active" id="sec-history">
-  <div class="report-inner">{build_history_html()}</div>
-</section>
-
 {overview_section}
 
 <section class="report-section report-section--stats" id="sec-volume">
@@ -1560,6 +1571,10 @@ def render_report(subject: str, session: Optional[str], variant: str,
 
 <section class="report-section report-section--surface" id="sec-surface">
   {surface_html}
+</section>
+
+<section class="report-section clinical-editor-section active" id="sec-history">
+  <div class="report-inner">{build_history_html()}</div>
 </section>
 
 <section class="report-section clinical-editor-section" id="sec-discussion">
@@ -1588,7 +1603,12 @@ def render_report(subject: str, session: Optional[str], variant: str,
 
 
 def report(bids_root, subject: str, session: Optional[str] = None, *,
-           pvc: str = DEFAULT_PVC, ref: str = DEFAULT_REF,
+           pvc: str = DEFAULT_PVC,
+           ref: str = DEFAULT_REF,
+           trc: str = DEFAULT_TRACER,
+           hippocampal: bool = False,
+           z_score: bool = True,
+           ref_dataset: Optional[str] = None,
            smooth: str = DEFAULT_SMOOTH,
            out_dir: Optional[Path] = None,
            pet_root: Optional[Path] = None,
@@ -1600,7 +1620,10 @@ def report(bids_root, subject: str, session: Optional[str] = None, *,
     bids_root : BIDS dataset root (contains ``derivatives/``).
     subject   : e.g. ``"sub-PX296"``.
     session   : e.g. ``"ses-01"``; ``None`` for session-less layouts.
-    pvc, ref  : partial-volume correction and reference region to report.
+    pvc, ref, trc : partial-volume correction, reference region, and tracer to report.
+    hippocampal : whether to include the hippocampal surface tab. Default: False.
+    z_score : whether to include the cortical Z-score surface tab. Default: True.
+    ref_dataset : (optional) path to the reference dataset. Default: None.
     smooth    : surface smoothing level to display ("none", "5mm", "10mm").
     out_dir   : defaults to ``<session dir>/report``.
     pet_root  : MICA-PET pipeline directory; defaults to the newest present.
@@ -1621,7 +1644,7 @@ def report(bids_root, subject: str, session: Optional[str] = None, *,
         raise FileNotFoundError(f"No such subject/session: {sdir}")
     idb = idbids(subject, session)
 
-    have = available_smoothings(sdir, idb, pvc, ref)
+    have = available_smoothings(sdir, idb, pvc, ref, trc)
     if not have:
         raise FileNotFoundError(
             f"No {RESOLUTION} surface maps for pvc-{pvc} ref-{ref} in {sdir / 'surf'}")
@@ -1637,21 +1660,27 @@ def report(bids_root, subject: str, session: Optional[str] = None, *,
 
     # One SUVR colour scale for the whole report, so a colour means the same
     # value in the Volume tab as in the Surface tab.
-    vmax = suvr_display_max(sdir, idb, pvc, ref, smooth)
+    vmax = suvr_display_max(sdir, idb, pvc, ref, smooth, trc)
 
-    vol_pvc = (VOLUME_PVC if pet_volume_path(sdir, idb, VOLUME_PVC, ref).exists()
+    vol_pvc = (VOLUME_PVC if pet_volume_path(
+        sdir, idb, VOLUME_PVC, ref, trc).exists()
                else pvc)
-    vol_payload = build_volume_payload(sdir, idb, vol_pvc, ref, vmax)
+    vol_payload = build_volume_payload(sdir, idb, vol_pvc, ref, vmax, trc)
 
-    specs = surface_map_specs(sdir, idb, pvc, ref, smooth, vmax,
-                              find_hipp_root(bids_root), subject, session, log)
+    specs = surface_map_specs(
+        sdir, idb, pvc, ref, smooth, vmax,
+        find_hipp_root(bids_root) if hippocampal else None,
+        subject, session, log, trc,
+        include_hippocampal=hippocampal,
+        include_z_score=z_score,
+    )
     surf_payload = build_surface_payload(sdir, idb, specs, cache, log)
 
     variant = f"pvc-{pvc} · ref-{ref}"
 
-    rows, _provenance = summary_rows(sdir, idb, pvc, ref, log)
+    rows, _provenance = summary_rows(sdir, idb, pvc, ref, log, trc)
 
-    overview_html = build_overview_html(sdir, idb, pvc, ref)
+    overview_html = build_overview_html(sdir, idb, pvc, ref, trc)
 
     html_doc = render_report(
         subject, session, variant, overview_html,
@@ -1662,7 +1691,7 @@ def report(bids_root, subject: str, session: Optional[str] = None, *,
                            build_summary_table(rows)),
     )
 
-    path = out / f"report_{idb}_pvc-{pvc}_ref-{ref}.html"
+    path = out / f"{idb}_pvc-{pvc}_ref-{ref}_trc-{trc}_report.html"
     path.write_text(html_doc, encoding="utf-8")
     log(f"✓ {path}  ({path.stat().st_size / 1e6:.1f} MB)")
     return path
@@ -1733,7 +1762,7 @@ def _wizard(bids_root: Path) -> int:
     if pvc is None:
         return 0
 
-    smooths = available_smoothings(sdir, idb, pvc, DEFAULT_REF)
+    smooths = available_smoothings(sdir, idb, pvc, DEFAULT_REF, DEFAULT_TRACER)
     smooth = choose("Surface smoothing", smooths) if smooths else DEFAULT_SMOOTH
     if smooths and smooth is None:
         return 0
@@ -1752,6 +1781,8 @@ def main(argv=None) -> int:
     p.add_argument("--subject")
     p.add_argument("--session")
     p.add_argument("--pvc", default=DEFAULT_PVC)
+    p.add_argument("--trc", default=DEFAULT_TRACER,
+                   help="tracer label used in derivative filenames")
     p.add_argument("--smooth", default=DEFAULT_SMOOTH, choices=list(SMOOTH_LEVELS),
                    help="surface smoothing level to display")
     p.add_argument("--ref", default=DEFAULT_REF)
@@ -1768,6 +1799,7 @@ def main(argv=None) -> int:
         return 1
     if args.subject:
         report(root, args.subject, args.session, pvc=args.pvc, ref=args.ref,
+               trc=args.trc,
                smooth=args.smooth,
                out_dir=Path(args.out_dir) if args.out_dir else None,
                pet_root=pet_root)

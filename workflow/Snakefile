@@ -184,7 +184,7 @@ def get_ref_region():
 
 def get_all_targets(wildcards):
     targets = inputs['pet'].expand(
-        os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "qc", "sub-{subject}_ses-{session}_pvc-"+get_pvc_method()+"_ref-"+get_ref_region()+"_trc-{trc}_report.html"),
+        os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "report", "sub-{subject}_ses-{session}_pvc-"+get_pvc_method()+"_ref-"+get_ref_region()+"_trc-{trc}_report.html"),
         allow_missing=True,
     )
 

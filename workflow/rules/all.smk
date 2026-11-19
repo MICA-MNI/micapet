@@ -530,7 +530,8 @@ rule report:
         func_R = rules.project_pet_data.output.func_R,
         csv = rules.subcortical_map.output.csv,
     output:
-        report = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "qc", "sub-{subject}_ses-{session}_pvc-"+get_pvc_method()+"_ref-"+get_ref_region()+"_trc-{trc}_report.html"),
+        # report = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "qc", "sub-{subject}_ses-{session}_pvc-"+get_pvc_method()+"_ref-"+get_ref_region()+"_trc-{trc}_report.html"),
+        report = os.path.join(root, MICAPET_DIR_NAME, "sub-{subject}", "ses-{session}", "report", "sub-{subject}_ses-{session}_pvc-"+get_pvc_method()+"_ref-"+get_ref_region()+"_trc-{trc}_report.html"),
     params:
         bids_dir = config["bids_dir"],
         subj_dir = os.path.join(root, FASTSURFER_DIR_NAME),
@@ -540,6 +541,8 @@ rule report:
         fs_license = config.get("fs_license"),
         pvc_method = lambda wildcards: get_pvc_method(),
         skip_hippunfold = not config.get("skip_hippunfold", False),
+        normalize_histogram_max = config.get("normalize_histogram_max", False),
+        smoothing = lambda wildcards: get_smoothing(),
     log:
         os.path.join(root, "logs", "report", "sub-{subject}_ses-{session}_ref-"+get_ref_region()+"_trc-{trc}.log")
     shell:
@@ -553,7 +556,10 @@ rule report:
                 subj_dir='{params.subj_dir}',
                 pvc_method='{params.pvc_method}',
                 ref_region='{params.ref_region}',
-                hippocampal={params.skip_hippunfold}
+                hippocampal={params.skip_hippunfold},
+                z_score=True,
+                normalize_histogram_max={params.normalize_histogram_max},
+                smoothing='{params.smoothing}'
             )" \
                 > {log} 2>&1
         '''
