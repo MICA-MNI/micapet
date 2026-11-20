@@ -223,7 +223,9 @@ The pipeline writes derivatives into the output directory, including:
 |   |   ├── synthseg_robust_2.0.h5.001
 |   |   └── synthseg_robust_2.0.h5.002
 |   ├── mni_icbm152_t1_tal_nlin_sym_09a_parc.nii.gz
-|   └── mni_icbm152_t1_tal_nlin_sym_09a.nii.gz
+|   ├── mni_icbm152_t1_tal_nlin_sym_09a.nii.gz
+|   └── reference
+|       └──referenceset_surf-fsLR-32k_label-midthickness_pvc-RBV-FS_ref-pons_smooth-10mm_trc-FDG_pet.csv
 ├── workflow/
 |   ├── rules
 |   |   └── all.smk
@@ -243,6 +245,13 @@ The pipeline writes derivatives into the output directory, including:
 <!-- ## HPC usage
 
 For cluster execution, the repository includes helper scripts under [scripts](scripts) for submitting jobs to PBS/Torque-style systems. For multi-subject runs, it is recommended to use a separate output directory per participant to avoid workflow configuration conflicts. -->
+
+## Reference dataset
+MICA-PET is able to calculate Z-score maps when given a .csv of a normal dataset. The dataset must contain 64,984 columns (fsLR32k L+R hemispheres) and each column must be a separate control subject. The .csv must be placed in the /resources/reference subdirectory with the following nomenclature for it to be automatically detected:
+```text
+referenceset_surf-fsLR-32k_label-midthickness_pvc-${pvc_method}_ref-${ref_region}_smooth-${smoothing}mm_trc-${tracer}_pet.csv
+```
+The subject that is run in MICA-PET must have parameters that match exactly the parameters in the .csv name. 
 
 ## Troubleshooting
 
