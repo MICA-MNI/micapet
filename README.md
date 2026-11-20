@@ -57,7 +57,7 @@ MICA-PET may also be run from an Apptainer/Singularity format (.sif) for use in 
 
 ```bash
 # Either build singularity image from Docker Hub
-singularity build micapet.sif docker://jacx11/micapet:v.beta.0.1
+singularity build micapet.sif docker://micalab/micapet:v.beta.0.1
 
 # Or build singularity image locally
 export DOCKER_BUILDKIT=1
@@ -74,7 +74,7 @@ singularity build micapet.sif docker-daemon://micapet:v.beta.0.1
 The latest Docker image can be pulled from Docker Hub
 
 ```bash
-docker pull micalab/micapet:v.alpha.0.1
+docker pull micalab/micapet:v.beta.0.1
 
 docker run --rm -v _____
 ```
